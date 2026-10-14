@@ -197,3 +197,19 @@ for (const b of document.querySelectorAll('#bar button')) b.addEventListener('cl
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 export { startPlay, toLobby };
 (async () => { try { await document.fonts.load(F(8)); await document.fonts.load('8px Silkscreen'); } catch {} refreshPurse(); go(routeId(), false); requestAnimationFrame(frame); })();
+
+// ?wallet=<solana address> (e.g. from the Inu Verse arcade building): load that wallet's shared Shiba profile.
+(async () => { try {
+  const w = new URLSearchParams(location.search).get('wallet') || '';
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w) || A.profile.wallet === w && A.profile._loaded) return;
+  const r = await fetch(`https://kibble-pay.vercel.app/api/profile?wallet=${encodeURIComponent(w)}`); const j = await r.json(); if (!j.exists) return;
+  const keep = A.profile.outfit; A.profile = normalizeProfile(j.profile, w); A.profile._loaded = true;
+  for (const k of Object.keys(keep || {})) if (!A.profile.outfit[k] && keep[k]) A.profile.outfit[k] = keep[k];
+  LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile));
+} catch {} })();
+// ?p=<base64url profile JSON> (Inu Verse passes the player's Shiba even before a real wallet is connected).
+try { const raw = new URLSearchParams(location.search).get('p'); if (raw && raw.length < 12000) {
+  const json = decodeURIComponent(escape(atob(raw.replace(/-/g, '+').replace(/_/g, '/'))));
+  const p = normalizeProfile(JSON.parse(json), new URLSearchParams(location.search).get('wallet') || undefined);
+  const keep = A.profile.outfit; A.profile = p; for (const k of Object.keys(keep || {})) if (!A.profile.outfit[k] && keep[k]) A.profile.outfit[k] = keep[k];
+  LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile)); } } catch {}

@@ -7,7 +7,8 @@
 import { addScore, board, arcadeBoard, GAME_IDS, PERIODS } from '../src/core/scores.js';
 const db = globalThis.__inuArcadeDb ||= {};
 export default async function handler(req, res) {
-  res.setHeader('cache-control', 'no-store');
+  res.setHeader('cache-control', 'no-store'); res.setHeader('access-control-allow-origin', '*'); res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS'); res.setHeader('access-control-allow-headers', 'content-type');
+  if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method === 'GET') { const period = PERIODS.includes(req.query.period) ? req.query.period : 'all'; const game = req.query.game;
     if (game === 'arcade') return res.status(200).json({ game, period, entries: arcadeBoard(db, period) });
     if (!GAME_IDS.includes(game)) return res.status(400).json({ error: 'unknown game' }); return res.status(200).json({ game, period, entries: board(db, game, period) }); }
