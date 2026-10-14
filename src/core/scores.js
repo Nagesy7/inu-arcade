@@ -1,6 +1,9 @@
 // Leaderboards: per-game + combined Arcade board, filtered by day/week/month. Local storage now; server stub in /api/scores.
 // Prizes are awarded by RANK ONLY (skill). Free to play, no paid entry, no chance-based prizes.
 export const GAME_IDS = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'];
+export const MODE_SUFFIX = ['', '@inu', '@daily'];
+export const BOARD_KEYS = GAME_IDS.flatMap((g) => MODE_SUFFIX.map((m) => g + m));
+const keyFor = (g, mode) => (mode && mode !== 'classic' ? `${g}@${mode}` : g);
 export const PERIODS = ['daily', 'weekly', 'monthly', 'all'];
 export function periodStart(period, now = Date.now()) {
   const d = new Date(now); d.setHours(0, 0, 0, 0);
@@ -11,7 +14,7 @@ export function periodStart(period, now = Date.now()) {
 }
 export const cleanName = (n) => (String(n || '').toUpperCase().replace(/[^A-Z0-9]/g, '') + '???').slice(0, 3);
 export function addScore(db, game, { name, score, at = Date.now(), wallet = null, house = false }) {
-  if (!GAME_IDS.includes(game) || !Number.isFinite(score) || score < 0) return null;
+  if (!BOARD_KEYS.includes(game) || !Number.isFinite(score) || score < 0) return null;
   const e = { name: cleanName(name), score: Math.floor(score), at, wallet }; if (house) e.house = true; (db[game] ||= []).push(e);
   db[game].sort((a, b) => b.score - a.score || a.at - b.at); if (db[game].length > 200) db[game].length = 200; return e;
 }
@@ -22,9 +25,9 @@ export function board(db, game, period = 'all', now = Date.now(), n = 10) {
   return [...best.values()].sort((a, b) => b.score - a.score || a.at - b.at).slice(0, n);
 }
 // Combined Arcade board: each game's top score in the period = 1000 pts; a player's best earns a share. Sum over games.
-export function arcadeBoard(db, period = 'all', now = Date.now(), n = 10) {
+export function arcadeBoard(db, period = 'all', now = Date.now(), n = 10, mode = 'classic') {
   const tot = new Map();
-  for (const g of GAME_IDS) { const b = board(db, g, period, now, 1000); const top = b[0]?.score || 0; if (!top) continue;
+  for (const g of GAME_IDS) { const b = board(db, keyFor(g, mode), period, now, 1000); const top = b[0]?.score || 0; if (!top) continue;
     for (const e of b) { const t = tot.get(e.name) || { name: e.name, points: 0, games: 0, house: !!e.house }; t.points += Math.round((1000 * e.score) / top); t.games++; tot.set(e.name, t); } }
   return [...tot.values()].sort((a, b) => b.points - a.points || b.games - a.games).slice(0, n);
 }

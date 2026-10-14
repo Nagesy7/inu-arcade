@@ -26,3 +26,22 @@ export const SFX = {
   start: () => seq([392, 523, 659, 784, 0, 659, 784], 0.07), ticket: () => seq([1175, 1568, 2093], 0.05, 'triangle', 0.08),
 };
 export function sfx(name) { try { SFX[name]?.(); } catch {} }
+SFX.mega = () => { tone(110, 880, 0.35, 'sawtooth', 0.09); noise(0.3, 0.1, 0.05, 300); };
+// ---- dynamic chiptune: original 4-bar loop in A minor; intensity 0..3 adds layers and tempo ----
+const BASS = [45, 45, 52, 45, 48, 48, 55, 48, 43, 43, 50, 43, 40, 40, 47, 52], ARP = [[57, 60, 64], [60, 64, 67], [55, 59, 62], [52, 56, 59]];
+const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
+let mus = null;
+export function setMusic(on, intensity = 0) {
+  if (!on) { if (mus) { clearInterval(mus.id); mus = null; } return; }
+  if (!mus) { mus = { step: 0, next: 0, intensity, id: null }; mus.id = setInterval(tick, 25); }
+  mus.intensity = Math.max(0, Math.min(3, intensity));
+}
+function tick() {
+  if (!ac || muted || !mus) return; const bpm = 118 + mus.intensity * 12, sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
+  while (mus.next < ac.currentTime + 0.12) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, I = mus.intensity;
+    tone(mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), sp * 0.8, 'triangle', 0.07, d);
+    if (I >= 1 && i % 2 === 0) { const ch = ARP[bar]; tone(mtof(ch[(i / 2) % 3] + 12), mtof(ch[(i / 2) % 3] + 12), sp * 0.5, 'square', 0.025, d); }
+    if (I >= 2) noise(0.03, i % 4 === 2 ? 0.05 : 0.02, d, i % 4 === 2 ? 1200 : 6000);
+    if (I >= 3 && i % 4 === 0) tone(mtof(ARP[bar][0] + 24), mtof(ARP[bar][2] + 24), sp * 1.5, 'square', 0.02, d);
+    mus.step++; mus.next += sp; }
+}
