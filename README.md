@@ -66,3 +66,10 @@ URL=https://inu-arcade.vercel.app TAG=live node scripts/e2e.mjs
 node scripts/build-pages.mjs && node scripts/og.mjs   # regenerate per-game pages + share cards after editing index.html
 export PATH=$HOME/.local/bin:$PATH; vercel deploy --prod --yes
 ```
+
+## Arcade-accurate Classic rules (v3)
+Classic mode is a faithful reimplementation of the original arcade *mechanics* (original names/art). Inu Mode layers its twists on top of the same rules. Rule tables are exported from each module and asserted in `tests/rules.test.mjs`.
+- **Kibble Chomp** (224x288): 28x31 maze with a side tunnel, 240 kibble + 4 power bones. Per-level speed table (pac / pac-fright / cat / tunnel / fright / Elroy 1+2), fright time 6,5,4,3,2,5,2,2,1,5,2,1,1,3,1,1,0,1,0… seconds, scatter/chase table per level (7/20/7/20/5/20/5/∞; then 1033 s and 1/60 s), the 4 targeting personalities including the up-direction overflow quirk, no-up tiles, cornering, dot stalls, house dot counters (30/60 on L1, 50 on L2), global counter after a death, idle release timer, Elroy speed-ups, bonus items at 70/170 dots (100→5000), 200/400/800/1600 combos, extra life at 10,000.
+- **Bark Invaders** (224x256): 11x5 rack moving one alien per frame (so speed rises as aliens die), 8 px drop, one player shot, rolling/plunger/squiggly bombs with column tables, score-based reload rate, mystery ship scored by shot count, pixel-eroded shields, wave start heights 136→192, extra life at 1500.
+- **Pup Crossing** (224x256): 5 road + 5 river lanes, diving ducks, 60 s timer, 10/step, 50 + 10/s per kennel, 1000 for all five, bonus fly and lady pup (+200), crocs in kennels, median and log snakes, croc logs, per-level speed ramp, extra life at 20,000.
+- **Bone Breaker** (224x256): 8 rows x 14 bricks scoring 1/1/3/3/5/5/7/7, speed-ups at 4 and 12 brick hits and on first orange/red contact, paddle halves after the ball hits the top wall, 8-segment angles, 2 screens (max 896). Interpretation: speed and paddle size reset with each new ball.

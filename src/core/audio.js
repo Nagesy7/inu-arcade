@@ -45,3 +45,4 @@ function tick() {
     if (I >= 3 && i % 4 === 0) tone(mtof(ARP[bar][0] + 24), mtof(ARP[bar][2] + 24), sp * 1.5, 'square', 0.02, d);
     mus.step++; mus.next += sp; }
 }
+SFX.march = (() => { let k = 0; const N = [98, 87, 78, 73]; return () => { tone(N[k], N[k] * 0.9, 0.09, 'square', 0.07); k = (k + 1) % 4; }; })();

@@ -26,8 +26,8 @@ export function save() { scoreStore.save(A.db); LS.setItem('inuarcade.wallet.v1'
 window.__arcade = A;
 
 // ---------- layout ----------
-function fit() { const top = isTouch ? 0 : 34, W = innerWidth, H = innerHeight - top; let s = Math.min(W / 384, H / 216); if (s >= 2) s = Math.floor(s * 2) / 2;
-  cv.style.width = Math.floor(384 * s) + 'px'; cv.style.height = Math.floor(216 * s) + 'px'; $('#stage').style.top = top + 'px'; }
+function fit() { const top = isTouch ? 0 : 34, W = innerWidth, H = innerHeight - top, cw = cv.width, ch = cv.height; let s = Math.min(W / cw, H / ch); if (s >= 2) s = Math.floor(s * 2) / 2;
+  cv.style.width = Math.floor(cw * s) + 'px'; cv.style.height = Math.floor(ch * s) + 'px'; $('#stage').style.top = top + 'px'; }
 addEventListener('resize', fit); fit();
 
 // ---------- text helpers ----------
@@ -56,7 +56,8 @@ export const CABS = [
 ];
 const CW = 40, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
-function toLobby(push = true) { if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
+function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
+function toLobby(push = true) { setRes(384, 216); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
 function lobbyTargets() { return [...CABS.map((c) => ({ kind: 'cab', id: c.id, x: c.x + CW / 2, y: FLOOR_Y + 8, label: c.title })), { kind: 'prizes', x: COUNTER.x + COUNTER.w / 2, y: COUNTER.y - 10, label: 'PRIZE COUNTER' }, { kind: 'scores', x: BOARD.x + BOARD.w / 2, y: FLOOR_Y + 8, label: 'HI-SCORE BOARD' }]; }
 function nearTarget(L) { return lobbyTargets().find((t) => Math.abs(t.x - L.x) < 18 && Math.abs(t.y - L.y) < 16); }
 function activate(t) { if (!t) return; sfx('select'); if (t.kind === 'cab') go(t.id); else if (t.kind === 'prizes') showPrizes(); else if (t.kind === 'scores') showScores(); }
@@ -120,7 +121,7 @@ function drawCabinet(c, now, skin) {
 const modeKey = (C) => MET.boardKey(C.id, C.gmode);
 const ghostKey = (C) => 'inuarcade.ghost.' + modeKey(C);
 function openCab(id) {
-  const G = GAMES[id]; A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
+  const G = GAMES[id]; setRes(G.W, G.H); A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
   if (!MET.MODE_IDS.includes(A.cab.gmode)) A.cab.gmode = 'classic';
   document.title = `${G.META.title.replace(/\b\w+/g, (w) => w[0] + w.slice(1).toLowerCase())} · Inu Arcade`;
 }
@@ -168,57 +169,60 @@ function finishRun() {
   save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score, raw: C.s.score, mult: C.mod?.mult || 1, gmode: C.gmode, rank, drank, got, ach, newGhost, level: C.s.level };
   S.postScore(key, entry); showResults(C.id, C.result);
 }
-function drawHUD(C) { const s = C.s; ctx.fillStyle = '#000000aa'; ctx.fillRect(0, 0, 384, 11); const hi = Math.max(S.board(A.db, modeKey(C), 'all')[0]?.score || 0, MET.finalScore(s.score, C.mod));
-  text(String(s.score).padStart(6, '0'), 4, 2, '#fbf1e0', 8); if (C.mod) text('x' + C.mod.mult, 56, 3, '#f2c14e', 5); text('HI ' + hi, 128, 2, '#f2c14e', 8);
-  text(C.gmode === 'classic' ? 'CLASSIC' : C.gmode === 'daily' ? 'DAILY' : 'INU', 230, 3, C.gmode === 'classic' ? '#8a7ac4' : '#ff5d73', 5); text('L' + s.level, 270, 2, '#7ef0ff', 8);
-  for (let i = 0; i < Math.min(5, s.lives); i++) PIX.blit(ctx, PIX.shibaHead(), 300 + i * 12, 0); }
+function drawHUD(C) { const s = C.s, G = C.G, W = G.W, H = G.H; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 20); const hi = Math.max(S.board(A.db, modeKey(C), 'all')[0]?.score || 0, MET.finalScore(s.score, C.mod));
+  text('1UP', 8, 1, '#ff5d73', 8, 'left', false); text(String(s.score).padStart(6, '0'), 8, 10, '#fbf1e0', 8, 'left', false);
+  text('HI-SCORE', W / 2 + 18, 1, '#ff5d73', 8, 'center', false); text(String(hi).padStart(6, '0'), W / 2 + 18, 10, '#fbf1e0', 8, 'center', false);
+  text(C.gmode === 'classic' ? 'CLASSIC' : C.gmode === 'daily' ? 'DAILY' : 'INU', W - 4, 2, C.gmode === 'classic' ? '#8a7ac4' : '#ff5d73', 5, 'right', false); if (C.mod) text('x' + C.mod.mult, W - 4, 11, '#f2c14e', 5, 'right', false);
+  for (let i = 0; i < Math.min(5, s.lives - 1); i++) { ctx.fillStyle = '#e8892e'; ctx.fillRect(8 + i * 11, H - 12, 8, 7); ctx.fillRect(8 + i * 11, H - 14, 2, 2); ctx.fillRect(14 + i * 11, H - 14, 2, 2); } }
+function centerBox(W, y, h) { ctx.fillStyle = '#000d'; ctx.fillRect(8, y, W - 16, h); ctx.strokeStyle = '#3a2a6a'; ctx.strokeRect(8.5, y + 0.5, W - 17, h - 1); }
+function sText(str, x, y, col, align = 'center') { ctx.font = '8px Silkscreen, monospace'; ctx.textAlign = align; ctx.textBaseline = 'top'; ctx.fillStyle = col; ctx.fillText(str, x, y); ctx.textAlign = 'left'; }
 function drawCab(now) {
-  const C = A.cab, G = C.G, M = G.META;
+  const C = A.cab, G = C.G, M = G.META, W = G.W, H = G.H, X = W / 2;
   if (C.mode === 'title') {
-    const g = ctx.createLinearGradient(0, 0, 0, 216); g.addColorStop(0, '#0a0620'); g.addColorStop(1, '#1a0a2a'); ctx.fillStyle = g; ctx.fillRect(0, 0, 384, 216);
-    ctx.strokeStyle = '#2a1650'; ctx.lineWidth = 1; for (let i = 0; i < 12; i++) { const y = 150 + i * i * 0.6 + ((now * 8) % 6); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(384, y); ctx.stroke(); } for (let i = -10; i <= 10; i++) { ctx.beginPath(); ctx.moveTo(192 + i * 8, 150); ctx.lineTo(192 + i * 40, 216); ctx.stroke(); }
-    const skins = A.purse.skins[C.id] || []; if (skins.length) { ctx.strokeStyle = skins.includes('gold') ? '#f2d070' : M.color; ctx.lineWidth = 3; ctx.strokeRect(2, 2, 380, 212); }
-    text(M.title, 192, 14, '#000', 16, 'center', false); text(M.title, 190, 12, M.color, 16, 'center', false);
-    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#c8bce8'; ctx.textAlign = 'center'; wrap(M.blurb, 64).forEach((l, i) => ctx.fillText(l, 192, 38 + i * 9)); ctx.textAlign = 'left';
-    // mode selector
-    MET.MODE_IDS.forEach((m, i) => { const x = 64 + i * 128, on = m === C.gmode; ctx.fillStyle = on ? (m === 'classic' ? '#6a52c4' : '#ff5d73') : '#1a1438'; ctx.fillRect(x - 58, 58, 116, 14); text(MET.MODES[m].name, x, 61, on ? '#fff' : '#6a5a9a', 6, 'center', false); });
-    const mod = MET.modFor(C.gmode); ctx.font = '8px Silkscreen, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fbf1e0';
-    const info = C.gmode === 'classic' ? [MET.MODES.classic.desc + ' ' + (M.classicNote || '')] : [...wrap(M.inuMove, 66), ...wrap(`WEEKLY MODIFIER ${mod.name}: ${mod.desc}`, 66)];
-    const nMove = C.gmode === 'classic' ? 1 : wrap(M.inuMove, 66).length; info.forEach((l, i) => { ctx.fillStyle = i >= nMove ? '#f2c14e' : '#fbf1e0'; ctx.fillText(l, 192, 80 + i * 9); }); if (C.gmode === 'daily') { ctx.fillStyle = '#7ef0ff'; ctx.fillText(`TODAY'S SEED #${MET.dailySeed(C.id) % 100000} · SAME RUN FOR EVERY PUP`, 192, 80 + info.length * 9); } ctx.textAlign = 'left';
-    text('TOP PUPS · ' + MET.MODES[C.gmode].name, 192, 116, '#f2c14e', 6, 'center'); S.board(A.db, modeKey(C), C.gmode === 'daily' ? 'daily' : 'all', Date.now(), 4).forEach((e, i) => text(`${i + 1}. ${e.name} ${String(e.score).padStart(6, ' ')}`, 192, 126 + i * 10, i ? '#fbf1e0' : '#7ef0ff', 8, 'center'));
-    if (Math.floor(now * 2) % 2) text(isTouch ? '◀ ▶ MODE · START TO PLAY' : '◀ ▶ MODE · SPACE TO PLAY', 192, 170, '#ff5d73', 8, 'center');
-    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#8a7ac4'; ctx.textAlign = 'center'; ctx.fillText(M.controls + (isTouch ? '' : ' · Esc: hall'), 192, 186); if (loadGhost(C)) ctx.fillText('Your best run races you as a ghost', 192, 196);
-    const sp = R.SPONSORS[C.id]; ctx.fillText(sp ? `CABINET SPONSOR: ${sp.name}` : 'SPONSOR SLOT OPEN · FREE PLAY · SKILL PRIZES ONLY', 192, 206); ctx.textAlign = 'left';
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#07051a'); g.addColorStop(1, '#170828'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#25124a'; ctx.lineWidth = 1; for (let i = 0; i < 12; i++) { const y = H - 70 + i * i * 0.5 + ((now * 8) % 6); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } for (let i = -8; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(X + i * 6, H - 70); ctx.lineTo(X + i * 30, H); ctx.stroke(); }
+    const skins = A.purse.skins[C.id] || []; if (skins.length) { ctx.strokeStyle = skins.includes('gold') ? '#f2d070' : M.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, W - 2, H - 2); }
+    const words = M.title.split(' '); words.forEach((w, i) => { text(w, X + 1, 14 + i * 20, '#000', 16, 'center', false); text(w, X, 13 + i * 20, M.color, 16, 'center', false); });
+    let y = 58; wrap(M.blurb, 40).forEach((l) => { sText(l, X, y, '#c8bce8'); y += 9; }); y += 4;
+    MET.MODE_IDS.forEach((m, i) => { const on = m === C.gmode, bx = 8 + i * ((W - 16) / 3), bw = (W - 16) / 3 - 2; ctx.fillStyle = on ? (m === 'classic' ? '#6a52c4' : '#ff5d73') : '#1a1438'; ctx.fillRect(bx, y, bw, 13); text(m === 'daily' ? 'DAILY' : m === 'inu' ? 'INU' : 'CLASSIC', bx + bw / 2, y + 3, on ? '#fff' : '#6a5a9a', 6, 'center', false); });
+    C.modeY = y; y += 18;
+    const mod = MET.modFor(C.gmode); const info = C.gmode === 'classic' ? wrap(MET.MODES.classic.desc + ' ' + (M.classicNote || ''), 40) : wrap(M.inuMove, 40), modl = C.gmode === 'classic' ? [] : wrap(`WEEKLY: ${mod.name}. ${mod.desc}`, 40);
+    info.forEach((l) => { sText(l, X, y, '#fbf1e0'); y += 9; }); modl.forEach((l) => { sText(l, X, y, '#f2c14e'); y += 9; }); if (C.gmode === 'daily') { sText(`TODAY'S SEED #${MET.dailySeed(C.id) % 100000}`, X, y, '#7ef0ff'); y += 9; }
+    y += 6; text('TOP PUPS', X, y, '#f2c14e', 8, 'center'); y += 12;
+    S.board(A.db, modeKey(C), C.gmode === 'daily' ? 'daily' : 'all', Date.now(), 5).forEach((e, i) => { text(`${i + 1} ${e.name} ${String(e.score).padStart(6, ' ')}`, X, y, i ? '#fbf1e0' : '#7ef0ff', 8, 'center'); y += 11; });
+    if (Math.floor(now * 2) % 2) text(isTouch ? 'PRESS START' : 'PRESS SPACE', X, H - 48, '#ff5d73', 8, 'center');
+    sText('◀ ▶ CHANGE MODE' + (isTouch ? '' : ' · ESC: HALL'), X, H - 36, '#8a7ac4'); if (loadGhost(C)) sText('Your best run races you as a ghost', X, H - 27, '#8a7ac4');
+    const sp = R.SPONSORS[C.id]; sText(sp ? `SPONSOR: ${sp.name}` : 'FREE PLAY · SKILL PRIZES ONLY', X, H - 14, '#5a4a8a');
     return;
   }
-  const sh = C.s.shake > 0 && C.mode === 'play' ? C.s.shake * 10 : 0; ctx.save(); if (sh) ctx.translate(Math.round((Math.random() - 0.5) * sh), Math.round((Math.random() - 0.5) * sh));
+  const sh = C.s.shake > 0 && C.mode === 'play' ? C.s.shake * 8 : 0; ctx.save(); if (sh) ctx.translate(Math.round((Math.random() - 0.5) * sh), Math.round((Math.random() - 0.5) * sh));
   G.draw(ctx, C.s, now, PIX);
-  if (C.ghost && C.mode === 'play' && !C.ghost.s.over && G.ghostPos) { const gp = G.ghostPos(C.ghost.s); ctx.globalAlpha = 0.35; PIX.blitC(ctx, PIX.shibaHead('#9fd0ff', '#5a8ac0'), gp.x, gp.y); ctx.globalAlpha = 0.6; ctx.font = '6px Silkscreen, monospace'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('BEST', gp.x - 8, gp.y - 7); ctx.globalAlpha = 1; }
-  for (const p of C.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x | 0, p.y | 0, 2, 2); } ctx.globalAlpha = 1;
-  for (const p of C.s.pops) { ctx.globalAlpha = Math.min(1, p.t * 2); text(p.text, p.x, p.y, p.c, 6, 'center'); } ctx.globalAlpha = 1;
+  if (C.ghost && C.mode === 'play' && !C.ghost.s.over && G.ghostPos) { const gp = G.ghostPos(C.ghost.s); ctx.globalAlpha = 0.35; ctx.fillStyle = '#9fd0ff'; ctx.fillRect(gp.x - 5, gp.y - 5, 10, 10); ctx.globalAlpha = 0.7; ctx.font = '6px Silkscreen, monospace'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('BEST', gp.x - 8, gp.y - 7); ctx.globalAlpha = 1; }
+  for (const p of C.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x | 0, p.y | 0, 1.5, 1.5); } ctx.globalAlpha = 1;
+  for (const p of C.s.pops) { ctx.globalAlpha = Math.min(1, p.t * 2); text(p.text, Math.max(30, Math.min(W - 30, p.x)), p.y, p.c, 5, 'center'); } ctx.globalAlpha = 1;
   ctx.restore(); drawHUD(C);
-  if (C.mode === 'attract') { ctx.fillStyle = '#000a'; ctx.fillRect(100, 92, 184, 32); text(C.demo.label, 192, 96, M.color, 6, 'center'); if (Math.floor(now * 2) % 2) text(isTouch ? 'TAP START' : 'PRESS SPACE', 192, 110, '#fbf1e0', 8, 'center'); }
-  if (C.mode === 'play' && C.paused) { ctx.fillStyle = '#000a'; ctx.fillRect(130, 96, 124, 22); text('PAUSED', 192, 103, '#f2c14e', 8, 'center'); }
-  if (C.mode === 'play' && C.s.flash > 0.6) { ctx.fillStyle = `rgba(255,60,60,${(C.s.flash - 0.6) * 0.5})`; ctx.fillRect(0, 0, 384, 216); }
-  if (C.mode === 'over') { ctx.fillStyle = '#000b'; ctx.fillRect(82, 80, 220, 52); text('GAME OVER', 192, 88, '#ff5d73', 16, 'center'); text('SCORE ' + C.final + (C.mod ? `  (${C.s.score} x${C.mod.mult})` : ''), 192, 110, '#fbf1e0', 8, 'center'); }
-  if (C.mode === 'initials') { ctx.fillStyle = '#000d'; ctx.fillRect(60, 50, 264, 116); text('NEW SCORE ' + C.final, 192, 60, '#f2c14e', 8, 'center'); text('ENTER YOUR INITIALS', 192, 76, '#fbf1e0', 8, 'center');
-    C.ini.forEach((ch, i) => { const x = 156 + i * 26; if (i === C.cur && Math.floor(now * 4) % 2) { ctx.fillStyle = M.color; ctx.fillRect(x - 2, 120, 20, 3); } text(ch, x, 98, i === C.cur ? M.color : '#fbf1e0', 16); });
-    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#8a7ac4'; ctx.textAlign = 'center'; ctx.fillText('UP/DOWN letter · LEFT/RIGHT move · A next/OK', 192, 140); ctx.fillText(`${MET.MODES[C.gmode].name} boards: daily, weekly, monthly & all-time`, 192, 152); ctx.textAlign = 'left'; }
-  if (C.mode === 'results') { ctx.fillStyle = '#000b'; ctx.fillRect(80, 70, 224, 70); text(`${C.result.score} PTS · #${C.result.drank} TODAY`, 192, 78, '#f2c14e', 8, 'center'); text(`+${C.result.got.bones} BONES  +${C.result.got.tickets} TICKETS`, 192, 96, '#5fd37a', 8, 'center'); if (Math.floor(now * 2) % 2) text('A: PLAY AGAIN', 192, 118, '#fbf1e0', 8, 'center'); }
+  if (C.mode === 'attract') { centerBox(W, H / 2 - 18, 34); text(C.demo.label.replace('REPLAY: ', ''), X, H / 2 - 12, M.color, 5, 'center'); if (Math.floor(now * 2) % 2) text(isTouch ? 'PRESS START' : 'PRESS SPACE', X, H / 2 + 2, '#fbf1e0', 8, 'center'); }
+  if (C.mode === 'play' && C.paused) { centerBox(W, H / 2 - 12, 22); text('PAUSED', X, H / 2 - 5, '#f2c14e', 8, 'center'); }
+  if (C.mode === 'play' && C.s.flash > 0.6) { ctx.fillStyle = `rgba(255,60,60,${(C.s.flash - 0.6) * 0.4})`; ctx.fillRect(0, 0, W, H); }
+  if (C.mode === 'over') { centerBox(W, H / 2 - 24, 48); text('GAME OVER', X, H / 2 - 16, '#ff5d73', 8, 'center'); text('SCORE ' + C.final, X, H / 2, '#fbf1e0', 8, 'center'); if (C.mod) sText(`${C.s.score} x${C.mod.mult} weekly`, X, H / 2 + 12, '#f2c14e'); }
+  if (C.mode === 'initials') { centerBox(W, H / 2 - 56, 112); text('NEW SCORE', X, H / 2 - 48, '#f2c14e', 8, 'center'); text(String(C.final), X, H / 2 - 36, '#fbf1e0', 8, 'center'); text('YOUR INITIALS', X, H / 2 - 22, '#fbf1e0', 8, 'center');
+    C.ini.forEach((ch, i) => { const x = X - 30 + i * 24; if (i === C.cur && Math.floor(now * 4) % 2) { ctx.fillStyle = M.color; ctx.fillRect(x - 2, H / 2 + 12, 20, 2); } text(ch, x, H / 2 - 6, i === C.cur ? M.color : '#fbf1e0', 16); });
+    sText('UP/DOWN letter · A next', X, H / 2 + 20, '#8a7ac4'); sText(`${MET.MODES[C.gmode].name} boards`, X, H / 2 + 30, '#8a7ac4'); }
+  if (C.mode === 'results') { centerBox(W, H / 2 - 30, 60); text(`${C.result.score} PTS`, X, H / 2 - 22, '#f2c14e', 8, 'center'); text(`#${C.result.drank} TODAY`, X, H / 2 - 10, '#fbf1e0', 8, 'center'); sText(`+${C.result.got.bones} Bones  +${C.result.got.tickets} tickets`, X, H / 2 + 2, '#5fd37a'); if (Math.floor(now * 2) % 2) sText('A: PLAY AGAIN', X, H / 2 + 14, '#fbf1e0'); }
 }
 // bloom: blurred additive copy of the frame (CRT mode). Skipped where ctx.filter is unsupported.
-const bloomCv = document.createElement('canvas'); bloomCv.width = 192; bloomCv.height = 108; const bctx = bloomCv.getContext('2d'); const canFilter = 'filter' in bctx;
-function bloom() { if (!A.crt || !canFilter) return; bctx.filter = 'none'; bctx.clearRect(0, 0, 192, 108); bctx.drawImage(cv, 0, 0, 192, 108); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.32; ctx.filter = 'blur(2px)'; ctx.imageSmoothingEnabled = true; ctx.drawImage(bloomCv, 0, 0, 384, 216); ctx.restore(); ctx.imageSmoothingEnabled = false; }
+const bloomCv = document.createElement('canvas'); const bctx = bloomCv.getContext('2d'); const canFilter = 'filter' in bctx;
+function bloom() { if (!A.crt || !canFilter) return; const bw = cv.width >> 1, bh = cv.height >> 1; if (bloomCv.width !== bw || bloomCv.height !== bh) { bloomCv.width = bw; bloomCv.height = bh; } bctx.filter = 'none'; bctx.clearRect(0, 0, bw, bh); bctx.drawImage(cv, 0, 0, bw, bh); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.32; ctx.filter = 'blur(2px)'; ctx.imageSmoothingEnabled = true; ctx.drawImage(bloomCv, 0, 0, cv.width, cv.height); ctx.restore(); ctx.imageSmoothingEnabled = false; }
 
 // ---------- canvas pointer (tap/click) ----------
-function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 384, y: ((e.clientY - r.top) / r.height) * 216 }; }
+function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * cv.width, y: ((e.clientY - r.top) / r.height) * cv.height }; }
 cv.addEventListener('pointerdown', (e) => { unlockAudio(); if (panelOpen()) return; const p = toCanvas(e);
   if (A.scene === 'lobby') { const L = A.lobby; const c = CABS.find((c) => { const r = cabRect(c); return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h + 8; });
     const tg = lobbyTargets(); let t = c ? tg.find((t) => t.id === c.id) : null;
     if (!t && p.x >= COUNTER.x - 4 && p.x <= COUNTER.x + COUNTER.w + 4 && p.y >= COUNTER.y - 32 && p.y <= COUNTER.y + COUNTER.h) t = tg.find((t) => t.kind === 'prizes');
     if (!t && p.x >= BOARD.x && p.y <= BOARD.y + BOARD.h) t = tg.find((t) => t.kind === 'scores');
     if (t) { L.target = { x: t.x, y: t.y }; L.pending = t; } else L.target = { x: p.x, y: Math.max(FLOOR_Y + 6, p.y) }; return; }
-  if (A.scene === 'cab' && A.cab.mode === 'title' && p.y >= 56 && p.y <= 74) { const i = Math.max(0, Math.min(2, Math.floor((p.x - 6) / 124))); A.cab.gmode = MET.MODE_IDS[i]; LS.setItem('inuarcade.mode', A.cab.gmode); sfx('blip'); A.cab.t = 0; return; }
+  if (A.scene === 'cab' && A.cab.mode === 'title' && p.y >= A.cab.modeY - 3 && p.y <= A.cab.modeY + 16) { const i = Math.max(0, Math.min(2, Math.floor((p.x - 8) / ((cv.width - 16) / 3)))); A.cab.gmode = MET.MODE_IDS[i]; LS.setItem('inuarcade.mode', A.cab.gmode); sfx('blip'); A.cab.t = 0; return; }
   if (A.scene === 'cab' && ['title', 'attract'].includes(A.cab.mode)) startPlay(); });
 addEventListener('keydown', unlockAudio); addEventListener('touchstart', unlockAudio, { passive: true });
 
