@@ -1,0 +1,2 @@
+{ "cleanUrls": true, "trailingSlash": false,
+  "headers": [{ "source": "/src/(.*)", "headers": [{ "key": "cache-control", "value": "public, max-age=0, must-revalidate" }] }] }

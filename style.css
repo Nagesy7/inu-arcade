@@ -1,0 +1,41 @@
+@font-face{font-family:"Press Start 2P";src:url(/fonts/PressStart2P.ttf) format("truetype");font-display:block}
+@font-face{font-family:Silkscreen;src:url(/fonts/Silkscreen.ttf) format("truetype");font-display:block}
+:root{--ink:#1a1424;--navy:#0b0820;--gold:#f2c14e;--cream:#fbf1e0;--pink:#ff5d73;--cyan:#4fc3e8;--green:#5fd37a;--purple:#6a52c4}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--navy);color:var(--cream);font-family:Silkscreen,monospace;font-size:14px;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#screen{image-rendering:pixelated;image-rendering:crisp-edges;background:#000;box-shadow:0 0 0 3px #2a1f55,0 0 40px #6a52c455;touch-action:none}
+#bar{position:fixed;top:max(4px,env(safe-area-inset-top));right:max(6px,env(safe-area-inset-right));display:flex;gap:4px;align-items:center;z-index:5;flex-wrap:wrap;justify-content:flex-end}
+.tb{font:10px Silkscreen,monospace;background:#1d1640cc;color:var(--cream);border:2px solid var(--purple);padding:4px 7px;cursor:pointer;border-radius:3px}
+.tb:hover{background:#2c2260}
+#purse{font:10px Silkscreen,monospace;background:#000a;padding:4px 7px;border:2px solid #2a1f55;color:var(--gold)}
+#pad{position:fixed;inset:0;pointer-events:none;z-index:4;display:none}
+body.touch #pad{display:block}
+#pad b{pointer-events:auto;position:absolute;display:flex;align-items:center;justify-content:center;font:bold 16px monospace;color:#fff;background:#ffffff1f;border:2px solid #ffffff55;border-radius:10px;touch-action:none}
+#pad b.on{background:#f2c14e88;border-color:var(--gold)}
+.dpad{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:14px;width:150px;height:150px}
+.dpad [data-k=up]{left:50px;top:0;width:50px;height:52px}.dpad [data-k=down]{left:50px;bottom:0;width:50px;height:52px}
+.dpad [data-k=left]{left:0;top:50px;width:52px;height:50px}.dpad [data-k=right]{right:0;top:50px;width:52px;height:50px}
+.btns{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:14px;width:150px;height:150px}
+.abtn{right:0;bottom:16px;width:78px;height:78px;border-radius:50% !important;font-size:22px !important;background:#ff5d7355 !important}
+.abtn.on{background:#ff5d73cc !important}
+.sbtn{right:0;top:0;width:70px;height:30px;font-size:10px !important;font-family:Silkscreen,monospace !important}
+.sbtn.bk{right:76px}
+#panel{position:fixed;inset:0;background:#05031099;display:flex;align-items:center;justify-content:center;z-index:10;touch-action:auto}
+#panel[hidden]{display:none}
+.pbox{position:relative;background:#140f30;border:3px solid var(--purple);box-shadow:6px 6px 0 #000;max-width:min(720px,94vw);max-height:90vh;overflow:auto;padding:14px 18px;touch-action:pan-y;-webkit-user-select:text;user-select:text}
+.pbox h2{font:14px "Press Start 2P",monospace;color:var(--gold);margin:4px 0 10px;line-height:1.4}
+.pbox h3{font:10px "Press Start 2P",monospace;color:var(--cyan);margin:12px 0 6px}
+.x{position:absolute;right:6px;top:6px;background:none;border:0;color:var(--cream);font-size:18px;cursor:pointer}
+.btn{font:11px Silkscreen,monospace;background:var(--purple);color:#fff;border:0;padding:8px 12px;cursor:pointer;box-shadow:3px 3px 0 #000;margin:3px}
+.btn.gold{background:var(--gold);color:var(--ink)}.btn.x2{background:#000;border:2px solid #fff}.btn:disabled{opacity:.45;cursor:default}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.tabs .btn.on{background:var(--gold);color:var(--ink)}
+table{border-collapse:collapse;width:100%;font-size:12px}td,th{padding:3px 6px;text-align:left;border-bottom:1px solid #2a1f55}th{color:var(--gold);font-weight:normal}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{background:#1d1640;border:2px solid #2a1f55;padding:8px;font-size:12px}.card b{color:var(--gold)}
+.small{font-size:11px;opacity:.8}.note{font-size:11px;background:#0008;border-left:3px solid var(--green);padding:6px 8px;margin:8px 0}
+input{font:12px Silkscreen,monospace;background:#000;color:var(--cream);border:2px solid var(--purple);padding:6px;width:100%}
+#rotate{display:none;position:fixed;inset:0;background:var(--navy);z-index:20;align-items:center;justify-content:center;text-align:center;font:12px "Press Start 2P",monospace;line-height:2;color:var(--gold)}
+@media (orientation:portrait) and (pointer:coarse){#rotate{display:flex}}
+body.touch #bar{flex-direction:column;align-items:stretch;flex-wrap:nowrap;top:max(4px,env(safe-area-inset-top));right:max(4px,env(safe-area-inset-right));width:66px}
+body.touch .tb{padding:3px 4px;font-size:9px}body.touch #purse{font-size:9px;padding:3px 4px;text-align:center}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!--META-->
+<title>Pup Crossing · Inu Arcade</title>
+<meta name="description" content="Hop a pup across Kibble Highway and Bonewater Creek into the kennels. Free-to-play at Inu Arcade.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Inu Arcade">
+<meta property="og:title" content="Pup Crossing · Inu Arcade">
+<meta property="og:description" content="Hop a pup across Kibble Highway and Bonewater Creek into the kennels. Free-to-play at Inu Arcade.">
+<meta property="og:image" content="https://inu-arcade.vercel.app/og/pup-crossing.png">
+<meta property="og:url" content="https://inu-arcade.vercel.app/pup-crossing">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pup Crossing · Inu Arcade">
+<meta name="twitter:description" content="Hop a pup across Kibble Highway and Bonewater Creek into the kennels. Free-to-play at Inu Arcade.">
+<meta name="twitter:image" content="https://inu-arcade.vercel.app/og/pup-crossing.png">
+<!--/META-->
+<link rel="icon" href="/favicon.png">
+<link rel="preload" href="/fonts/PressStart2P.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="stage"><canvas id="screen" width="384" height="216" aria-label="Inu Arcade game screen"></canvas></div>
+<div id="bar">
+  <button class="tb" id="b-lobby" title="Back to the arcade hall">⌂ Hall</button>
+  <button class="tb" id="b-scores" title="Leaderboards">🏆 Scores</button>
+  <button class="tb" id="b-prizes" title="Prize counter">🎟 Prizes</button>
+  <button class="tb" id="b-profile" title="Your Shiba">🐕 Me</button>
+  <button class="tb" id="b-mute" title="Sound">🔊</button>
+  <span id="purse"></span>
+</div>
+<div id="pad" aria-hidden="true">
+  <div class="dpad"><b data-k="up">▲</b><b data-k="left">◀</b><b data-k="right">▶</b><b data-k="down">▼</b></div>
+  <div class="btns"><b data-k="a" class="abtn">A</b><b data-k="start" class="sbtn">START</b><b data-k="back" class="sbtn bk">BACK</b></div>
+</div>
+<div id="panel" hidden><div class="pbox"><button class="x" id="pclose" aria-label="Close">✕</button><div id="pbody"></div></div></div>
+<div id="rotate"><div>🐕📱↻<br>Turn your phone sideways to play</div></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
