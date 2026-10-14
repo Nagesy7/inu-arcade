@@ -11,6 +11,19 @@ test('chomp: native 224x288, 28x31 maze, 240 dots + 4 energizers, tunnel row wra
   for (const k of [...s.dots, ...s.energizers]) assert.ok(seen.has(k), 'unreachable ' + k);
   s.ready = 0; s.cats.forEach((c) => (c.state = 'house')); s.pac.x = 4; s.pac.y = 14 * 8 + 4; s.pac.dir = 'left'; s.pac.want = 'left'; run(C, s, 20, () => ({ left: true })); assert.ok(s.pac.x > 200, 'wrapped to right side ' + s.pac.x);
 });
+test('chomp: original maze has no dead ends, no 2x2 open blocks, a mirrored layout, sensible no-up tiles, and a house + start', () => {
+  const open = (x, y) => !C.isWall(x, y); let cells = 0;
+  for (let y = 0; y < 31; y++) for (let x = 0; x < 28; x++) { if (!open(x, y)) continue; cells++; const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => open(x + dx, y + dy)).length; assert.ok(n >= 2, `dead end at ${x},${y}`); if (x < 27 && y < 30) assert.ok(!(open(x + 1, y) && open(x, y + 1) && open(x + 1, y + 1)), `2x2 open block at ${x},${y}`); }
+  for (const r of C.MAZE) assert.equal(r, [...r].reverse().join(''), 'left-right symmetric');
+  assert.ok(cells > 280 && cells < 360, 'corridor density ' + cells);
+  for (const k of C.NO_UP) { const [x, y] = k.split(',').map(Number); assert.ok(open(x, y) && open(x, y - 1), 'no-up tile is a real up junction ' + k); }
+  assert.equal(C.MAZE[12].slice(13, 15), '--'); assert.ok(open(13, 23) && open(14, 23) && open(13, 11) && open(14, 11), 'pac + blinky start tiles open');
+});
+test('chomp: cats leave the house and keep chasing on the new maze (no stuck cats)', () => {
+  const s = C.create(7); s.ready = 0; const seen = s.cats.map(() => new Set());
+  for (let i = 0; i < 60 * 40; i++) { C.step(s, F, {}); s.lives = 3; s.over = false; s.cats.forEach((c, j) => { if (c.state === 'out') seen[j].add(Math.floor(c.x / 8) + ',' + Math.floor(c.y / 8)); }); }
+  seen.forEach((v, j) => assert.ok(v.size > 10, `cat ${j} roamed ${v.size} tiles`));
+});
 test('chomp: per-level speed table (pac, ghost, tunnel, fright, Elroy)', () => {
   assert.deepEqual(C.speeds(1), { pac: 80, pacFright: 90, ghost: 75, tunnel: 40, fright: 50, elroy1: [20, 80], elroy2: [10, 85] });
   assert.deepEqual(C.speeds(2), { pac: 90, pacFright: 95, ghost: 85, tunnel: 45, fright: 55, elroy1: [30, 90], elroy2: [15, 95] });
@@ -51,16 +64,16 @@ test('chomp: ghost-house dot limits (L1 inky 30, clyde 60) and the idle timer', 
 test('chomp: cornering lets Pac cut corners; dots stall Pac 1 frame, energizers 3', () => {
   const s = C.create(1); s.ready = 0; s.cats.forEach((c) => (c.state = 'house')); s.idleF = -1e9; s.dotCounters = [0, -1e9, -1e9, -1e9]; s.cats[1].state = 'house';
   // at (6,5) junction approaching from the right; pre-turn before the centre moves diagonally
-  s.pac.x = 6 * 8 + 4 + 3; s.pac.y = 5 * 8 + 4; s.pac.dir = 'left'; s.dots.clear(); s.energizers.clear(); s.energizers.add('0,0');
-  C.step(s, F, { down: true }); C.step(s, F, { down: true }); assert.equal(s.pac.dir, 'down'); assert.ok(s.pac.y > 5 * 8 + 4 && s.pac.x < 6 * 8 + 4 + 3, 'moved diagonally');
-  const t = C.create(1); t.ready = 0; t.pac.x = 9 * 8 + 4; t.pac.y = 23 * 8 + 4; t.pac.dir = 'left'; t.dots = new Set(['8,23']); for (let i = 0; i < 8; i++) C.step(t, F, { left: true }); assert.equal(t.pac.stall >= 0, true); assert.equal(t.score, 10);
+  s.pac.x = 4 * 8 + 4 + 3; s.pac.y = 5 * 8 + 4; s.pac.dir = 'left'; s.dots.clear(); s.energizers.clear(); s.energizers.add('0,0');
+  C.step(s, F, { down: true }); C.step(s, F, { down: true }); assert.equal(s.pac.dir, 'down'); assert.ok(s.pac.y > 5 * 8 + 4 && s.pac.x < 4 * 8 + 4 + 3, 'moved diagonally');
+  const t = C.create(1); t.ready = 0; t.pac.x = 13 * 8 + 4; t.pac.y = 23 * 8 + 4; t.pac.dir = 'left'; t.dots = new Set(['12,23']); for (let i = 0; i < 8; i++) C.step(t, F, { left: true }); assert.equal(t.pac.stall >= 0, true); assert.equal(t.score, 10);
 });
 test('chomp: bonus items at 70 and 170 dots, value sequence by level; 200/400/800/1600; extra life at 10000', () => {
   assert.deepEqual(C.BONUS_DOTS, [70, 170]); assert.deepEqual([1, 2, 3, 5, 7, 9, 11, 13, 20].map((l) => C.bonusFor(l)[1]), [100, 300, 500, 700, 1000, 2000, 3000, 5000, 5000]);
   assert.deepEqual(C.PTS.ghosts, [200, 400, 800, 1600]); assert.equal(C.PTS.extraLifeAt, 10000);
-  const s = C.create(1); s.ready = 0; s.eaten = 69; s.pac.x = 9 * 8 + 4; s.pac.y = 23 * 8 + 4; s.pac.dir = 'left'; for (let i = 0; i < 10; i++) C.step(s, F, { left: true }); assert.equal(s.bonus?.pts, 100);
-  const e = C.create(1); e.ready = 0; e.frightF = 300; e.cats.forEach((c, i) => { c.state = 'out'; c.fright = true; c.x = e.pac.x - 4; c.y = e.pac.y; }); for (let i = 0; i < 4; i++) { C.step(e, F, {}); e.freeze = 0; } assert.equal(e.score, 200 + 400 + 800 + 1600);
-  const x = C.create(1); x.ready = 0; x.score = 9995; x.pac.x = 9 * 8 + 4; x.pac.y = 23 * 8 + 4; x.pac.dir = 'left'; for (let i = 0; i < 10; i++) C.step(x, F, { left: true }); assert.equal(x.lives, 4);
+  const s = C.create(1); s.ready = 0; s.eaten = 69; s.pac.x = 13 * 8 + 4; s.pac.y = 23 * 8 + 4; s.pac.dir = 'left'; for (let i = 0; i < 10; i++) C.step(s, F, { left: true }); assert.equal(s.bonus?.pts, 100);
+  const e = C.create(1); e.ready = 0; e.dots.clear(); e.frightF = 300; e.cats.forEach((c, i) => { c.state = 'out'; c.fright = true; c.x = e.pac.x - 4; c.y = e.pac.y; }); for (let i = 0; i < 4; i++) { C.step(e, F, {}); e.freeze = 0; } assert.equal(e.score, 200 + 400 + 800 + 1600);
+  const x = C.create(1); x.ready = 0; x.score = 9995; x.pac.x = 13 * 8 + 4; x.pac.y = 23 * 8 + 4; x.pac.dir = 'left'; for (let i = 0; i < 10; i++) C.step(x, F, { left: true }); assert.equal(x.lives, 4);
 });
 test('chomp: touching a cat costs a life, clearing all 244 advances the level; bot can clear level 1', () => {
   const s = C.create(1); s.ready = 0; const c = s.cats[0]; c.x = s.pac.x - 4; c.y = s.pac.y; C.step(s, F, {}); assert.equal(s.lives, 2);

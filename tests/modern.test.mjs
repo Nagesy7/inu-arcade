@@ -9,7 +9,7 @@ test('classic has no Inu twists', () => {
 });
 test('Inu Chomp: bark stuns nearby cats (harmless while stunned); $KIBBLE coin', () => {
   const s = C.create(1, { inu: true }); s.ready = 0; const c = s.cats[0]; c.x = s.pac.x + 16; c.y = s.pac.y; C.step(s, F, { a: true }); assert.ok(c.stun > 0); c.x = s.pac.x; c.y = s.pac.y; C.step(s, F, {}); assert.equal(s.lives, 3);
-  const k = C.create(1, { inu: true }); k.ready = 0; k.eaten = 99; k.pac.x = 9 * 8 + 4; k.pac.y = 23 * 8 + 4; k.pac.dir = 'left'; for (let i = 0; i < 8; i++) C.step(k, F, { left: true }); assert.ok(k.coin);
+  const k = C.create(1, { inu: true }); k.ready = 0; k.eaten = 99; k.pac.x = 13 * 8 + 4; k.pac.y = 23 * 8 + 4; k.pac.dir = 'left'; for (let i = 0; i < 8; i++) C.step(k, F, { left: true }); assert.ok(k.coin);
 });
 test('Inu Invaders: Mega Woof pierces a column; boss whale on wave 3', () => {
   const s = I.create(1, { inu: true }); s.ready = 0; s.ufoT = 1e9; const col = s.aliens.filter((a) => a.c === 5); s.player.x = col[0].x + 2;

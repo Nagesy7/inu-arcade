@@ -5,11 +5,9 @@
 import { rng } from '../core/rng.js';
 export const META = { id: 'kibble-chomp', title: 'KIBBLE CHOMP', color: '#f2c14e', blurb: 'Clear the maze of kibble. Four bear-market cats hunt you, each its own way. Power bones turn the hunt around.', controls: 'Arrows / WASD / D-pad to steer', inuMove: 'BARK STUN (A): freezes nearby cats for 2s, 8s cooldown. $KIBBLE coins (+500) appear twice a maze.', classicNote: 'Arcade-accurate tables.' };
 export const W = 224, H = 288, OY = 24, COLS = 28, ROWS = 31, TILE = 8;
+// Original Inu Arcade maze (v4): 28x31, mirrored halves, 240 kibble + 4 power bones, side tunnel on row 14, no dead ends.
 const HALF = [
-  '##############', '#............#', '#.####.#####.#', '#o####.#####.#', '#.####.#####.#', '#.............', '#.####.##.####', '#.####.##.####', '#......##....#',
-  '######.##### #', '######.##### #', '######.##     ', '######.## ###-', '######.## #HHH', '      .   #HHH', '######.## #HHH', '######.## ####', '######.##     ',
-  '######.## ####', '######.## ####', '#............#', '#.####.#####.#', '#.####.#####.#', '#o..##....... ', '###.##.##.####', '###.##.##.####', '#......##....#',
-  '#.##########.#', '#.##########.#', '#.............', '##############'];
+  '##############', '#.....#.......', '#.###.#.####.#', '#o###.#.####.#', '#.###.#.####.#', '#.............', '#.##.#####.###', '#.##.#####.###', '#....##      #', '####.## #### #', '####.## #### #', '####.         ', '####.## # ###-', '####.## # #HHH', '    .##   #HHH', '####.## # #HHH', '####.## # ####', '####.         ', '####.## # ####', '#....##..     ', '#.##.#####.###', '#.##.#####.###', '#o.#.......###', '##.#.##.##....', '##...##.######', '####.##.######', '#.......#.....', '#.#####.#.####', '#.#####.#.####', '#.............', '##############'];
 export const MAZE = HALF.map((r) => r + [...r].reverse().join(''));
 export const PTS = { dot: 10, energizer: 50, ghosts: [200, 400, 800, 1600], extraLifeAt: 10000 };
 const PX100 = 75.75757625 / 60; // 100% speed in px/frame
@@ -35,7 +33,7 @@ export const DOT_LIMITS = (level) => (level === 1 ? [0, 0, 30, 60] : level === 2
 export const GLOBAL_LIMITS = [0, 7, 17, 32];
 export const idleLimit = (level) => (level < 5 ? 240 : 180); // frames without a dot before forcing a release
 export const SCATTER = [{ x: 25, y: -3 }, { x: 2, y: -3 }, { x: 27, y: 32 }, { x: 0, y: 32 }];
-export const NO_UP = ['12,11', '15,11', '12,23', '15,23'];
+export const NO_UP = ['12,11', '15,11', '10,23', '17,23']; // cats can't turn up here (above the house + above the start lane)
 export const BARK = { cd: 8, radius: 3.5, stun: 2 }, COIN = { at: [100, 200], pts: 500, life: 9 };
 const DIRS = { up: [0, -1], left: [-1, 0], down: [0, 1], right: [1, 0] }, OPP = { up: 'down', down: 'up', left: 'right', right: 'left' }, ORDER = ['up', 'left', 'down', 'right'];
 export const CAT_COLORS = ['#e8343c', '#f58ac8', '#3ad0e0', '#f5a23a'], CAT_NAMES = ['BEARISH', 'PANIC', 'DUMPY', 'FUDDY'];
@@ -43,7 +41,7 @@ export function isWall(tx, ty) { if (ty === 14 && (tx < 0 || tx >= COLS)) return
 const ghostWall = (tx, ty, eyes) => { if (ty >= 0 && ty < ROWS && tx >= 0 && tx < COLS && MAZE[ty][tx] === '-') return !eyes; return isWall(tx, ty); };
 const tileOf = (a) => ({ x: Math.floor(a.x / TILE), y: Math.floor(a.y / TILE) });
 const atCenter = (a) => a.x % 8 === 4 && a.y % 8 === 4;
-export const inTunnel = (a) => { const t = tileOf(a); return t.y === 14 && (t.x <= 5 || t.x >= 22); };
+export const inTunnel = (a) => { const t = tileOf(a); return t.y === 14 && (t.x <= 3 || t.x >= 24); };
 const fx = (s, x, y, c, n = 8) => s.fx.push({ x, y: y + OY, c, n }), pop = (s, x, y, text, c = '#7ef0ff') => s.pops.push({ x, y: y + OY, text, c, t: 1 });
 export function create(seed = 1, opts = {}) {
   const s = { id: META.id, inu: !!opts.inu, seed, rnd: rng(seed), score: 0, lives: 3, level: 1, over: false, t: 0, ev: [], fx: [], pops: [], shake: 0, flash: 0, acc: 0, frame: 0, extra: false,
