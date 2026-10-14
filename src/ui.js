@@ -1,6 +1,6 @@
 // DOM panels: results + share, leaderboards & prize pools, prize counter, profile/wallet, Inu Rescue link.
 import { A, GAMES, RESCUE_URL, save, go, startPlay } from './main.js';
-import * as S from './core/scores.js'; import * as R from './core/rewards.js'; import { sfx } from './core/audio.js';
+import * as S from './core/scores.js'; import * as R from './core/rewards.js'; import { sfx } from './core/audio.js'; import * as MET from './core/meta.js';
 import { avatarCanvas } from './vendor/inu-avatar.js'; import { normalizeProfile } from './vendor/profile-schema.js';
 const $ = (q) => document.querySelector(q), esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const KIBBLE_PAY = 'https://kibble-pay.vercel.app';
@@ -10,32 +10,34 @@ export function closePanel() { $('#panel').hidden = true; A.input?.clear(); }
 $('#pclose').onclick = closePanel; $('#panel').addEventListener('pointerdown', (e) => { if (e.target.id === 'panel') closePanel(); });
 export function refreshPurse() { $('#purse').textContent = `🦴 ${A.purse.bones}  🎟 ${A.purse.tickets}`; }
 const title = (id) => GAMES[id]?.META.title.replace(/\b\w+/g, (w) => w[0] + w.slice(1).toLowerCase()) || 'Inu Arcade';
-export function shareUrl(id, score) { const text = `🐕🕹️ I scored ${score} on ${title(id)} at Inu Arcade! Free to play, beat me:`; const url = `${location.origin}/${id}`;
+export function shareUrl(id, score, gmode = 'classic') { const text = `🐕🕹️ I scored ${score} on ${title(id)} (${MET.MODES[gmode].name.toLowerCase()}) at Inu Arcade! Free to play, beat me:`; const url = `${location.origin}/${id}`;
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`; }
 export function showResults(id, r) {
   openPanel(`<h2>${esc(title(id))}</h2><p><b style="color:var(--gold);font-size:18px">${r.score}</b> points · level ${r.level}</p>
-  <p>Rank <b>#${r.drank}</b> today · <b>#${r.rank}</b> all-time</p><p>Earned <b>+${r.got.bones} Bones</b> and <b>+${r.got.tickets} prize tickets</b> 🎟</p>
-  <div><a class="btn x2" id="r-share" href="${shareUrl(id, r.score)}" target="_blank" rel="noopener">Share on 𝕏</a><button class="btn" id="r-copy">Copy link</button></div>
+  ${r.mult !== 1 ? `<p class="small">${r.raw} × ${r.mult} weekly modifier</p>` : ''}<p>${esc(MET.MODES[r.gmode].name)} · Rank <b>#${r.drank}</b> today · <b>#${r.rank}</b> all-time</p><p>Earned <b>+${r.got.bones} Bones</b> and <b>+${r.got.tickets} prize tickets</b> 🎟</p>
+  ${r.ach?.length ? `<div class="note">🏅 Achievement${r.ach.length > 1 ? 's' : ''}: ${r.ach.map((a) => `<b>${esc(a.name)}</b> (+${a.tickets} 🎟)`).join(', ')}</div>` : ''}${r.newGhost ? '<p class="small">👻 New personal best saved as your ghost. It will race you next time and play in attract mode.</p>' : ''}
+  <div><a class="btn x2" id="r-share" href="${shareUrl(id, r.score, r.gmode)}" target="_blank" rel="noopener">Share on 𝕏</a><button class="btn" id="r-copy">Copy link</button></div>
   <div><button class="btn gold" id="r-again">Play again</button><button class="btn" id="r-scores">Leaderboards</button><button class="btn" id="r-prizes">Prize counter</button><button class="btn" id="r-hall">Back to hall</button></div>
   <p class="small">Tickets come from playing and from score tiers. Bones are free play currency and can't be cashed out.</p>`, 'results');
-  $('#r-again').onclick = () => { closePanel(); startPlay(); }; $('#r-scores').onclick = () => showScores(id); $('#r-prizes').onclick = () => showPrizes(); $('#r-hall').onclick = () => go(null);
+  $('#r-again').onclick = () => { closePanel(); startPlay(); }; $('#r-scores').onclick = () => showScores(id, 'daily', r.gmode); $('#r-prizes').onclick = () => showPrizes(); $('#r-hall').onclick = () => go(null);
   $('#r-copy').onclick = async () => { try { await navigator.clipboard.writeText(`${location.origin}/${id}`); $('#r-copy').textContent = 'Copied!'; } catch { $('#r-copy').textContent = location.origin + '/' + id; } };
 }
 const fmtT = (ms) => { const h = Math.floor(ms / 36e5); return h >= 48 ? `${Math.floor(h / 24)}d` : `${h}h ${Math.floor((ms % 36e5) / 6e4)}m`; };
-export function showScores(game = 'arcade', period = 'daily') {
-  if (!game || !GAMES[game]) game = game === 'arcade' || !game ? 'arcade' : 'arcade';
+export function showScores(game = 'arcade', period = 'daily', mode = 'classic') {
+  if (!game || !GAMES[game]) game = 'arcade'; const key = MET.boardKey(game, mode);
+  const mtabs = MET.MODE_IDS.map((m) => `<button class="btn ${m === mode ? 'on' : ''}" data-m="${m}">${MET.MODES[m].name}</button>`).join('');
   const tabs = ['arcade', ...Object.keys(GAMES)].map((g) => `<button class="btn ${g === game ? 'on' : ''}" data-g="${g}">${g === 'arcade' ? 'Arcade' : esc(title(g))}</button>`).join('');
   const ptabs = S.PERIODS.map((p) => `<button class="btn ${p === period ? 'on' : ''}" data-p="${p}">${p}</button>`).join('');
   let rows;
-  if (game === 'arcade') rows = S.arcadeBoard(A.db, period, Date.now(), 15).map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}${e.house ? ' <span class="small">(house)</span>' : ''}</td><td>${e.points}</td><td>${e.games}/4</td></tr>`).join('');
-  else rows = S.board(A.db, game, period, Date.now(), 15).map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}${e.house ? ' <span class="small">(house)</span>' : ''}</td><td>${e.score}</td><td class="small">${new Date(e.at).toLocaleDateString()}</td></tr>`).join('');
-  const pools = ['daily', 'weekly', 'monthly'].map((p) => { const ranked = S.arcadeBoard(A.db, p); const po = S.payouts(p, ranked);
+  if (game === 'arcade') rows = S.arcadeBoard(A.db, period, Date.now(), 15, mode).map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}${e.house ? ' <span class="small">(house)</span>' : ''}</td><td>${e.points}</td><td>${e.games}/4</td></tr>`).join('');
+  else rows = S.board(A.db, key, period, Date.now(), 15).map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}${e.house ? ' <span class="small">(house)</span>' : ''}</td><td>${e.score}</td><td class="small">${new Date(e.at).toLocaleDateString()}</td></tr>`).join('');
+  const pools = ['daily', 'weekly', 'monthly'].map((p) => { const ranked = S.arcadeBoard(A.db, p, Date.now(), 10, mode); const po = S.payouts(p, ranked);
     return `<div class="card"><b>${p.toUpperCase()} POOL</b><br>${S.POOLS[p].bones} Bones + ${esc(S.POOLS[p].cosmetic)}<br>${po.map((x) => `#${x.rank} ${esc(x.name)}: ${x.bones} 🦴${x.cosmetic ? ' + 👑' : ''}`).join('<br>')}<br><span class="small">resets in ${fmtT(S.resetsIn(p))}</span></div>`; }).join('');
-  openPanel(`<h2>Leaderboards</h2><div class="tabs">${tabs}</div><div class="tabs">${ptabs}</div>
+  openPanel(`<h2>Leaderboards</h2><div class="tabs">${mtabs}</div><div class="tabs">${tabs}</div><div class="tabs">${ptabs}</div>
   <table><tr><th>#</th><th>Pup</th><th>${game === 'arcade' ? 'Arcade pts' : 'Score'}</th><th>${game === 'arcade' ? 'Games' : 'Date'}</th></tr>${rows || '<tr><td colspan=4>No scores yet. Be the first!</td></tr>'}</table>
-  <h3>Prize pools (skill only)</h3><div class="grid">${pools}</div>
+  <h3>Prize pools (skill only) · ${MET.MODES[mode].name}</h3><p class="small">This week's Inu Mode modifier: <b>${esc(MET.weeklyModifier().name)}</b>, ${esc(MET.weeklyModifier().desc)}</p><div class="grid">${pools}</div>
   <div class="note">Free to play. Prizes go to the top 3 on the combined Arcade board for each period, by rank only: no entry fee, no draws, no luck. Arcade points: each game's top score in the period is worth 1000, everyone else gets their share, summed over the four games. House scores (INU/PUP/DOG) are demo entries and never win. Scores are stored on this device for now; the server board is coming with kibble-pay sign-in.</div>`, 'scores');
-  document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => showScores(b.dataset.g, period))); document.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => showScores(game, b.dataset.p)));
+  document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => showScores(b.dataset.g, period, mode))); document.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => showScores(game, b.dataset.p, mode))); document.querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => showScores(game, period, b.dataset.m)));
 }
 export async function showPrizes(msg = '') {
   const P = A.purse, bal = await A.wallet().balance();
@@ -76,3 +78,5 @@ export function showRescue() {
   <p><a class="btn gold" href="${RESCUE_URL}" target="_blank" rel="noopener">Play Inu Rescue ↗</a><button class="btn" id="rs-back">Stay in the hall</button></p>`, 'rescue');
   $('#rs-back').onclick = closePanel;
 }
+export function showAchievements() { const got = A.purse.ach || {};
+  openPanel(`<h2>Achievements</h2><p class="small">${Object.keys(got).length}/${MET.ACHIEVEMENTS.length} unlocked. Each pays a fixed number of prize tickets once.</p><div class="grid">${MET.ACHIEVEMENTS.map((a) => `<div class="card ach ${got[a.id] ? '' : 'locked'}"><div>${got[a.id] ? '🏅' : '🔒'}</div><div><b>${esc(a.name)}</b><br><span class="small">${esc(a.desc)}</span><br>🎟 ${a.tickets}</div></div>`).join('')}</div>`, 'ach'); }

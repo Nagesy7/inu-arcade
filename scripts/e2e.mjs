@@ -36,7 +36,32 @@ const tag = process.env.TAG || 'local';
     const href = await p.locator('#r-share').getAttribute('href'); ok(href.startsWith('https://x.com/intent/post?') && href.includes(encodeURIComponent(String(top.score))) && href.includes(encodeURIComponent('/' + g)), `${g}: share-to-X link carries score + game URL`);
     await p.screenshot({ path: `proof/${tag}-desktop-${g}-results.png` }); await p.click('#pclose');
   }
-  await p.click('#b-scores'); await p.waitForTimeout(200); await p.screenshot({ path: `proof/${tag}-desktop-leaderboards.png` }); ok(await p.locator('#pbody table tr').count() > 3, 'scores panel lists arcade board');
+  // ---- Inu Mode: select with real keys, use each signature move ----
+  for (const g of GAMES) {
+    await p.goto(URL + '/' + g); await p.waitForTimeout(600); await p.keyboard.press('ArrowRight'); await p.waitForTimeout(100);
+    ok((await p.evaluate(() => window.__arcade.cab.gmode)) === 'inu', `${g}: ArrowRight on title selects INU MODE`); await p.screenshot({ path: `proof/${tag}-desktop-${g}-inu-title.png` });
+    await p.keyboard.press('Enter'); await p.waitForTimeout(150);
+    const r = await p.evaluate(() => { const s = window.__arcade.cab.s; return { inu: s.inu, mod: !!window.__arcade.cab.mod }; }); ok(r.inu && r.mod, `${g}: Inu run has twists + weekly modifier`);
+    if (g === 'kibble-chomp') { await p.waitForTimeout(1600); await p.keyboard.press('Space'); await p.waitForTimeout(60); ok((await p.evaluate(() => window.__arcade.cab.s.stats.barks)) === 1, `${g}: Space = bark stun`); }
+    if (g === 'bark-invaders') { await p.keyboard.down('Space'); await p.waitForTimeout(1100); await p.keyboard.up('Space'); await p.waitForTimeout(60); ok((await p.evaluate(() => window.__arcade.cab.s.stats.megas)) === 1, `${g}: hold+release Space = Mega Woof`); }
+    if (g === 'pup-crossing') { await p.keyboard.press('ArrowUp'); await p.waitForTimeout(250); await p.keyboard.press('Space'); await p.waitForTimeout(60); const q = await p.evaluate(() => window.__arcade.cab.s); ok(q.stats.leaps === 1 || q.lives < 3, `${g}: Space = zoomies leap (leaps ${q.stats.leaps})`); }
+    if (g === 'bone-breaker') { await p.keyboard.press('Space'); await p.waitForTimeout(500); await p.keyboard.press('Space'); await p.waitForTimeout(60); ok((await p.evaluate(() => window.__arcade.cab.s.stats.smashes)) === 1, `${g}: Space = bone smash, boss brick present ${await p.evaluate(() => window.__arcade.cab.s.bricks.some((b) => b.boss))}`); }
+    await p.waitForTimeout(700); await p.screenshot({ path: `proof/${tag}-desktop-${g}-inu-play.png` });
+    await p.evaluate(() => { const s = window.__arcade.cab.s; s.score += 777; s.over = true; }); await p.waitForTimeout(2600); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
+    const k = await p.evaluate((g) => ({ inu: (window.__arcade.db[g + '@inu'] || []).length, ghost: !!localStorage.getItem('inuarcade.ghost.' + g + '@inu'), ach: Object.keys(window.__arcade.purse.ach || {}).length }), g);
+    ok(k.inu >= 1 && k.ghost && k.ach >= 1, `${g}: Inu score on its own board, ghost saved, achievements ${k.ach}`); await p.click('#pclose');
+    await p.evaluate(() => (window.__arcade.cab.t = 7.9)); await p.keyboard.press('Escape'); await p.goto(URL + '/' + g); await p.waitForTimeout(400); await p.evaluate(() => (window.__arcade.cab.t = 7.95)); await p.waitForTimeout(400);
+    ok((await p.evaluate(() => window.__arcade.cab.demo?.label)) === 'REPLAY: YOUR BEST RUN', `${g}: attract mode replays your ghost`);
+    await p.keyboard.press('Enter'); await p.waitForTimeout(300); ok(await p.evaluate(() => !!window.__arcade.cab.ghost), `${g}: ghost races you on the next run`);
+    if (g === 'pup-crossing') await p.screenshot({ path: `proof/${tag}-desktop-ghost-race.png` });
+    await p.evaluate(() => localStorage.setItem('inuarcade.mode', 'classic'));
+  }
+  await p.goto(URL + '/bone-breaker'); await p.waitForTimeout(500); await p.keyboard.press('ArrowLeft'); await p.waitForTimeout(100); ok((await p.evaluate(() => window.__arcade.cab.gmode)) === 'daily', 'ArrowLeft wraps to DAILY CHALLENGE');
+  await p.keyboard.press('Enter'); await p.waitForTimeout(100); const ds = await p.evaluate(() => window.__arcade.cab.seed); await p.keyboard.press('Escape'); await p.goto(URL + '/bone-breaker'); await p.waitForTimeout(400); await p.keyboard.press('Enter'); await p.waitForTimeout(100);
+  ok(ds === (await p.evaluate(() => window.__arcade.cab.seed)), `daily challenge reuses today's seed (${ds})`); await p.evaluate(() => localStorage.setItem('inuarcade.mode', 'classic'));
+  await p.click('#b-ach'); await p.waitForTimeout(200); await p.screenshot({ path: `proof/${tag}-desktop-achievements.png` }); await p.click('#pclose');
+  await p.click('#b-crt'); ok(!(await p.evaluate(() => document.body.classList.contains('crt'))), 'CRT toggle turns off'); await p.click('#b-crt');
+  await p.click('#b-scores'); await p.waitForTimeout(200); await p.click('[data-m="inu"]'); await p.waitForTimeout(150); await p.screenshot({ path: `proof/${tag}-desktop-leaderboards.png` }); ok(await p.locator('#pbody table tr').count() >= 2, 'scores panel lists arcade board');
   const tk = await p.evaluate(() => window.__arcade.purse.tickets); await p.click('#pclose'); await p.click('#b-prizes'); await p.waitForTimeout(200);
   await p.click('[data-buy="arcade-cap"]'); await p.waitForTimeout(200); const pr = await p.evaluate(() => ({ t: window.__arcade.purse.tickets, owned: window.__arcade.purse.owned, hat: window.__arcade.profile.outfit.hat?.id }));
   ok(pr.owned.includes('arcade-cap') && pr.t === tk - 4 && pr.hat === 'arcade-cap', `prize counter swaps 4 tickets for Arcade Cap (${tk}->${pr.t})`);
@@ -71,6 +96,8 @@ const tag = process.env.TAG || 'local';
     await tap(await c('up')); await tap(await c('a')); await tap(await c('a')); await tap(await c('a')); await p.waitForTimeout(300); b = await st(); ok(b.mode === 'results', `iphone ${g}: initials entered by touch`);
     if (g === 'bone-breaker') await p.screenshot({ path: `proof/${tag}-iphone-results.png` }); await p.evaluate(() => document.querySelector('#pclose').click());
   }
+  await p.goto(URL + '/kibble-chomp'); await p.waitForTimeout(600); await tap(await c('right')); await p.waitForTimeout(100); ok((await st()).mode === 'title' && (await p.evaluate(() => window.__arcade.cab.gmode)) === 'inu', 'iphone: d-pad selects INU MODE');
+  await tap(await c('start')); await p.waitForTimeout(1700); await tap(await c('a')); await p.waitForTimeout(80); ok((await p.evaluate(() => window.__arcade.cab.s.stats.barks)) === 1, 'iphone: A = bark stun in Inu Mode'); await p.waitForTimeout(500); await p.screenshot({ path: `proof/${tag}-iphone-inu-chomp.png` });
   const sel = await p.evaluate(() => [String(getSelection()), scrollX, scrollY, visualViewport.scale].join('|')); ok(sel === '|0|0|1', `iphone: no selection/scroll/zoom (${sel})`);
   ok(errs.length === 0, 'iphone: no page errors ' + errs.join(' | ')); await ctx.close();
 }

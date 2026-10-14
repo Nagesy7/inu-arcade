@@ -1,6 +1,7 @@
 // Inu Arcade runtime: router, fixed-step loop, lobby hall, cabinet state machine (title/attract/play/over/initials/results).
 import { createInput } from './core/input.js';
-import { sfx, unlockAudio, isMuted, setMuted } from './core/audio.js';
+import { sfx, unlockAudio, isMuted, setMuted, setMusic } from './core/audio.js';
+import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
 import * as S from './core/scores.js';
 import * as R from './core/rewards.js';
@@ -8,7 +9,7 @@ import { simWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
 import * as Chomp from './games/chomp.js'; import * as Invaders from './games/invaders.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js';
-import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse } from './ui.js';
+import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements } from './ui.js';
 
 export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Invaders, 'pup-crossing': Crossing, 'bone-breaker': Breaker };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
@@ -38,7 +39,7 @@ function wrap(str, max) { const out = []; let line = ''; for (const w of str.spl
 const PATHS = [...Object.keys(GAMES), 'inu-rescue'];
 function routeId() { const p = location.pathname.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '').split('/')[0]; const h = location.hash.replace(/^#\/?/, ''); return PATHS.includes(p) ? p : PATHS.includes(h) ? h : null; }
 export function go(id, push = true) {
-  closePanel(); input.clear();
+  closePanel(); input.clear(); setMusic(false);
   if (id === 'inu-rescue') { if (push) history.pushState({}, '', '/'); toLobby(false); showRescue(); return; }
   if (id && GAMES[id]) { if (push && location.pathname !== '/' + id) history.pushState({}, '', '/' + id); openCab(id); }
   else { if (push && location.pathname !== '/') history.pushState({}, '', '/'); toLobby(false); }
@@ -116,18 +117,37 @@ function drawCabinet(c, now, skin) {
 }
 
 // ---------- cabinet ----------
+const modeKey = (C) => MET.boardKey(C.id, C.gmode);
+const ghostKey = (C) => 'inuarcade.ghost.' + modeKey(C);
 function openCab(id) {
-  const G = GAMES[id]; A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, s: G.create((Math.random() * 1e9) | 0), ini: [...A.initials], cur: 0 };
+  const G = GAMES[id]; A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
+  if (!MET.MODE_IDS.includes(A.cab.gmode)) A.cab.gmode = 'classic';
   document.title = `${G.META.title.replace(/\b\w+/g, (w) => w[0] + w.slice(1).toLowerCase())} · Inu Arcade`;
 }
-function startPlay() { const C = A.cab; C.s = C.G.create((Math.random() * 1e9) | 0); C.mode = 'play'; C.t = 0; sfx('start'); input.clear(); }
+function newRun(C, seed) { const mod = MET.modFor(C.gmode); const s = MET.applyMod(C.G.create(seed, { inu: C.gmode !== 'classic' }), mod); return { s, mod }; }
+function startPlay() { const C = A.cab; const seed = C.gmode === 'daily' ? MET.dailySeed(C.id) : (Math.random() * 1e9) | 0; const r = newRun(C, seed);
+  C.s = r.s; C.mod = r.mod; C.seed = seed; C.masks = []; C.mode = 'play'; C.t = 0; C.paused = false; C.parts = [];
+  const g = loadGhost(C); C.ghost = g ? { g, s: MET.applyMod(C.G.create(g.seed, { inu: g.mode !== 'classic' }), g.mod), ms: MET.decode(g.rle), i: 0 } : null;
+  sfx('start'); input.clear(); }
+function loadGhost(C) { try { return JSON.parse(LS.getItem(ghostKey(C))); } catch { return null; } }
+function stepFx(C, dt) { const s = C.s;
+  for (const f of s.fx.splice(0)) for (let i = 0; i < f.n; i++) { const a = Math.random() * 6.283, v = 20 + Math.random() * 70; C.parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, c: f.c, t: 0.4 + Math.random() * 0.4 }); }
+  for (const p of C.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 140 * dt; p.t -= dt; } C.parts = C.parts.filter((p) => p.t > 0).slice(-400);
+  for (const p of s.pops) { p.t -= dt * 0.8; p.y -= 14 * dt; } s.pops = s.pops.filter((p) => p.t > 0); s.shake = Math.max(0, (s.shake || 0) - dt); }
 function updateCab(dt, inp) {
   const C = A.cab, G = C.G; C.t += dt; const P = inp.pressed;
   if (P.has('back') && C.mode !== 'initials') return go(null);
-  if (C.mode === 'title') { if (P.has('a') || P.has('start')) return startPlay(); if (C.t > 7) { C.mode = 'attract'; C.t = 0; C.s = G.create((Math.random() * 1e9) | 0); } return; }
-  if (C.mode === 'attract') { G.step(C.s, dt, G.bot(C.s)); if (P.has('a') || P.has('start')) return startPlay(); if (C.s.over || C.t > 25) { C.mode = 'title'; C.t = 0; } return; }
-  if (C.mode === 'play') { if (P.has('start')) { C.paused = !C.paused; sfx('blip'); } if (C.paused) return; G.step(C.s, dt, inp); for (const e of C.s.ev) sfx(e); if (C.s.over) { C.mode = 'over'; C.t = 0; } return; }
-  if (C.mode === 'over') { if (C.t > 2.2) { if (C.s.score > 0) { C.mode = 'initials'; C.ini = [...A.initials]; C.cur = 0; } else { C.mode = 'title'; } C.t = 0; } return; }
+  if (C.mode === 'title') { if (P.has('left') || P.has('right') || P.has('up') || P.has('down')) { const i = MET.MODE_IDS.indexOf(C.gmode), d = P.has('left') || P.has('up') ? -1 : 1; C.gmode = MET.MODE_IDS[(i + d + 3) % 3]; LS.setItem('inuarcade.mode', C.gmode); sfx('blip'); C.t = 0; }
+    if (P.has('a') || P.has('start')) return startPlay(); if (C.t > 8) startAttract(C); return; }
+  if (C.mode === 'attract') { const D = C.demo; const m = D.ms ? D.ms[D.i++] : null; G.step(C.s, dt * (D.mod?.speed || 1), D.ms ? MET.fromMask(m ?? 0) : G.bot(C.s)); C.s.fx.length = 0; C.s.pops.length = 0;
+    if (P.has('a') || P.has('start')) return startPlay(); if (C.s.over || C.t > 25 || (D.ms && D.i >= D.ms.length)) { C.mode = 'title'; C.t = 0; } return; }
+  if (C.mode === 'play') { if (P.has('start')) { C.paused = !C.paused; sfx('blip'); } if (C.paused) { setMusic(false); return; }
+    const m = MET.toMask(inp); C.masks.push(m); G.step(C.s, dt * (C.mod?.speed || 1), MET.fromMask(m)); for (const e of C.s.ev) sfx(e); stepFx(C, dt);
+    if (C.ghost && !C.ghost.s.over && C.ghost.i < C.ghost.ms.length) { const gs = C.ghost.s; G.step(gs, dt * (C.ghost.g.mod?.speed || 1), MET.fromMask(C.ghost.ms[C.ghost.i++])); gs.fx.length = 0; gs.pops.length = 0; gs.ev.length = 0; }
+    setMusic(true, Math.min(3, (C.s.level - 1) + (C.s.lives <= 1 ? 1 : 0) + (C.gmode !== 'classic' ? 1 : 0)));
+    if (C.s.over) { C.mode = 'over'; C.t = 0; setMusic(false); C.final = MET.finalScore(C.s.score, C.mod); } return; }
+  stepFx(C, dt);
+  if (C.mode === 'over') { if (C.t > 2.2) { if (C.final > 0) { C.mode = 'initials'; C.ini = [...A.initials]; C.cur = 0; } else { C.mode = 'title'; } C.t = 0; } return; }
   if (C.mode === 'initials') {
     const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; const ch = (d) => { const i = L.indexOf(C.ini[C.cur]); C.ini[C.cur] = L[(i + d + L.length) % L.length]; sfx('blip'); };
     if (P.has('up')) ch(1); if (P.has('down')) ch(-1); if (P.has('left') && C.cur > 0) { C.cur--; sfx('blip'); }
@@ -136,40 +156,59 @@ function updateCab(dt, inp) {
   }
   if (C.mode === 'results') { if (!panelOpen() && (P.has('a') || P.has('start'))) startPlay(); }
 }
+function startAttract(C) { C.mode = 'attract'; C.t = 0; const g = loadGhost(C);
+  if (g) { C.s = MET.applyMod(C.G.create(g.seed, { inu: g.mode !== 'classic' }), g.mod); C.demo = { ms: MET.decode(g.rle), i: 0, mod: g.mod, label: 'REPLAY: YOUR BEST RUN' }; }
+  else { const r = newRun(C, (Math.random() * 1e9) | 0); C.s = r.s; C.demo = { ms: null, mod: r.mod, label: 'DEMO' }; } }
 function finishRun() {
-  const C = A.cab; A.initials = C.ini.join(''); const entry = S.addScore(A.db, C.id, { name: A.initials, score: C.s.score, wallet: wallet().simulated ? null : wallet().address });
-  const all = S.board(A.db, C.id, 'all', Date.now(), 100), day = S.board(A.db, C.id, 'daily', Date.now(), 100);
+  const C = A.cab, key = modeKey(C), score = C.final; A.initials = C.ini.join(''); const entry = S.addScore(A.db, key, { name: A.initials, score, wallet: wallet().simulated ? null : wallet().address });
+  const all = S.board(A.db, key, 'all', Date.now(), 100), day = S.board(A.db, key, 'daily', Date.now(), 100);
   const rank = all.findIndex((e) => e.name === entry.name) + 1, drank = day.findIndex((e) => e.name === entry.name) + 1;
-  const got = R.grant(A.purse, C.id, C.s.score); save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score: C.s.score, rank, drank, got, level: C.s.level };
-  S.postScore(C.id, entry); showResults(C.id, C.result);
+  const prev = loadGhost(C); let newGhost = false; if (!prev || score > (prev.score || 0)) { try { LS.setItem(ghostKey(C), JSON.stringify({ seed: C.seed, mode: C.gmode, mod: C.mod, score, rle: MET.encode(C.masks), at: Date.now() })); newGhost = true; } catch {} }
+  const got = R.grant(A.purse, C.id, score); const ach = MET.evalAchievements(A.purse, { game: C.id, mode: C.gmode, score, level: C.s.level, stats: C.s.stats || {} });
+  save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score, raw: C.s.score, mult: C.mod?.mult || 1, gmode: C.gmode, rank, drank, got, ach, newGhost, level: C.s.level };
+  S.postScore(key, entry); showResults(C.id, C.result);
 }
-function drawHUD(C) { const s = C.s; ctx.fillStyle = '#000000aa'; ctx.fillRect(0, 0, 384, 11); const hi = Math.max(S.board(A.db, C.id, 'all')[0]?.score || 0, s.score);
-  text(String(s.score).padStart(6, '0'), 4, 2, '#fbf1e0', 8); text('HI ' + hi, 150, 2, '#f2c14e', 8); text('L' + s.level, 262, 2, '#7ef0ff', 8);
+function drawHUD(C) { const s = C.s; ctx.fillStyle = '#000000aa'; ctx.fillRect(0, 0, 384, 11); const hi = Math.max(S.board(A.db, modeKey(C), 'all')[0]?.score || 0, MET.finalScore(s.score, C.mod));
+  text(String(s.score).padStart(6, '0'), 4, 2, '#fbf1e0', 8); if (C.mod) text('x' + C.mod.mult, 56, 3, '#f2c14e', 5); text('HI ' + hi, 128, 2, '#f2c14e', 8);
+  text(C.gmode === 'classic' ? 'CLASSIC' : C.gmode === 'daily' ? 'DAILY' : 'INU', 230, 3, C.gmode === 'classic' ? '#8a7ac4' : '#ff5d73', 5); text('L' + s.level, 270, 2, '#7ef0ff', 8);
   for (let i = 0; i < Math.min(5, s.lives); i++) PIX.blit(ctx, PIX.shibaHead(), 300 + i * 12, 0); }
 function drawCab(now) {
   const C = A.cab, G = C.G, M = G.META;
   if (C.mode === 'title') {
-    ctx.fillStyle = '#05030f'; ctx.fillRect(0, 0, 384, 216); for (let i = 0; i < 60; i++) { ctx.fillStyle = i % 4 ? '#2a2850' : '#6a62a0'; ctx.fillRect((i * 131) % 384, (i * 71 + now * 10 * (1 + (i % 3))) % 216, 1, 1); }
+    const g = ctx.createLinearGradient(0, 0, 0, 216); g.addColorStop(0, '#0a0620'); g.addColorStop(1, '#1a0a2a'); ctx.fillStyle = g; ctx.fillRect(0, 0, 384, 216);
+    ctx.strokeStyle = '#2a1650'; ctx.lineWidth = 1; for (let i = 0; i < 12; i++) { const y = 150 + i * i * 0.6 + ((now * 8) % 6); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(384, y); ctx.stroke(); } for (let i = -10; i <= 10; i++) { ctx.beginPath(); ctx.moveTo(192 + i * 8, 150); ctx.lineTo(192 + i * 40, 216); ctx.stroke(); }
     const skins = A.purse.skins[C.id] || []; if (skins.length) { ctx.strokeStyle = skins.includes('gold') ? '#f2d070' : M.color; ctx.lineWidth = 3; ctx.strokeRect(2, 2, 380, 212); }
-    text(M.title, 192, 22, '#000', 16, 'center', false); text(M.title, 190, 20, M.color, 16, 'center', false);
-    text('AN INU ARCADE ORIGINAL', 192, 42, '#8a7ac4', 8, 'center');
-    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#fbf1e0'; ctx.textAlign = 'center'; wrap(M.blurb, 60).forEach((l, i) => ctx.fillText(l, 192, 60 + i * 10)); ctx.textAlign = 'left';
-    text('TOP PUPS', 192, 88, '#f2c14e', 8, 'center'); S.board(A.db, C.id, 'all', Date.now(), 5).forEach((e, i) => text(`${i + 1}. ${e.name} ${String(e.score).padStart(6, ' ')}`, 192, 100 + i * 11, i ? '#fbf1e0' : '#7ef0ff', 8, 'center'));
-    if (Math.floor(now * 2) % 2) text(isTouch ? 'TAP START OR A' : 'PRESS SPACE OR ENTER', 192, 162, '#ff5d73', 8, 'center');
-    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#8a7ac4'; ctx.textAlign = 'center'; ctx.fillText(M.controls + (isTouch ? '' : ' · Esc: back to hall'), 192, 178);
-    const sp = R.SPONSORS[C.id]; ctx.fillText(sp ? `CABINET SPONSOR: ${sp.name}` : 'CABINET SPONSOR SLOT: OPEN · FREE PLAY · SKILL PRIZES ONLY', 192, 196); ctx.textAlign = 'left';
+    text(M.title, 192, 14, '#000', 16, 'center', false); text(M.title, 190, 12, M.color, 16, 'center', false);
+    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#c8bce8'; ctx.textAlign = 'center'; wrap(M.blurb, 64).forEach((l, i) => ctx.fillText(l, 192, 38 + i * 9)); ctx.textAlign = 'left';
+    // mode selector
+    MET.MODE_IDS.forEach((m, i) => { const x = 64 + i * 128, on = m === C.gmode; ctx.fillStyle = on ? (m === 'classic' ? '#6a52c4' : '#ff5d73') : '#1a1438'; ctx.fillRect(x - 58, 58, 116, 14); text(MET.MODES[m].name, x, 61, on ? '#fff' : '#6a5a9a', 6, 'center', false); });
+    const mod = MET.modFor(C.gmode); ctx.font = '8px Silkscreen, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fbf1e0';
+    const info = C.gmode === 'classic' ? [MET.MODES.classic.desc + ' ' + (M.classicNote || '')] : [...wrap(M.inuMove, 66), ...wrap(`WEEKLY MODIFIER ${mod.name}: ${mod.desc}`, 66)];
+    const nMove = C.gmode === 'classic' ? 1 : wrap(M.inuMove, 66).length; info.forEach((l, i) => { ctx.fillStyle = i >= nMove ? '#f2c14e' : '#fbf1e0'; ctx.fillText(l, 192, 80 + i * 9); }); if (C.gmode === 'daily') { ctx.fillStyle = '#7ef0ff'; ctx.fillText(`TODAY'S SEED #${MET.dailySeed(C.id) % 100000} · SAME RUN FOR EVERY PUP`, 192, 80 + info.length * 9); } ctx.textAlign = 'left';
+    text('TOP PUPS · ' + MET.MODES[C.gmode].name, 192, 116, '#f2c14e', 6, 'center'); S.board(A.db, modeKey(C), C.gmode === 'daily' ? 'daily' : 'all', Date.now(), 4).forEach((e, i) => text(`${i + 1}. ${e.name} ${String(e.score).padStart(6, ' ')}`, 192, 126 + i * 10, i ? '#fbf1e0' : '#7ef0ff', 8, 'center'));
+    if (Math.floor(now * 2) % 2) text(isTouch ? '◀ ▶ MODE · START TO PLAY' : '◀ ▶ MODE · SPACE TO PLAY', 192, 170, '#ff5d73', 8, 'center');
+    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#8a7ac4'; ctx.textAlign = 'center'; ctx.fillText(M.controls + (isTouch ? '' : ' · Esc: hall'), 192, 186); if (loadGhost(C)) ctx.fillText('Your best run races you as a ghost', 192, 196);
+    const sp = R.SPONSORS[C.id]; ctx.fillText(sp ? `CABINET SPONSOR: ${sp.name}` : 'SPONSOR SLOT OPEN · FREE PLAY · SKILL PRIZES ONLY', 192, 206); ctx.textAlign = 'left';
     return;
   }
-  G.draw(ctx, C.s, now, PIX); drawHUD(C);
-  if (C.mode === 'attract') { ctx.fillStyle = '#000a'; ctx.fillRect(110, 92, 164, 32); text('DEMO', 192, 96, M.color, 8, 'center'); if (Math.floor(now * 2) % 2) text(isTouch ? 'TAP START' : 'PRESS SPACE', 192, 110, '#fbf1e0', 8, 'center'); }
+  const sh = C.s.shake > 0 && C.mode === 'play' ? C.s.shake * 10 : 0; ctx.save(); if (sh) ctx.translate(Math.round((Math.random() - 0.5) * sh), Math.round((Math.random() - 0.5) * sh));
+  G.draw(ctx, C.s, now, PIX);
+  if (C.ghost && C.mode === 'play' && !C.ghost.s.over && G.ghostPos) { const gp = G.ghostPos(C.ghost.s); ctx.globalAlpha = 0.35; PIX.blitC(ctx, PIX.shibaHead('#9fd0ff', '#5a8ac0'), gp.x, gp.y); ctx.globalAlpha = 0.6; ctx.font = '6px Silkscreen, monospace'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('BEST', gp.x - 8, gp.y - 7); ctx.globalAlpha = 1; }
+  for (const p of C.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x | 0, p.y | 0, 2, 2); } ctx.globalAlpha = 1;
+  for (const p of C.s.pops) { ctx.globalAlpha = Math.min(1, p.t * 2); text(p.text, p.x, p.y, p.c, 6, 'center'); } ctx.globalAlpha = 1;
+  ctx.restore(); drawHUD(C);
+  if (C.mode === 'attract') { ctx.fillStyle = '#000a'; ctx.fillRect(100, 92, 184, 32); text(C.demo.label, 192, 96, M.color, 6, 'center'); if (Math.floor(now * 2) % 2) text(isTouch ? 'TAP START' : 'PRESS SPACE', 192, 110, '#fbf1e0', 8, 'center'); }
   if (C.mode === 'play' && C.paused) { ctx.fillStyle = '#000a'; ctx.fillRect(130, 96, 124, 22); text('PAUSED', 192, 103, '#f2c14e', 8, 'center'); }
   if (C.mode === 'play' && C.s.flash > 0.6) { ctx.fillStyle = `rgba(255,60,60,${(C.s.flash - 0.6) * 0.5})`; ctx.fillRect(0, 0, 384, 216); }
-  if (C.mode === 'over') { ctx.fillStyle = '#000b'; ctx.fillRect(92, 84, 200, 44); text('GAME OVER', 192, 92, '#ff5d73', 16, 'center'); text('SCORE ' + C.s.score, 192, 112, '#fbf1e0', 8, 'center'); }
-  if (C.mode === 'initials') { ctx.fillStyle = '#000d'; ctx.fillRect(60, 50, 264, 116); text('NEW SCORE ' + C.s.score, 192, 60, '#f2c14e', 8, 'center'); text('ENTER YOUR INITIALS', 192, 76, '#fbf1e0', 8, 'center');
+  if (C.mode === 'over') { ctx.fillStyle = '#000b'; ctx.fillRect(82, 80, 220, 52); text('GAME OVER', 192, 88, '#ff5d73', 16, 'center'); text('SCORE ' + C.final + (C.mod ? `  (${C.s.score} x${C.mod.mult})` : ''), 192, 110, '#fbf1e0', 8, 'center'); }
+  if (C.mode === 'initials') { ctx.fillStyle = '#000d'; ctx.fillRect(60, 50, 264, 116); text('NEW SCORE ' + C.final, 192, 60, '#f2c14e', 8, 'center'); text('ENTER YOUR INITIALS', 192, 76, '#fbf1e0', 8, 'center');
     C.ini.forEach((ch, i) => { const x = 156 + i * 26; if (i === C.cur && Math.floor(now * 4) % 2) { ctx.fillStyle = M.color; ctx.fillRect(x - 2, 120, 20, 3); } text(ch, x, 98, i === C.cur ? M.color : '#fbf1e0', 16); });
-    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#8a7ac4'; ctx.textAlign = 'center'; ctx.fillText('UP/DOWN letter · LEFT/RIGHT move · A next/OK', 192, 140); ctx.fillText('Score goes on the daily, weekly, monthly & all-time boards', 192, 152); ctx.textAlign = 'left'; }
+    ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#8a7ac4'; ctx.textAlign = 'center'; ctx.fillText('UP/DOWN letter · LEFT/RIGHT move · A next/OK', 192, 140); ctx.fillText(`${MET.MODES[C.gmode].name} boards: daily, weekly, monthly & all-time`, 192, 152); ctx.textAlign = 'left'; }
   if (C.mode === 'results') { ctx.fillStyle = '#000b'; ctx.fillRect(80, 70, 224, 70); text(`${C.result.score} PTS · #${C.result.drank} TODAY`, 192, 78, '#f2c14e', 8, 'center'); text(`+${C.result.got.bones} BONES  +${C.result.got.tickets} TICKETS`, 192, 96, '#5fd37a', 8, 'center'); if (Math.floor(now * 2) % 2) text('A: PLAY AGAIN', 192, 118, '#fbf1e0', 8, 'center'); }
 }
+// bloom: blurred additive copy of the frame (CRT mode). Skipped where ctx.filter is unsupported.
+const bloomCv = document.createElement('canvas'); bloomCv.width = 192; bloomCv.height = 108; const bctx = bloomCv.getContext('2d'); const canFilter = 'filter' in bctx;
+function bloom() { if (!A.crt || !canFilter) return; bctx.filter = 'none'; bctx.clearRect(0, 0, 192, 108); bctx.drawImage(cv, 0, 0, 192, 108); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.32; ctx.filter = 'blur(2px)'; ctx.imageSmoothingEnabled = true; ctx.drawImage(bloomCv, 0, 0, 384, 216); ctx.restore(); ctx.imageSmoothingEnabled = false; }
 
 // ---------- canvas pointer (tap/click) ----------
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * 384, y: ((e.clientY - r.top) / r.height) * 216 }; }
@@ -179,6 +218,7 @@ cv.addEventListener('pointerdown', (e) => { unlockAudio(); if (panelOpen()) retu
     if (!t && p.x >= COUNTER.x - 4 && p.x <= COUNTER.x + COUNTER.w + 4 && p.y >= COUNTER.y - 32 && p.y <= COUNTER.y + COUNTER.h) t = tg.find((t) => t.kind === 'prizes');
     if (!t && p.x >= BOARD.x && p.y <= BOARD.y + BOARD.h) t = tg.find((t) => t.kind === 'scores');
     if (t) { L.target = { x: t.x, y: t.y }; L.pending = t; } else L.target = { x: p.x, y: Math.max(FLOOR_Y + 6, p.y) }; return; }
+  if (A.scene === 'cab' && A.cab.mode === 'title' && p.y >= 56 && p.y <= 74) { const i = Math.max(0, Math.min(2, Math.floor((p.x - 6) / 124))); A.cab.gmode = MET.MODE_IDS[i]; LS.setItem('inuarcade.mode', A.cab.gmode); sfx('blip'); A.cab.t = 0; return; }
   if (A.scene === 'cab' && ['title', 'attract'].includes(A.cab.mode)) startPlay(); });
 addEventListener('keydown', unlockAudio); addEventListener('touchstart', unlockAudio, { passive: true });
 
@@ -189,8 +229,11 @@ function frame(t) {
   while (acc >= 1 / 60) { acc -= 1 / 60; const inp = input.snapshot(); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
   if (A.scene === 'lobby') drawLobby(now); else if (A.scene === 'cab') drawCab(now);
+  bloom();
   requestAnimationFrame(frame);
 }
+A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const setCrt = () => { document.body.classList.toggle('crt', A.crt); crtB.textContent = A.crt ? '📺 CRT' : '📺 off'; }; setCrt(); crtB.onclick = () => { A.crt = !A.crt; LS.setItem('inuarcade.crt', A.crt ? '1' : '0'); setCrt(); };
+$('#b-ach').onclick = () => showAchievements();
 $('#b-lobby').onclick = () => go(null); $('#b-scores').onclick = () => showScores(A.cab?.id); $('#b-prizes').onclick = () => showPrizes(); $('#b-profile').onclick = () => showProfile();
 const mb = $('#b-mute'); const setMb = () => (mb.textContent = isMuted() ? '🔇' : '🔊'); setMb(); mb.onclick = () => { setMuted(!isMuted()); setMb(); unlockAudio(); };
 for (const b of document.querySelectorAll('#bar button')) b.addEventListener('click', (e) => e.currentTarget.blur());
