@@ -1,6 +1,7 @@
 // Inu Arcade runtime: router, fixed-step loop, lobby hall, cabinet state machine (title/attract/play/over/initials/results).
 import { createInput } from './core/input.js';
-import { sfx, unlockAudio, isMuted, setMuted, setMusic } from './core/audio.js';
+import { sfx, unlockAudio, isMuted, setMuted, setMusic, audioState } from './core/audio.js';
+import { fitBox } from './core/layout.js';
 import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
 import * as S from './core/scores.js';
@@ -35,12 +36,12 @@ export async function syncWallet() { const w = wallet(); if (!w?.address || w.si
   save(); }
 function load(k, d) { try { const v = JSON.parse(LS.getItem(k)); return v ?? d; } catch { return d; } }
 export function save() { scoreStore.save(A.db); LS.setItem(PURSE_KEY, JSON.stringify(A.purse)); LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile)); LS.setItem('inuarcade.initials', A.initials); refreshPurse(); }
-window.__arcade = A;
+window.__arcade = A; A.audioState = audioState;
 
 // ---------- layout ----------
-function fit() { const top = isTouch ? 0 : 34, W = innerWidth, H = innerHeight - top, cw = cv.width, ch = cv.height; let s = Math.min(W / cw, H / ch); if (s >= 2) s = Math.floor(s * 2) / 2;
-  cv.style.width = Math.floor(cw * s) + 'px'; cv.style.height = Math.floor(ch * s) + 'px'; $('#stage').style.top = top + 'px'; }
-addEventListener('resize', fit); fit();
+function fit() { const top = isTouch ? 0 : 34, b = fitBox(innerWidth, innerHeight - top, cv.width, cv.height, isTouch);
+  cv.style.width = b.w + 'px'; cv.style.height = b.h + 'px'; $('#stage').style.top = top + 'px'; $('#stage').style.paddingLeft = b.off * 2 + 'px'; }
+addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 120)); fit();
 
 // ---------- text helpers ----------
 const F = (px) => `${px}px "Press Start 2P", monospace`;
@@ -239,7 +240,8 @@ cv.addEventListener('pointerdown', (e) => { unlockAudio(); if (panelOpen()) retu
     if (t) { L.target = { x: t.x, y: t.y }; L.pending = t; } else L.target = { x: p.x, y: Math.max(FLOOR_Y + 6, p.y) }; return; }
   if (A.scene === 'cab' && A.cab.mode === 'title' && p.y >= A.cab.modeY - 3 && p.y <= A.cab.modeY + 16) { const i = Math.max(0, Math.min(2, Math.floor((p.x - 8) / ((cv.width - 16) / 3)))); A.cab.gmode = MET.MODE_IDS[i]; LS.setItem('inuarcade.mode', A.cab.gmode); sfx('blip'); A.cab.t = 0; return; }
   if (A.scene === 'cab' && ['title', 'attract'].includes(A.cab.mode)) startPlay(); });
-addEventListener('keydown', unlockAudio); addEventListener('touchstart', unlockAudio, { passive: true });
+for (const ev of ['keydown', 'touchstart', 'touchend', 'pointerup', 'click']) addEventListener(ev, unlockAudio, { passive: true, capture: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) unlockAudio(); });
 
 // ---------- loop ----------
 let last = performance.now(), acc = 0;
@@ -254,7 +256,9 @@ function frame(t) {
 A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const setCrt = () => { document.body.classList.toggle('crt', A.crt); crtB.textContent = A.crt ? '📺 CRT' : '📺 off'; }; setCrt(); crtB.onclick = () => { A.crt = !A.crt; LS.setItem('inuarcade.crt', A.crt ? '1' : '0'); setCrt(); };
 $('#b-ach').onclick = () => showAchievements();
 $('#b-lobby').onclick = () => go(null); $('#b-scores').onclick = () => showScores(A.cab?.id); $('#b-prizes').onclick = () => showPrizes(); $('#b-profile').onclick = () => showProfile();
-const mb = $('#b-mute'); const setMb = () => (mb.textContent = isMuted() ? '🔇' : '🔊'); setMb(); mb.onclick = () => { setMuted(!isMuted()); setMb(); unlockAudio(); };
+const mb = $('#b-mute'); const setMb = () => { mb.textContent = isMuted() ? '🔇' : '🔊'; mb.setAttribute('aria-label', isMuted() ? 'Unmute sound' : 'Mute sound'); mb.setAttribute('aria-pressed', String(isMuted())); }; setMb();
+const toggleMute = () => { unlockAudio(); setMuted(!isMuted()); setMb(); }; mb.onclick = toggleMute;
+addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.target.closest?.('input')) toggleMute(); });
 for (const b of document.querySelectorAll('#bar button')) b.addEventListener('click', (e) => e.currentTarget.blur());
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 export { startPlay, toLobby };

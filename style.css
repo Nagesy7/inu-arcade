@@ -44,3 +44,6 @@ body.crt #screen{filter:saturate(1.18) contrast(1.06);border-radius:10px}
 body.crt #crtwrap::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:10px;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.45) 100%);box-shadow:inset 0 0 30px rgba(120,90,255,.18)}
 .ach{display:flex;gap:8px;align-items:center}.ach.locked{opacity:.4}
 body.touch #bar{display:grid;grid-template-columns:1fr 1fr;width:112px;gap:3px}body.touch #purse{grid-column:1/3}
+
+body.touch #inu-legal{font-size:9px!important;opacity:.75;left:max(6px,env(safe-area-inset-left))!important;right:auto!important;top:4px!important;bottom:auto!important;max-width:20vw;white-space:normal!important;line-height:1.5;}
+#stage{box-sizing:border-box}

@@ -1,17 +1,21 @@
 // Original WebAudio chiptune SFX: square/triangle/noise blips generated at runtime. No samples.
-let ac = null, muted = false; try { muted = localStorage.getItem('inuarcade.mute') === '1'; } catch {}
+let ac = null, master = null, muted = false; try { muted = localStorage.getItem('inuarcade.mute') === '1'; } catch {}
 export const isMuted = () => muted;
-export function setMuted(m) { muted = m; try { localStorage.setItem('inuarcade.mute', m ? '1' : '0'); } catch {} }
-export function unlockAudio() { try { ac ||= new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch {} }
+export function setMuted(m) { muted = !!m; if (master) master.gain.value = muted ? 0 : 1; try { localStorage.setItem('inuarcade.mute', m ? '1' : '0'); } catch {} }
+export function unlockAudio() { try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+  if (!ac) { ac = new C(); master = ac.createGain(); master.gain.value = muted ? 0 : 1; master.connect(ac.destination);
+    const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0); } // iOS: silent blip inside the gesture
+  if (ac.state !== 'running') ac.resume?.(); } catch {} }
+export const audioState = () => (ac ? ac.state : 'none');
 function tone(f0, f1, dur, type = 'square', vol = 0.08, delay = 0) {
   if (!ac || muted) return; const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.02);
 }
 function noise(dur, vol = 0.08, delay = 0, hp = 800) {
   if (!ac || muted) return; const t = ac.currentTime + delay, n = Math.floor(ac.sampleRate * dur), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
   let v = 0; for (let i = 0; i < n; i++) { if (i % 6 === 0) v = Math.random() * 2 - 1; d[i] = v * (1 - i / n); }
-  const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp; s.buffer = b; g.gain.value = vol; s.connect(f).connect(g).connect(ac.destination); s.start(t);
+  const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp; s.buffer = b; g.gain.value = vol; s.connect(f).connect(g).connect(master); s.start(t);
 }
 const seq = (notes, step, type = 'square', vol = 0.07) => notes.forEach((n, i) => n && tone(n, n, step * 0.9, type, vol, i * step));
 export const SFX = {
