@@ -19,3 +19,9 @@ test('IP: invader sprites are not the classic arcade alien bitmaps; no blue frig
   const chomp = readFileSync(new URL('../src/games/chomp.js', import.meta.url), 'utf8'); assert.ok(!chomp.includes("'#2430b8'") && !chomp.includes("'#3b57e8'"));
   const au = readFileSync(new URL('../src/core/audio.js', import.meta.url), 'utf8'); assert.ok(!au.includes('[98, 87, 78, 73]') && !au.includes("k ? 300 : 420"));
 });
+test('remix: leaderboard + ghost storage keys bumped to v2 so old and new scores never mix', async () => {
+  const S = await import('../src/core/scores.js'); assert.equal(S.SCORES_KEY, 'inuarcade.scores.v2');
+  const mem = new Map(); const st = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) }; mem.set('inuarcade.scores.v1', JSON.stringify({ 'kibble-chomp': [{ name: 'OLD', score: 99999, at: Date.now() }] }));
+  const store = S.createScoreStore(st); const db = store.load(); assert.ok(!(db['kibble-chomp'] || []).some((e) => e.name === 'OLD'), 'v1 scores are not loaded into v2 boards');
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'); assert.ok(main.includes("'inuarcade.ghost.v2.'"));
+});

@@ -1,28 +1,38 @@
-// BONE BREAKER — arcade-accurate paddle-and-ball rules (224x256 native), original Inu art and names.
-// 8 rows x 14 bricks scoring 1/1/3/3/5/5/7/7 (bottom to top), speed-ups after 4 and 12 hits and on first contact with
-// the orange and red rows, paddle halves once the ball hits the top wall, 8-segment paddle angles, 2 screens (max 896).
+// BONE BREAKER — original Inu paddle-and-ball (224x256 native). Classic mode = classic-difficulty rules on Inu's own
+// design: 3 hand-drawn bone-yard screens of 12-wide crates (tough top crates take 2 hits), crate values by height
+// 1..6, the ball speeds up every 10 paddle returns and the first time you dig into the top two rows, the paddle
+// wears down 2px per 20 crates (min 16), continuous paddle angles up to 62 degrees.
 import { rng, clamp } from '../core/rng.js';
-export const META = { id: 'bone-breaker', title: 'BONE BREAKER', color: '#4fc3e8', blurb: 'Eight rows of crates, two walls. The ball speeds up as you dig in, and your paddle halves when you break through.', controls: 'Left/Right to move, Space / A to serve', inuMove: 'BONE SMASH (A): fire a bone through the wall, 6s cooldown. Bone power-ups (Fetch, Bone Storm, Big Bone, Pup Pack) and a FUD-bot boss brick each screen.', classicNote: 'Arcade-accurate tables.' };
-export const W = 224, H = 256, X0 = 7, X1 = 217, TOP = 24, PY = 232, COLS = 14, ROWS = 8, STRIDE = 15, BW = 14, BH = 6, ROW0 = 52;
-export const ROW_PTS = [7, 7, 5, 5, 3, 3, 1, 1], ROW_COLOR = ['#e8343c', '#e8343c', '#f08a2a', '#f08a2a', '#3ac860', '#3ac860', '#f2d84e', '#f2d84e'], ROW_NAME = ['red', 'red', 'orange', 'orange', 'green', 'green', 'yellow', 'yellow'];
-export const SCREENS = 2, MAX_SCORE = 2 * COLS * ROW_PTS.reduce((a, b) => a + b, 0); // 896
-export const SPEEDS = [1.5, 2.0, 2.5, 3.0, 3.5]; // px/frame per speed level
-export const HIT_TRIGGERS = [4, 12];
-export const PADDLE_W = 24, PADDLE_SMALL = 12;
-export const SEG_ANGLES = [-60, -45, -30, -15, 15, 30, 45, 60]; // degrees from vertical by paddle segment
+export const META = { id: 'bone-breaker', title: 'BONE BREAKER', color: '#4fc3e8', blurb: 'Three bone-yard crate walls. Long rallies and deep digs speed the ball up, and your paddle wears down as you smash.', controls: 'Left/Right to move, Space / A to serve', inuMove: 'BONE SMASH (A): fire a bone through the wall, 6s cooldown. Bone power-ups (Fetch, Bone Storm, Big Bone, Pup Pack) and a FUD-bot boss brick each screen.', classicNote: 'Original Inu rules at classic difficulty.' };
+export const W = 224, H = 256, X0 = 7, X1 = 217, TOP = 24, PY = 232, COLS = 12, ROWS = 7, STRIDE = 17.4, BW = 16, BH = 7, ROW0 = 50;
+export const ROW_PTS = [6, 5, 4, 3, 2, 2, 1], ROW_COLOR = ['#c85ad8', '#4fc3e8', '#5fd37a', '#f2d84e', '#f08a2a', '#f08a2a', '#e8d8c0'], ROW_NAME = ['violet', 'sky', 'grass', 'sun', 'clay', 'clay', 'bone'];
+// three original screens ('#' crate, 'T' tough crate = 2 hits, '.' gap); rows top to bottom
+export const SCREEN_MAPS = [
+  ['TTTTTTTTTTTT', '############', '##.######.##', '############', '############', '.##########.', '############'],
+  ['..TTTTTTTT..', '.##########.', '###.####.###', '############', '###.####.###', '.##########.', '..########..'],
+  ['TT..TTTT..TT', '############', '#.##.##.##.#', '############', '##.##..##.##', '############', '############']];
+export const SCREENS = 3;
+const mapPts = (m) => m.reduce((a, row, r) => a + [...row].filter((ch) => ch !== '.').length * ROW_PTS[r], 0);
+export const MAX_SCORE = SCREEN_MAPS.reduce((a, m) => a + mapPts(m), 0);
+export const SPEEDS = [1.6, 2.0, 2.4, 2.8, 3.2]; // px/frame per speed level
+export const RALLY_STEP = 10, DEEP_ROWS = 2; // speed up every 10 paddle returns, and once on first contact with the top 2 rows
+export const PADDLE_W = 24, PADDLE_MIN = 16, WEAR = { every: 20, px: 2 };
+export const MAX_ANGLE = 62; // degrees from vertical at the paddle tip, linear in between
 export const POWERS_INU = ['wide', 'multi', 'fetch', 'storm', 'life'], SMASH = { cd: 6 }, BOSS_PTS = 500;
 const fx = (s, x, y, c, n = 8) => s.fx.push({ x, y, c, n }), pop = (s, x, y, text, c = '#7ef0ff') => s.pops.push({ x, y, text, c, t: 1 });
 export function create(seed = 1, opts = {}) {
   const s = { id: META.id, inu: !!opts.inu, seed, rnd: rng(seed), score: 0, lives: 3, level: 1, screen: 1, over: false, t: 0, ev: [], fx: [], pops: [], shake: 0, flash: 0, acc: 0, frame: 0,
-    hits: 0, speedLvl: 0, touched: { orange: false, red: false }, small: false, smashCd: 0, smash: null, fetchT: 0, stormT: 0, wideT: 0, caps: [], stats: { bosses: 0, smashes: 0, maxRally: 0, rally: 0 } };
+    hits: 0, broken: 0, returns: 0, speedLvl: 0, deep: false, smashCd: 0, smash: null, fetchT: 0, stormT: 0, wideT: 0, caps: [], stats: { bosses: 0, smashes: 0, maxRally: 0, rally: 0 } };
   s.paddle = { x: 112 }; layout(s); serve(s); return s;
 }
 function layout(s) {
-  s.bricks = []; for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const i = r * COLS + c; s.bricks.push({ r, c, x: X0 + 1 + c * STRIDE, y: ROW0 + r * (BH + 1), w: BW, h: BH, hp: 1, power: s.inu && (i + s.screen) % 9 === 0 ? POWERS_INU[(i >> 1) % POWERS_INU.length] : null }); }
+  s.bricks = []; const map = SCREEN_MAPS[(s.screen - 1) % SCREEN_MAPS.length];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const ch = map[r][c]; if (ch === '.') continue; const i = r * COLS + c;
+    s.bricks.push({ r, c, x: X0 + 2 + c * STRIDE, y: ROW0 + r * (BH + 1), w: BW, h: BH, hp: ch === 'T' ? 2 : 1, tough: ch === 'T', power: s.inu && (i + s.screen) % 9 === 0 ? POWERS_INU[(i >> 1) % POWERS_INU.length] : null }); }
   if (s.inu) { const hp = 8 + s.screen * 4; s.bricks.push({ r: -1, c: 6, x: 90, y: 32, w: 44, h: 12, hp, max: hp, boss: true, vx: 0.5 }); }
 }
-function serve(s) { s.balls = [{ x: 112, y: 140, vx: 0, vy: 0, stuck: true }]; s.serveT = 120; s.speedLvl = Math.min(s.speedLvl, 0); s.hits = 0; s.touched = { orange: false, red: false }; s.small = false; }
-export const paddleW = (s) => (s.wideT > 0 ? 40 : s.small ? PADDLE_SMALL : PADDLE_W);
+function serve(s) { s.balls = [{ x: 112, y: 140, vx: 0, vy: 0, stuck: true }]; s.serveT = 120; s.speedLvl = 0; s.returns = 0; s.deep = false; }
+export const paddleW = (s) => (s.wideT > 0 ? 40 : Math.max(PADDLE_MIN, PADDLE_W - WEAR.px * Math.floor(s.broken / WEAR.every)));
 export const ballSpeed = (s) => SPEEDS[s.speedLvl] * (s.slowT > 0 ? 0.7 : 1);
 export function speedUp(s, why) { if (s.speedLvl < SPEEDS.length - 1) { s.speedLvl++; renorm(s); s.ev.push('pow'); } s.lastSpeedUp = why; }
 function renorm(s) { const sp = ballSpeed(s); for (const b of s.balls) if (!b.stuck) { const m = Math.hypot(b.vx, b.vy) || 1; b.vx *= sp / m; b.vy *= sp / m; } }
@@ -52,10 +62,10 @@ const ov = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.
 export function moveBall(s, b, f) {
   b.x += b.vx * f; b.y += b.vy * f; const R = 1.5, pd = s.paddle, pw = paddleW(s);
   if (b.x - R < X0) { b.x = X0 + R; b.vx = Math.abs(b.vx); s.ev.push('bounce'); } if (b.x + R > X1) { b.x = X1 - R; b.vx = -Math.abs(b.vx); s.ev.push('bounce'); }
-  if (b.y - R < TOP) { b.y = TOP + R; b.vy = Math.abs(b.vy); s.ev.push('bounce'); if (!s.small) { s.small = true; s.ev.push('hit'); pop(s, pd.x, PY - 10, 'PADDLE HALVED', '#ff5d73'); } }
+  if (b.y - R < TOP) { b.y = TOP + R; b.vy = Math.abs(b.vy); s.ev.push('bounce'); }
   if (b.vy > 0 && b.y + R >= PY && b.y + R <= PY + 4 && b.x >= pd.x - pw / 2 - R && b.x <= pd.x + pw / 2 + R) {
-    const seg = clamp(Math.floor(((b.x - (pd.x - pw / 2)) / pw) * 8), 0, 7), a = (SEG_ANGLES[seg] * Math.PI) / 180, sp = ballSpeed(s);
-    b.vx = sp * Math.sin(a); b.vy = -sp * Math.cos(a); b.y = PY - R; s.ev.push('bounce'); s.stats.rally++; s.stats.maxRally = Math.max(s.stats.maxRally, s.stats.rally);
+    const off = clamp((b.x - pd.x) / (pw / 2), -1, 1), a = (off * MAX_ANGLE * Math.PI) / 180, sp = ballSpeed(s);
+    b.vx = sp * Math.sin(a); b.vy = -sp * Math.cos(a); b.y = PY - R; s.ev.push('bounce'); s.stats.rally++; s.stats.maxRally = Math.max(s.stats.maxRally, s.stats.rally); if (++s.returns % RALLY_STEP === 0) speedUp(s, 'rally');
     if (s.fetchT > 0) { b.stuck = true; b.caught = true; b.off = b.x - pd.x; s.serveT = 90; } return; }
   const bx = { x: b.x - R, y: b.y - R, w: 2 * R, h: 2 * R }; const hit = s.bricks.find((k) => ov(bx, k)); if (!hit) return;
   const pierce = s.stormT > 0 && !hit.boss;
@@ -63,12 +73,11 @@ export function moveBall(s, b, f) {
   damage(s, hit, pierce ? 9 : 1);
 }
 function damage(s, hit, d) {
+  if (!hit.boss && hit.r < DEEP_ROWS && !s.deep) { s.deep = true; speedUp(s, 'deep'); }
   hit.hp -= d; if (hit.hp > 0) { s.ev.push('bounce'); if (hit.boss) fx(s, hit.x + hit.w / 2, hit.y + hit.h, '#ff5d73', 5); return; }
   s.bricks.splice(s.bricks.indexOf(hit), 1);
   if (hit.boss) { s.score += BOSS_PTS; s.stats.bosses++; s.shake = 0.5; fx(s, hit.x + hit.w / 2, hit.y + 6, '#f2c14e', 40); pop(s, hit.x + 22, hit.y + 10, 'FUD BOT DOWN +500', '#f2c14e'); s.ev.push('boom'); return; }
-  s.score += ROW_PTS[hit.r]; s.hits++; s.ev.push('brick'); fx(s, hit.x + BW / 2, hit.y + BH / 2, ROW_COLOR[hit.r], 6); if (hit.power) s.caps.push({ x: hit.x + BW / 2, y: hit.y + BH, kind: hit.power });
-  if (HIT_TRIGGERS.includes(s.hits)) speedUp(s, 'hits' + s.hits);
-  const nm = ROW_NAME[hit.r]; if ((nm === 'orange' || nm === 'red') && !s.touched[nm]) { s.touched[nm] = true; speedUp(s, nm); }
+  s.score += ROW_PTS[hit.r]; s.hits++; s.broken++; s.ev.push('brick'); fx(s, hit.x + BW / 2, hit.y + BH / 2, ROW_COLOR[hit.r], 6); if (hit.power) s.caps.push({ x: hit.x + BW / 2, y: hit.y + BH, kind: hit.power });
 }
 export function applyPower(s, kind) {
   s.ev.push('pow'); s.score += 0; s.pops.push({ x: s.paddle.x, y: PY - 14, text: { wide: 'BIG BONE!', multi: 'PUP PACK!', life: 'EXTRA PUP!', fetch: 'FETCH!', storm: 'BONE STORM!' }[kind], c: '#f2c14e', t: 1.2 });
@@ -88,7 +97,7 @@ export function draw(ctx, s, now, P) {
   ctx.fillStyle = '#05040d'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#9a9ab0'; ctx.fillRect(X0 - 4, TOP - 4, 4, H - TOP + 4); ctx.fillRect(X1, TOP - 4, 4, H - TOP + 4); ctx.fillRect(X0 - 4, TOP - 4, X1 - X0 + 8, 4);
   for (const k of s.bricks) { if (k.boss) { ctx.fillStyle = '#23233a'; ctx.fillRect(k.x, k.y, k.w, k.h); ctx.fillStyle = '#ff3040'; ctx.fillRect(k.x + 10, k.y + 4, 4, 2); ctx.fillRect(k.x + k.w - 14, k.y + 4, 4, 2); ctx.fillStyle = '#ff5d73'; ctx.fillRect(k.x, k.y - 2, k.w * k.hp / k.max, 1); continue; }
-    ctx.fillStyle = ROW_COLOR[k.r]; ctx.fillRect(k.x, k.y, k.w, k.h); ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(k.x, k.y, k.w, 1); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(k.x, k.y + k.h - 1, k.w, 1); if (k.power) { ctx.fillStyle = '#fff'; ctx.fillRect(k.x + 6, k.y + 2, 2, 2); } }
+    ctx.fillStyle = ROW_COLOR[k.r]; ctx.fillRect(k.x, k.y, k.w, k.h); if (k.tough) { ctx.fillStyle = k.hp > 1 ? '#6a4a8a' : '#a88ac8'; ctx.fillRect(k.x + 1, k.y + 3, k.w - 2, 1); } ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(k.x, k.y, k.w, 1); ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(k.x, k.y + k.h - 1, k.w, 1); if (k.power) { ctx.fillStyle = '#fff'; ctx.fillRect(k.x + 6, k.y + 2, 2, 2); } }
   for (const c of s.caps) { ctx.fillStyle = PCOL[c.kind]; ctx.fillRect(c.x - 4, c.y - 2, 8, 4); ctx.fillRect(c.x - 7, c.y - 4, 4, 3); ctx.fillRect(c.x - 7, c.y + 1, 4, 3); ctx.fillRect(c.x + 3, c.y - 4, 4, 3); ctx.fillRect(c.x + 3, c.y + 1, 4, 3); /* bone-shaped pickup, not a capsule */ ctx.fillStyle = '#14101c'; ctx.font = '6px Silkscreen, monospace'; ctx.fillText(PLET[c.kind], c.x - 2, c.y + 2); }
   if (s.smash) { ctx.fillStyle = '#fbf1e0'; ctx.fillRect(s.smash.x - 1, s.smash.y, 2, 7); ctx.fillRect(s.smash.x - 2, s.smash.y, 4, 2); ctx.fillRect(s.smash.x - 2, s.smash.y + 6, 4, 2); }
   const pd = s.paddle, pw = paddleW(s); ctx.fillStyle = '#f6ead6'; ctx.fillRect(pd.x - pw / 2, PY, pw, 4); ctx.fillStyle = '#e8892e'; ctx.fillRect(pd.x - pw / 2, PY + 2, pw, 2);

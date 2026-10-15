@@ -2,6 +2,7 @@
 // Prizes are awarded by RANK ONLY (skill). Free to play, no paid entry, no chance-based prizes.
 export const GAME_IDS = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'];
 export const MODE_SUFFIX = ['', '@inu', '@daily'];
+export const SCORES_VERSION = 2, SCORES_KEY = 'inuarcade.scores.v' + SCORES_VERSION; // v2 = remixed original cabinets; v1 (arcade-table) scores stay in their own key
 export const BOARD_KEYS = GAME_IDS.flatMap((g) => MODE_SUFFIX.map((m) => g + m));
 const keyFor = (g, mode) => (mode && mode !== 'classic' ? `${g}@${mode}` : g);
 export const PERIODS = ['daily', 'weekly', 'monthly', 'all'];
@@ -40,7 +41,7 @@ export const POOLS = {
 export function payouts(period, ranked) { const p = POOLS[period]; ranked = ranked.filter((e) => !e.house); return p.split.map((pct, i) => ({ rank: i + 1, name: ranked[i]?.name || '---', bones: Math.floor((p.bones * pct) / 100), cosmetic: i === 0 ? p.cosmetic : null })); }
 export function resetsIn(period, now = Date.now()) { const d = new Date(periodStart(period, now));
   if (period === 'daily') d.setDate(d.getDate() + 1); else if (period === 'weekly') d.setDate(d.getDate() + 7); else d.setMonth(d.getMonth() + 1); return d.getTime() - now; }
-export function createScoreStore(storage, key = 'inuarcade.scores.v1') {
+export function createScoreStore(storage, key = SCORES_KEY) {
   const load = () => { try { return JSON.parse(storage.getItem(key)) || {}; } catch { return {}; } };
   return { load, save: (db) => { try { storage.setItem(key, JSON.stringify(db)); } catch {} } };
 }

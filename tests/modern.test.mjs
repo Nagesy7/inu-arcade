@@ -18,7 +18,7 @@ test('Inu Invaders: Mega Woof pierces a column; boss whale on wave 3', () => {
 });
 test('Inu Crossing: zoomies leap 2 rows; lost puppy +300', () => {
   const s = X.create(1, { inu: true }); s.lanes.forEach((l) => { if (X.isRoad(l.row)) l.objs = []; }); X.step(s, F, { a: true }); assert.equal(s.pup.row, 12); assert.equal(s.score, 20);
-  const t = X.create(1, { inu: true }); t.lanes.forEach((l) => (l.objs = [])); t.pup.carrying = true; t.pup.row = 2; t.pup.x = X.BAYS[2]; t.timerF = 60; X.step(t, F, {}); assert.equal(t.stats.rescued, 1); assert.equal(t.score, 50 + 0 + 300);
+  const t = X.create(1, { inu: true }); t.lanes.forEach((l) => (l.v = 0)); t.ladyT = 1; X.step(t, F, {}); const l6 = t.lanes.find((k) => k.row === 6); t.pup.row = 6; t.pup.x = X.wrapX(l6, l6.objs[t.lady.obj]) + t.lady.off; if (t.pup.x < 10 || t.pup.x > 214) { l6.objs[t.lady.obj].x -= t.pup.x - 100; t.pup.x = 100; } const sc = t.score; X.step(t, F, {}); assert.equal(t.stats.rescued, 1); assert.equal(t.score - sc, 300);
 });
 test('Inu Breaker: boss brick + power-ups + bone smash', () => {
   const s = B.create(1, { inu: true }); assert.ok(s.bricks.some((b) => b.boss)); assert.ok(s.bricks.some((b) => b.power)); s.balls[0].stuck = false; s.balls[0].vy = -1; s.balls[0].vx = 0.5; B.step(s, F, { a: true }); assert.equal(s.stats.smashes, 1);

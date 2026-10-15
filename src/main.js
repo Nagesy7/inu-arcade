@@ -132,7 +132,7 @@ function drawCabinet(c, now, skin) {
 
 // ---------- cabinet ----------
 const modeKey = (C) => MET.boardKey(C.id, C.gmode);
-const ghostKey = (C) => 'inuarcade.ghost.' + modeKey(C);
+const ghostKey = (C) => 'inuarcade.ghost.v2.' + modeKey(C); // v2: old replays would desync on the remixed rules
 function openCab(id) {
   const G = GAMES[id]; setRes(G.W, G.H); A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
   if (!MET.MODE_IDS.includes(A.cab.gmode)) A.cab.gmode = 'classic';

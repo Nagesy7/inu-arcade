@@ -48,7 +48,7 @@ const tag = process.env.TAG || 'local';
     if (g === 'bone-breaker') { await p.keyboard.press('Space'); await p.waitForTimeout(500); await p.keyboard.press('Space'); await p.waitForTimeout(60); ok((await p.evaluate(() => window.__arcade.cab.s.stats.smashes)) === 1, `${g}: Space = bone smash, boss brick present ${await p.evaluate(() => window.__arcade.cab.s.bricks.some((b) => b.boss))}`); }
     await p.waitForTimeout(700); await p.screenshot({ path: `proof/${tag}-desktop-${g}-inu-play.png` });
     await p.evaluate(() => { const s = window.__arcade.cab.s; s.score += 777; s.over = true; }); await p.waitForTimeout(2600); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
-    const k = await p.evaluate((g) => ({ inu: (window.__arcade.db[g + '@inu'] || []).length, ghost: !!localStorage.getItem('inuarcade.ghost.' + g + '@inu'), ach: Object.keys(window.__arcade.purse.ach || {}).length }), g);
+    const k = await p.evaluate((g) => ({ inu: (window.__arcade.db[g + '@inu'] || []).length, ghost: !!localStorage.getItem('inuarcade.ghost.v2.' + g + '@inu'), ach: Object.keys(window.__arcade.purse.ach || {}).length }), g);
     ok(k.inu >= 1 && k.ghost && k.ach >= 1, `${g}: Inu score on its own board, ghost saved, achievements ${k.ach}`); await p.click('#pclose');
     await p.evaluate(() => (window.__arcade.cab.t = 7.9)); await p.keyboard.press('Escape'); await p.goto(URL + '/' + g); await p.waitForTimeout(400); await p.evaluate(() => (window.__arcade.cab.t = 7.95)); await p.waitForTimeout(400);
     ok((await p.evaluate(() => window.__arcade.cab.demo?.label)) === 'REPLAY: YOUR BEST RUN', `${g}: attract mode replays your ghost`);

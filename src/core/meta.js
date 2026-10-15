@@ -40,7 +40,7 @@ export const ACHIEVEMENTS = [
   { id: 'inv-streak', name: 'Sharpshooter', desc: 'Bark Invaders: 15 hits without a miss', tickets: 4, test: (r) => r.game === 'bark-invaders' && r.stats.best >= 15 },
   { id: 'inv-boss', name: 'Whale Watcher', desc: 'Bark Invaders (Inu): sink the rug-pull whale', tickets: 6, test: (r) => r.game === 'bark-invaders' && r.stats.bosses >= 1 },
   { id: 'inv-wave', name: 'Fleet Rekt', desc: 'Bark Invaders: clear a wave', tickets: 4, test: (r) => r.game === 'bark-invaders' && r.level >= 2 },
-  { id: 'cross-home', name: 'Home Sweet Kennel', desc: 'Pup Crossing: fill 3 kennels in one run', tickets: 3, test: (r) => r.game === 'pup-crossing' && r.stats.homes >= 3 },
+  { id: 'cross-home', name: 'Park Life', desc: 'Pup Crossing: reach 3 dog-park gates in one run', tickets: 3, test: (r) => r.game === 'pup-crossing' && r.stats.homes >= 3 },
   { id: 'cross-rescue', name: 'Good Samaritan', desc: 'Pup Crossing (Inu): rescue 3 puppies', tickets: 6, test: (r) => r.game === 'pup-crossing' && r.stats.rescued >= 3 },
   { id: 'brk-rally', name: 'Rally Pup', desc: 'Bone Breaker: 20 paddle hits in a row', tickets: 4, test: (r) => r.game === 'bone-breaker' && r.stats.maxRally >= 20 },
   { id: 'brk-boss', name: 'FUD Buster', desc: 'Bone Breaker (Inu): smash the FUD-bot boss brick', tickets: 5, test: (r) => r.game === 'bone-breaker' && r.stats.bosses >= 1 },
