@@ -5,7 +5,7 @@ import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
 import * as S from './core/scores.js';
 import * as R from './core/rewards.js';
-import { simWallet, setWallet, wallet } from './core/wallet.js';
+import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
 import * as Chomp from './games/chomp.js'; import * as Invaders from './games/invaders.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js';
@@ -19,10 +19,22 @@ const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in wind
 const input = createInput(window);
 const LS = (() => { try { localStorage.setItem('_t', '1'); return localStorage; } catch { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) }; } })();
 const scoreStore = S.createScoreStore(LS);
-export const A = { db: S.seedHouse(scoreStore.load()), purse: load('inuarcade.wallet.v1', R.newWallet()), profile: normalizeProfile(load('inuarcade.profile.v1', null)), initials: LS.getItem('inuarcade.initials') || 'AAA', scene: null, cab: null, lobby: null, input, LS };
-setWallet(simWallet(LS)); A.wallet = wallet;
+export const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+const PURSE_KEY = DEMO ? 'inuarcade.demo.wallet.v1' : 'inuarcade.wallet.v1'; // demo progress never leaks into real mode
+export const A = { db: S.seedHouse(scoreStore.load()), purse: load(PURSE_KEY, R.newWallet()), profile: normalizeProfile(load('inuarcade.profile.v1', null)), initials: LS.getItem('inuarcade.initials') || 'AAA', scene: null, cab: null, lobby: null, input, LS };
+if (!DEMO) for (const g of Object.keys(A.purse.skins || {})) A.purse.skins[g] = A.purse.skins[g].filter((k) => k !== 'gold'); // burn skins come only from the wallet's server inventory
+setWallet(DEMO ? simWallet(LS) : pendingWallet()); A.wallet = wallet; A.mode = DEMO ? 'demo' : 'loading';
+// kibble-pay glue: real wallet + footer (Terms / Prize Rules). Demo (fake KIBBLE) only with ?demo=1.
+import('https://kibble-pay.vercel.app/inu-games.js').then(async (g) => { A.glue = g;
+  const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
+  if (K.kp) { A.kp = K.kp; setWallet(kibblePayWallet(K.kp)); if (K.kp.session && K.kp.address) syncWallet().catch(() => {}); } }).catch(() => { if (!DEMO) A.mode = 'offline'; });
+// after sign-in: wallet-owned burn skins + the wallet's shared Shiba
+export async function syncWallet() { const w = wallet(); if (!w?.address || w.simulated) return;
+  const inv = await w.inventory(); for (const k of Object.keys(inv)) { const m = k.match(/^burn:inu-arcade:skin:([\w-]+):(\w+)$/); if (m && inv[k] > 0) { const l = (A.purse.skins[m[1]] ||= []); if (!l.includes(m[2])) l.push(m[2]); } }
+  const sh = await A.glue.loadShiba(w.address); if (sh.exists) { const keep = A.profile.outfit; A.profile = sh.profile; for (const k of Object.keys(keep || {})) if (!A.profile.outfit[k] && keep[k]) A.profile.outfit[k] = keep[k]; }
+  save(); }
 function load(k, d) { try { const v = JSON.parse(LS.getItem(k)); return v ?? d; } catch { return d; } }
-export function save() { scoreStore.save(A.db); LS.setItem('inuarcade.wallet.v1', JSON.stringify(A.purse)); LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile)); LS.setItem('inuarcade.initials', A.initials); refreshPurse(); }
+export function save() { scoreStore.save(A.db); LS.setItem(PURSE_KEY, JSON.stringify(A.purse)); LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile)); LS.setItem('inuarcade.initials', A.initials); refreshPurse(); }
 window.__arcade = A;
 
 // ---------- layout ----------
@@ -127,7 +139,7 @@ function openCab(id) {
 }
 function newRun(C, seed) { const mod = MET.modFor(C.gmode); const s = MET.applyMod(C.G.create(seed, { inu: C.gmode !== 'classic' }), mod); return { s, mod }; }
 function startPlay() { const C = A.cab; const seed = C.gmode === 'daily' ? MET.dailySeed(C.id) : (Math.random() * 1e9) | 0; const r = newRun(C, seed);
-  C.s = r.s; C.mod = r.mod; C.seed = seed; C.masks = []; C.mode = 'play'; C.t = 0; C.paused = false; C.parts = [];
+  C.s = r.s; C.mod = r.mod; C.seed = seed; C.masks = []; C.runStart = Date.now(); C.mode = 'play'; C.t = 0; C.paused = false; C.parts = [];
   const g = loadGhost(C); C.ghost = g ? { g, s: MET.applyMod(C.G.create(g.seed, { inu: g.mode !== 'classic' }), g.mod), ms: MET.decode(g.rle), i: 0 } : null;
   sfx('start'); input.clear(); }
 function loadGhost(C) { try { return JSON.parse(LS.getItem(ghostKey(C))); } catch { return null; } }
@@ -168,6 +180,9 @@ function finishRun() {
   const got = R.grant(A.purse, C.id, score); const ach = MET.evalAchievements(A.purse, { game: C.id, mode: C.gmode, score, level: C.s.level, stats: C.s.stats || {} });
   save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score, raw: C.s.score, mult: C.mod?.mult || 1, gmode: C.gmode, rank, drank, got, ach, newGhost, level: C.s.level };
   S.postScore(key, entry); showResults(C.id, C.result);
+  // wallet-signed score -> kibble-pay prize board (only when signed in with a real wallet)
+  const w = wallet(); if (w?.submitScore && w.address) w.submitScore(C.id, score, Date.now() - (C.runStart || Date.now())).then((r) => note(r.ok ? 'Posted to the $KIBBLE prize board (wallet-signed).' : 'Prize board: ' + r.reason)).catch((e) => note('Prize board: ' + e.message));
+  function note(m) { C.result.posted = m; const pn = document.getElementById('panel'); if (pn && !pn.hidden && pn.dataset.kind === 'results') document.getElementById('pbody').insertAdjacentHTML('beforeend', `<p class="small">${m.replace(/[<>&]/g, '')}</p>`); }
 }
 function drawHUD(C) { const s = C.s, G = C.G, W = G.W, H = G.H; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 20); const hi = Math.max(S.board(A.db, modeKey(C), 'all')[0]?.score || 0, MET.finalScore(s.score, C.mod));
   text('1UP', 8, 1, '#ff5d73', 8, 'left', false); text(String(s.score).padStart(6, '0'), 8, 10, '#fbf1e0', 8, 'left', false);

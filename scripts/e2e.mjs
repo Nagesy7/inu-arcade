@@ -65,7 +65,14 @@ const tag = process.env.TAG || 'local';
   const tk = await p.evaluate(() => window.__arcade.purse.tickets); await p.click('#pclose'); await p.click('#b-prizes'); await p.waitForTimeout(200);
   await p.click('[data-buy="arcade-cap"]'); await p.waitForTimeout(200); const pr = await p.evaluate(() => ({ t: window.__arcade.purse.tickets, owned: window.__arcade.purse.owned, hat: window.__arcade.profile.outfit.hat?.id }));
   ok(pr.owned.includes('arcade-cap') && pr.t === tk - 4 && pr.hat === 'arcade-cap', `prize counter swaps 4 tickets for Arcade Cap (${tk}->${pr.t})`);
-  await p.click('[data-gold="bone-breaker"]'); await p.waitForTimeout(300); ok((await p.evaluate(() => window.__arcade.purse.skins['bone-breaker'])).includes('gold'), 'gold skin unlocks via simulated burn');
+  await p.waitForFunction(() => !!document.getElementById('inu-legal'), null, { timeout: 20000 }).catch(() => {}); ok(/Terms.*Prize Rules/.test(await p.evaluate(() => document.getElementById('inu-legal')?.textContent || '')), 'footer: Terms + Prize Rules links');
+  await p.click('#pclose'); await p.click('#b-prizes'); await p.waitForTimeout(200);
+  await p.click('[data-gold="bone-breaker"]'); await p.waitForTimeout(500); ok(!(await p.evaluate(() => window.__arcade.purse.skins['bone-breaker'] || [])).includes('gold') && /launching soon/i.test(await p.evaluate(() => document.getElementById('pbody').textContent)), 'real mode: gold burn shows KIBBLE launching soon, nothing burned or faked');
+  await p.evaluate(() => { const el = document.getElementById('srvboard'); return el && el.textContent; }); await p.click('#pclose'); await p.click('#b-scores'); await p.waitForFunction(() => !/Loading/.test(document.getElementById('srvboard')?.textContent || 'Loading'), null, { timeout: 15000 }).catch(() => {});
+  ok(/pool/i.test(await p.evaluate(() => document.getElementById('srvboard')?.textContent || '')), 'scores panel shows the real kibble-pay prize board + pool'); await p.screenshot({ path: `proof/${tag}-desktop-server-board.png` });
+  { const d = await ctx.newPage(); await d.goto(URL + '/?demo=1'); await d.waitForTimeout(800); await d.evaluate(() => { window.__arcade.purse.tickets = 99; }); await d.click('#b-prizes'); await d.waitForTimeout(200); await d.click('[data-gold="bone-breaker"]'); await d.waitForTimeout(300);
+    ok((await d.evaluate(() => window.__arcade.purse.skins['bone-breaker'] || [])).includes('gold') && /DEMO/.test(await d.evaluate(() => document.getElementById('pbody').textContent)), 'demo (?demo=1): gold skin via labelled fake burn'); await d.close(); }
+  await p.click('#pclose'); await p.click('#b-prizes'); await p.waitForTimeout(200);
   await p.screenshot({ path: `proof/${tag}-desktop-prizes.png` }); await p.click('#pclose'); await p.click('#b-profile'); await p.waitForTimeout(200); await p.screenshot({ path: `proof/${tag}-desktop-profile.png` }); await p.click('#pclose');
   await p.goto(URL + '/'); await p.waitForTimeout(800); await p.screenshot({ path: `proof/${tag}-desktop-lobby-after.png` });
   ok(errs.length === 0, 'desktop: no page errors ' + errs.join(' | ')); await ctx.close();

@@ -1,5 +1,5 @@
 // DOM panels: results + share, leaderboards & prize pools, prize counter, profile/wallet, Inu Rescue link.
-import { A, GAMES, RESCUE_URL, save, go, startPlay } from './main.js';
+import { A, GAMES, RESCUE_URL, save, go, startPlay, syncWallet } from './main.js';
 import * as S from './core/scores.js'; import * as R from './core/rewards.js'; import { sfx } from './core/audio.js'; import * as MET from './core/meta.js';
 import { avatarCanvas } from './vendor/inu-avatar.js'; import { normalizeProfile } from './vendor/profile-schema.js';
 const $ = (q) => document.querySelector(q), esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -14,7 +14,7 @@ export function shareUrl(id, score, gmode = 'classic') { const text = `🐕🕹�
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`; }
 export function showResults(id, r) {
   openPanel(`<h2>${esc(title(id))}</h2><p><b style="color:var(--gold);font-size:18px">${r.score}</b> points · level ${r.level}</p>
-  ${r.mult !== 1 ? `<p class="small">${r.raw} × ${r.mult} weekly modifier</p>` : ''}<p>${esc(MET.MODES[r.gmode].name)} · Rank <b>#${r.drank}</b> today · <b>#${r.rank}</b> all-time</p><p>Earned <b>+${r.got.bones} Bones</b> and <b>+${r.got.tickets} prize tickets</b> 🎟</p>
+  ${r.mult !== 1 ? `<p class="small">${r.raw} × ${r.mult} weekly modifier</p>` : ''}<p>${esc(MET.MODES[r.gmode].name)} · Rank <b>#${r.drank}</b> today · <b>#${r.rank}</b> all-time</p>${r.posted ? `<p class="small">${esc(r.posted)}</p>` : ''}<p>Earned <b>+${r.got.bones} Bones</b> and <b>+${r.got.tickets} prize tickets</b> 🎟</p>
   ${r.ach?.length ? `<div class="note">🏅 Achievement${r.ach.length > 1 ? 's' : ''}: ${r.ach.map((a) => `<b>${esc(a.name)}</b> (+${a.tickets} 🎟)`).join(', ')}</div>` : ''}${r.newGhost ? '<p class="small">👻 New personal best saved as your ghost. It will race you next time and play in attract mode.</p>' : ''}
   <div><a class="btn x2" id="r-share" href="${shareUrl(id, r.score, r.gmode)}" target="_blank" rel="noopener">Share on 𝕏</a><button class="btn" id="r-copy">Copy link</button></div>
   <div><button class="btn gold" id="r-again">Play again</button><button class="btn" id="r-scores">Leaderboards</button><button class="btn" id="r-prizes">Prize counter</button><button class="btn" id="r-hall">Back to hall</button></div>
@@ -35,8 +35,10 @@ export function showScores(game = 'arcade', period = 'daily', mode = 'classic') 
     return `<div class="card"><b>${p.toUpperCase()} POOL</b><br>${S.POOLS[p].bones} Bones + ${esc(S.POOLS[p].cosmetic)}<br>${po.map((x) => `#${x.rank} ${esc(x.name)}: ${x.bones} 🦴${x.cosmetic ? ' + 👑' : ''}`).join('<br>')}<br><span class="small">resets in ${fmtT(S.resetsIn(p))}</span></div>`; }).join('');
   openPanel(`<h2>Leaderboards</h2><div class="tabs">${mtabs}</div><div class="tabs">${tabs}</div><div class="tabs">${ptabs}</div>
   <table><tr><th>#</th><th>Pup</th><th>${game === 'arcade' ? 'Arcade pts' : 'Score'}</th><th>${game === 'arcade' ? 'Games' : 'Date'}</th></tr>${rows || '<tr><td colspan=4>No scores yet. Be the first!</td></tr>'}</table>
-  <h3>Prize pools (skill only) · ${MET.MODES[mode].name}</h3><p class="small">This week's Inu Mode modifier: <b>${esc(MET.weeklyModifier().name)}</b>, ${esc(MET.weeklyModifier().desc)}</p><div class="grid">${pools}</div>
+  <h3>Bones prize pools (free play currency, this device) · ${MET.MODES[mode].name}</h3><p class="small">This week's Inu Mode modifier: <b>${esc(MET.weeklyModifier().name)}</b>, ${esc(MET.weeklyModifier().desc)}</p><div class="grid">${pools}</div>
+  <h3>$KIBBLE prize board (wallet-signed · ${period === 'all' ? 'weekly' : period})</h3><div id="srvboard" class="small">Loading…</div>
   <div class="note">Free to play. Prizes go to the top 3 on the combined Arcade board for each period, by rank only: no entry fee, no draws, no luck. Arcade points: each game's top score in the period is worth 1000, everyone else gets their share, summed over the four games. House scores (INU/PUP/DOG) are demo entries and never win. Scores are stored on this device for now; the server board is coming with kibble-pay sign-in.</div>`, 'scores');
+  fillServerBoard(game, period);
   document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => showScores(b.dataset.g, period, mode))); document.querySelectorAll('[data-p]').forEach((b) => (b.onclick = () => showScores(game, b.dataset.p, mode))); document.querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => showScores(game, period, b.dataset.m)));
 }
 export async function showPrizes(msg = '') {
@@ -45,14 +47,14 @@ export async function showPrizes(msg = '') {
   const skins = Object.keys(GAMES).map((g) => { const has = A.purse.skins[g] || []; const sp = R.SPONSORS[g];
     return `<div class="card"><b>${esc(title(g))}</b><br><span class="small">Sponsor: ${sp ? esc(sp.name) : 'open slot'}</span><br>
     <button class="btn" data-neon="${g}" ${has.includes('neon') || P.tickets < R.SKINS.neon.tickets ? 'disabled' : ''}>${has.includes('neon') ? 'Neon ✓' : `Neon skin 🎟${R.SKINS.neon.tickets}`}</button>
-    <button class="btn gold" data-gold="${g}" ${has.includes('gold') ? 'disabled' : ''}>${has.includes('gold') ? 'Gold ✓' : `Gold skin: burn ${R.SKINS.gold.burn} KIBBLE`}</button></div>`; }).join('');
-  openPanel(`<h2>Prize Counter</h2>${msg ? `<div class="note">${esc(msg)}</div>` : ''}<p>🦴 <b>${P.bones}</b> Bones · 🎟 <b>${P.tickets}</b> tickets · ${A.wallet().simulated ? 'demo' : ''} $KIBBLE <b>${bal}</b> ${A.wallet().simulated ? '<span class="small">(simulated wallet)</span>' : ''}</p>
+    <button class="btn gold" data-gold="${g}" ${has.includes('gold') ? 'disabled' : ''}>${has.includes('gold') ? 'Gold ✓' : `Gold skin: optional burn ${R.SKINS.gold.burn} KIBBLE`}</button></div>`; }).join('');
+  openPanel(`<h2>Prize Counter</h2>${msg ? `<div class="note">${esc(msg)}</div>` : ''}<p>🦴 <b>${P.bones}</b> Bones · 🎟 <b>${P.tickets}</b> tickets · ${A.wallet().simulated ? 'demo' : ''} $KIBBLE <b>${A.mode === 'demo' || A.mode === 'live' ? bal : '-'}</b> ${A.mode === 'demo' ? '<span class="small">(DEMO wallet, fake KIBBLE)</span>' : A.mode === 'live' ? '' : '<span class="small">(KIBBLE launching soon)</span>'}</p>
   <h3>Swap tickets for cosmetics</h3><div class="grid">${items}</div>
   <h3>Cabinet skins</h3><div class="grid">${skins}</div>
-  <div class="note">Fixed prices, no mystery boxes, no randomness. Cosmetics show on your Shiba in the hall (equip them under 🐕 Me). $KIBBLE is only burned for cosmetic skins. It is never an entry fee or a prize. Payments aren't live yet, so this uses a simulated demo wallet that never touches a blockchain.</div>`, 'prizes');
+  <div class="note">Fixed prices, no mystery boxes, no randomness. Cosmetics show on your Shiba in the hall (equip them under 🐕 Me). Burning $KIBBLE for a Gold skin is <b>optional</b>: the tokens are destroyed (nobody receives them) and the skin is saved to your wallet. Burning is never an entry fee and never affects prizes. ${A.mode === 'demo' ? 'DEMO MODE: fake KIBBLE, nothing real.' : A.mode === 'live' ? 'Sign in under 🐕 Me first.' : 'KIBBLE launching soon: burns open at launch.'}</div>`, 'prizes');
   document.querySelectorAll('[data-buy]').forEach((b) => (b.onclick = () => { const r = R.redeem(P, b.dataset.buy); if (r.ok) { sfx('ticket'); if (r.item.slot) { A.profile.outfit[r.item.slot] = r.item.item; A.profile.cosmetics = [...new Set([...A.profile.cosmetics, r.item.id])]; } save(); } showPrizes(r.ok ? `Got ${r.item.name}!${r.item.slot ? ' Equipped.' : ''}` : r.reason); }));
   document.querySelectorAll('[data-neon]').forEach((b) => (b.onclick = () => { const r = R.unlockSkinWithTickets(P, b.dataset.neon); save(); if (r.ok) sfx('pow'); showPrizes(r.ok ? 'Neon skin unlocked!' : r.reason); }));
-  document.querySelectorAll('[data-gold]').forEach((b) => (b.onclick = async () => { const r = await R.unlockSkinWithBurn(P, b.dataset.gold, A.wallet()); save(); if (r.ok) sfx('pow'); showPrizes(r.ok ? `Gold skin unlocked (${r.simulated ? 'simulated burn' : 'burn ' + r.sig}).` : r.reason); }));
+  document.querySelectorAll('[data-gold]').forEach((b) => (b.onclick = async () => { const w = A.wallet(); if (!w.simulated && w.live && !w.address) return showPrizes('Sign in with Phantom under 🐕 Me first.'); const r = await R.unlockSkinWithBurn(P, b.dataset.gold, w); save(); if (r.ok) sfx('pow'); showPrizes(r.ok ? `Gold skin unlocked (${r.simulated ? 'simulated burn' : 'burn ' + r.sig}).` : r.reason); }));
 }
 const COATS = ['#e0802c', '#2a2a2a', '#f3e6cc', '#c9452a', '#8a5a3c', '#d9b38c'];
 export function showProfile(msg = '') {
@@ -63,8 +65,9 @@ export function showProfile(msg = '') {
   <p class="small">Prize cosmetics</p><div>${owned.length ? owned.map((s) => `<button class="btn ${p.outfit[s.slot]?.id === s.id ? 'gold' : ''}" data-eq="${s.id}">${esc(s.name)}</button>`).join('') : '<span class="small">Win tickets and swap them at the prize counter.</span>'}</div>
   <h3>Bring your Inu Verse Shiba</h3><p class="small">Paste your Solana wallet address (public address only, never a seed phrase or private key) to load the Shiba you made in Inu Verse from the shared kibble-pay profile.</p>
   <input id="pf-wallet" placeholder="Wallet address" value="${esc(p.wallet || '')}"><button class="btn" id="pf-load">Load profile</button>
-  <p class="small">Wallet: ${A.wallet().simulated ? 'simulated demo wallet (payments not live yet)' : esc(A.wallet().address)}</p></div></div>`, 'profile');
+  <h3>Wallet</h3><p class="small">${A.wallet().simulated ? 'DEMO wallet (fake KIBBLE, ?demo=1)' : A.wallet().address ? 'Signed in: ' + esc(A.wallet().address) + '. Your scores post to the $KIBBLE prize board.' : 'Sign in with Phantom to post wallet-signed scores (free entry), keep burn skins on your wallet and load your Inu Verse Shiba automatically.'}</p>${!A.wallet().simulated && !A.wallet().address && A.kp ? '<button class="btn gold" id="pf-connect">Sign in with Phantom</button>' : ''}</div></div>`, 'profile');
   $('#pv').appendChild(avatarCanvas(p, 3));
+  if ($('#pf-connect')) $('#pf-connect').onclick = async () => { try { await A.wallet().connect(); await syncWallet(); showProfile('Signed in. Loaded your wallet Shiba and skins.'); } catch (e) { showProfile('Sign-in failed: ' + e.message); } };
   $('#pf-name').onchange = (e) => { p.name = e.target.value.replace(/[<>]/g, '').slice(0, 20) || 'Shiba'; save(); };
   document.querySelectorAll('[data-coat]').forEach((b) => (b.onclick = () => { p.look.coat = b.dataset.coat; save(); showProfile(); }));
   document.querySelectorAll('[data-eq]').forEach((b) => (b.onclick = () => { const s = R.SHOP.find((x) => x.id === b.dataset.eq); p.outfit[s.slot] = p.outfit[s.slot]?.id === s.id ? null : s.item; save(); showProfile(); }));
@@ -80,3 +83,17 @@ export function showRescue() {
 }
 export function showAchievements() { const got = A.purse.ach || {};
   openPanel(`<h2>Achievements</h2><p class="small">${Object.keys(got).length}/${MET.ACHIEVEMENTS.length} unlocked. Each pays a fixed number of prize tickets once.</p><div class="grid">${MET.ACHIEVEMENTS.map((a) => `<div class="card ach ${got[a.id] ? '' : 'locked'}"><div>${got[a.id] ? '🏅' : '🔒'}</div><div><b>${esc(a.name)}</b><br><span class="small">${esc(a.desc)}</span><br>🎟 ${a.tickets}</div></div>`).join('')}</div>`, 'ach'); }
+
+// Real $KIBBLE prize board + pools from kibble-pay (/api/game). game 'arcade' -> one board per cabinet + combined.
+async function fillServerBoard(game, period) {
+  const el = () => document.getElementById('srvboard'); const kp = A.kp, pool = period === 'all' ? 'weekly' : period;
+  if (!kp) { if (el()) el().textContent = A.mode === 'demo' ? 'Demo mode: the real prize board is hidden.' : 'Prize board unavailable (kibble-pay not reachable).'; return; }
+  try {
+    const [b, P] = await Promise.all([kp.scores(game === 'arcade' ? 'all' : game, pool), kp.pools()]);
+    const dec = P.decimals || 6, amt = (u) => (Number(u) / 10 ** dec).toLocaleString('en-US', { maximumFractionDigits: 4 }), me = A.wallet()?.address;
+    const rows = b.entries.slice(0, 10).map((e) => `<tr><td>${e.rank}</td><td>${e.wallet === me ? '<b>you</b>' : esc(e.wallet.slice(0, 4) + '…' + e.wallet.slice(-4))}</td><td>${e.score}${game === 'arcade' ? ' pts' : ''}</td></tr>`).join('');
+    if (el()) el().innerHTML = `<p>${pool} pool: <b>${amt(P.pools[pool].accruedBaseUnits)} KIBBLE</b> so far (funded by shop revenue, paid to the combined top 3 across all Inu games). ${A.mode === 'soon' ? 'KIBBLE launching soon: pools start filling at launch.' : ''}</p>
+      <table><tr><th>#</th><th>Wallet</th><th>${game === 'arcade' ? 'Combined' : 'Best'}</th></tr>${rows || '<tr><td colspan=3>No wallet-signed scores yet. Sign in under 🐕 Me and play!</td></tr>'}</table>
+      <p class="small"><a href="https://kibble-pay.vercel.app/prize-rules.html" target="_blank" rel="noopener">Prize Rules</a>: skill only, free entry, 18+.</p>`;
+  } catch (e) { if (el()) el().textContent = 'Prize board error: ' + e.message; }
+}

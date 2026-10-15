@@ -39,10 +39,10 @@ Phone (landscape): on-screen D-pad, A, START and BACK, with multi-touch and fing
 - Each play earns Bones (capped at 600 a day; never cashed out) and prize tickets (1 + 1 per score tier).
 - Prize counter: fixed ticket prices for cosmetics (hat, shades, scarf, jacket, pin, sneakers, lobby trail). No randomness. Bought items equip on your Shiba.
 - Cabinet skins: Neon (12 tickets) and Gold (burn 25 $KIBBLE, **simulated**). Each cabinet also has a sponsor slot (`SPONSORS` in `src/core/rewards.js`).
-- Scores are stored in localStorage (`inuarcade.scores.v1`). `api/scores.js` is a kibble-pay-ready stub (GET/POST, in-memory, `authoritative:false`); the client posts to it fire-and-forget.
+- Local boards (initials, ghosts, Bones/ticket pools) stay in localStorage. **Wallet-signed scores**: after `Sign in with Phantom` (🐕 Me), every run posts to kibble-pay `/api/game?action=score` (sanity caps + rate limits), and the 🏆 panel shows the real $KIBBLE prize board and pool from kibble-pay. `api/scores.js` is the old unauthenticated stub, kept only for the Inu Verse hi-score sign.
 
 ## Wallet & profile
-- `src/core/wallet.js`: `simWallet` (100 demo KIBBLE, no chain) is active. Swap with `setWallet(kibblePayWallet(kibblePay))` once $KIBBLE is minted. Callers don't change. No seed phrases or keys are ever handled.
+- `src/core/wallet.js`: real kibble-pay SDK adapter by default (loaded via `https://kibble-pay.vercel.app/inu-games.js`). Before the $KIBBLE mint is set, Gold-skin burns show "KIBBLE launching soon". Burns are optional, recorded server-side as `burn:inu-arcade:skin:<game>:gold` and restored from `/api/inventory` on sign-in. The fake 100-KIBBLE `simWallet` runs **only with `?demo=1`** (separate save slot, labelled DEMO). The footer links Terms / Prize Rules.
 - The player's Shiba is drawn with the vendored `src/vendor/inu-avatar.js` + `profile-schema.js` (copied from kibble-pay; re-sync with `cp ../kibble-pay/public/inu-avatar.js ../kibble-pay/public/lib/profile-schema.js src/vendor/`). "🐕 Me" can load a public profile from `https://kibble-pay.vercel.app/api/profile?wallet=…`.
 
 ## Embedding in Inu Verse (later, done separately)
