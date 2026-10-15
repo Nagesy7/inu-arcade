@@ -36,7 +36,7 @@ export const SCATTER = [{ x: 25, y: -3 }, { x: 2, y: -3 }, { x: 27, y: 32 }, { x
 export const NO_UP = ['12,11', '15,11', '10,23', '17,23']; // cats can't turn up here (above the house + above the start lane)
 export const BARK = { cd: 8, radius: 3.5, stun: 2 }, COIN = { at: [100, 200], pts: 500, life: 9 };
 const DIRS = { up: [0, -1], left: [-1, 0], down: [0, 1], right: [1, 0] }, OPP = { up: 'down', down: 'up', left: 'right', right: 'left' }, ORDER = ['up', 'left', 'down', 'right'];
-export const CAT_COLORS = ['#e8343c', '#f58ac8', '#3ad0e0', '#f5a23a'], CAT_NAMES = ['BEARISH', 'PANIC', 'DUMPY', 'FUDDY'];
+export const CAT_COLORS = ['#7a8aa8', '#e8e4dc', '#e07a2a', '#c8a878'] /* grey, white, ginger, tabby coats */, CAT_NAMES = ['BEARISH', 'PANIC', 'DUMPY', 'FUDDY'];
 export function isWall(tx, ty) { if (ty === 14 && (tx < 0 || tx >= COLS)) return false; if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true; const c = MAZE[ty][tx]; return c === '#' || c === 'H' || c === '-'; }
 const ghostWall = (tx, ty, eyes) => { if (ty >= 0 && ty < ROWS && tx >= 0 && tx < COLS && MAZE[ty][tx] === '-') return !eyes; return isWall(tx, ty); };
 const tileOf = (a) => ({ x: Math.floor(a.x / TILE), y: Math.floor(a.y / TILE) });
@@ -182,12 +182,12 @@ const SPR_PAC = { // 13x13 sharp side-profile Shiba head (faces right; flipped f
   up: ['.oo.......oo.', '.odo.....odo.', '.ooooooooooo.', 'ooooooooooooo', 'ooooooooooooo', 'oooooddoooooo', 'ooooddddooooo', 'oooooddoooooo', '.ooooooooooo.', '.ooooooooooo.', '..ooooooooo..', '...ooooooo...', '.............'],
 };
 const PAC_PAL = { o: '#e8892e', d: '#a8521a', w: '#f6ead6', e: '#14101c', n: '#14101c' };
-const CAT = { body: ['...c......c...', '..ccc....ccc..', '..cccccccccc..', '.cccccccccccc.', '.cwwccccccwwc.', '.cwpccccccwpc.', '.cccccccccccc.', '.cccckkkkcccc.', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cc.ccc..ccc.cc', 'c...c....c...c'],
-  scared: ['...c......c...', '..ccc....ccc..', '..cccccccccccc', '.cccccccccccc.', '.ccyyccccyycc.', '.ccyyccccyycc.', '.cccccccccccc.', '.cycycycycycc.', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cc.ccc..ccc.cc', 'c...c....c...c'] };
+const CAT = { body: ['...c......c...', '..ccc....ccc..', '..cccccccccc..', '.cccccccccccc.', '.cwwccccccwwc.', '.cwpccccccwpc.', '.cccccccccccc.', '.cccckkkkcccc.', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', '.cccccccccccc.', '.cc..cccc..cc.'],
+  scared: ['...c......c...', '..ccc....ccc..', '..cccccccccccc', '.cccccccccccc.', '.ccyyccccyycc.', '.ccyyccccyycc.', '.cccccccccccc.', '.cycycycycycc.', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', '.cccccccccccc.', '.cc..cccc..cc.'] };
 export function draw(ctx, s, now, P) {
   ctx.fillStyle = '#06060f'; ctx.fillRect(0, 0, W, H);
   const flashMaze = s.clearing && Math.floor(s.freeze / 12) % 2;
-  const wallC = flashMaze ? '#ffffff' : '#3b57e8', fillC = '#0a0c26';
+  const wallC = flashMaze ? '#ffffff' : '#5fb04a', fillC = '#14240e'; /* green hedge maze */
   for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) { const ch = MAZE[y][x]; const X = x * 8, Y = y * 8 + OY;
     if (ch === '-') { ctx.fillStyle = '#f5b0c8'; ctx.fillRect(X, Y + 3, 8, 2); continue; }
     if (ch !== '#') continue; ctx.fillStyle = fillC; ctx.fillRect(X, Y, 8, 8); ctx.fillStyle = wallC;
@@ -201,8 +201,8 @@ export function draw(ctx, s, now, P) {
   if (s.coin && (s.coin.f > 120 || Math.floor(s.frame / 6) % 2)) { const X = s.coin.tx * 8 + 4, Y = s.coin.ty * 8 + 4 + OY; ctx.fillStyle = '#f2c14e'; ctx.fillRect(X - 3, Y - 3, 7, 7); ctx.fillStyle = '#7a5210'; ctx.fillRect(X - 1, Y - 2, 2, 5); }
   const flashF = FRIGHT_FLASHES[Math.min(s.level, 21)] * 28;
   for (const c of s.cats) { const X = c.x - 7, Y = c.y - 7 + OY;
-    if (c.eyes) { ctx.fillStyle = '#fff'; ctx.fillRect(X + 3, Y + 4, 3, 3); ctx.fillRect(X + 8, Y + 4, 3, 3); ctx.fillStyle = '#2a3fe8'; const [dx, dy] = DIRS[c.dir]; ctx.fillRect(X + 4 + dx, Y + 5 + dy, 1, 1); ctx.fillRect(X + 9 + dx, Y + 5 + dy, 1, 1); continue; }
-    if (c.fright) { const blink = s.frightF < flashF && Math.floor(s.frightF / 14) % 2 === 0; P.blit(ctx, P.sprite('catS' + blink, CAT.scared, { c: blink ? '#e8e8ff' : '#2430b8', y: blink ? '#e8343c' : '#f0d0a0' }, { outline: false }), X, Y); continue; }
+    if (c.eyes) { ctx.fillStyle = '#9ef07a'; ctx.fillRect(X + 3, Y + 4, 3, 3); ctx.fillRect(X + 8, Y + 4, 3, 3); ctx.fillStyle = '#14101c'; const [dx, dy] = DIRS[c.dir]; ctx.fillRect(X + 4 + dx, Y + 4, 1, 3); ctx.fillRect(X + 9 + dx, Y + 4, 1, 3); ctx.fillStyle = c.color; ctx.fillRect(X + 6 - dx * 4, Y + 9 - dy * 4, 2, 2); continue; } /* fleeing cat: green slit eyes + tail tip */
+    if (c.fright) { const blink = s.frightF < flashF && Math.floor(s.frightF / 14) % 2 === 0; P.blit(ctx, P.sprite('catS' + blink, CAT.scared, { c: blink ? '#ffffff' : '#c8a0e0', y: blink ? '#7a3aa8' : '#ffffff' } /* soggy lavender scaredy-cat, not blue */, { outline: false }), X, Y); continue; }
     P.blit(ctx, P.sprite('cat2' + c.color, CAT.body, { c: c.color, w: '#ffffff', p: '#14101c', k: '#14101c' }, { outline: false }), X, Y);
     const [dx, dy] = DIRS[c.dir]; ctx.fillStyle = '#14101c'; ctx.fillRect(X + 2 + Math.max(0, dx), Y + 4 + Math.max(0, dy), 1, 1); ctx.fillRect(X + 10 + Math.max(0, dx), Y + 4 + Math.max(0, dy), 1, 1);
     if (c.stun > 0) { ctx.fillStyle = '#7ef0ff'; ctx.fillRect(X, Y - 3, 14, 1); } }

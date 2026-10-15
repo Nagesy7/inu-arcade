@@ -1,6 +1,6 @@
 // PUP CROSSING — arcade-accurate lane-hopper rules (224x256 native), original Inu art and names.
 // 5 road lanes + 5 river lanes with fixed patterns, diving turtles(ducks), crocodiles (logs + in kennels), snakes,
-// bonus fly, lady pup, 60 s timer, 5 kennels per level, per-level speed ramp, extra life at 20,000.
+// bonus biscuit, lady pup, 60 s timer, 5 kennels per level, per-level speed ramp, extra life at 20,000.
 import { rng } from '../core/rng.js';
 export const META = { id: 'pup-crossing', title: 'PUP CROSSING', color: '#5fd37a', blurb: 'Five lanes of traffic, five lanes of river, five kennels. 60 seconds a pup. Ducks dive, crocs lurk, snakes slither.', controls: 'Arrows / WASD / D-pad to hop', inuMove: 'ZOOMIES LEAP (A): jump 2 rows, 5s cooldown. Lost puppies ride the logs more often: carry one home for +300.', classicNote: 'Arcade-accurate tables.' };
 export const W = 224, H = 256, T = 16, HOME_ROW = 2, START_ROW = 14, MEDIAN = 8, TIME = 60;
@@ -82,7 +82,7 @@ function reachHome(s) {
   const p = s.pup, i = BAYS.findIndex((bx) => Math.abs(p.x - bx) <= 8);
   if (i < 0) return kill(s, 'hedge'); if (s.homes[i]) return kill(s, 'hedge'); if (crocDeadly(s.bay[i])) return kill(s, 'croc');
   const secs = Math.floor(s.timerF / 60); let pts = PTS.home + secs * PTS.perSecond;
-  if (s.bay[i]?.kind === 'fly') { pts += PTS.fly; pop(s, BAYS[i], 40, 'FLY +200', '#f2c14e'); }
+  if (s.bay[i]?.kind === 'fly') { pts += PTS.fly; pop(s, BAYS[i], 40, 'BISCUIT +200', '#f2c14e'); }
   if (p.carrying) { if (s.inu) { pts += RESCUE_PTS; s.rescued++; s.stats.rescued++; } else pts += PTS.lady; pop(s, BAYS[i], 56, s.inu ? 'PUPPY SAVED +300' : 'LADY PUP +200', '#f5a0c8'); }
   s.bay[i] = null; s.homes[i] = 1; s.score += pts; s.stats.homes++; s.ev.push('home'); fx(s, BAYS[i], 40, '#5fd37a', 16); pop(s, BAYS[i], 28, '+' + pts, '#5fd37a');
   if (s.homes.every(Boolean)) { s.score += PTS.allHomes; s.level++; s.homes = [0, 0, 0, 0, 0]; buildLevel(s); s.ev.push('level'); pop(s, 112, 120, 'LEVEL ' + s.level + '  +1000', '#f2c14e'); }
@@ -119,7 +119,7 @@ export function draw(ctx, s, now, P) {
   ctx.fillStyle = '#2b1f4a'; ctx.fillRect(0, MEDIAN * T, W, T); ctx.fillRect(0, START_ROW * T, W, T); ctx.fillStyle = '#3d2c6a'; for (let x = 0; x < W; x += 8) { ctx.fillRect(x, MEDIAN * T + 2, 4, 1); ctx.fillRect(x + 4, START_ROW * T + 13, 4, 1); }
   ctx.fillStyle = '#101018'; ctx.fillRect(0, 9 * T, W, 5 * T); ctx.fillStyle = '#4a4a5a'; for (let r = 9; r < 13; r++) for (let x = 0; x < W; x += 16) ctx.fillRect(x, (r + 1) * T - 1, 8, 1);
   s.homes.forEach((h, i) => { if (h) P.blit(ctx, P.sprite('pupH', PUP.up, { 1: '#e8892e', 2: '#14101c' }, { outline: false }), BAYS[i] - 5, 2 * T + 3); const b = s.bay[i]; if (!b) return;
-    if (b.kind === 'fly') { ctx.fillStyle = '#c8f04e'; ctx.fillRect(BAYS[i] - 2, 2 * T + 6, 4, 3); ctx.fillStyle = '#fff'; ctx.fillRect(BAYS[i] - 4 + (s.frame % 8 < 4 ? 0 : 1), 2 * T + 4, 3, 2); }
+    if (b.kind === 'fly') { const by = 2 * T + 5 + (s.frame % 16 < 8 ? 0 : 1); ctx.fillStyle = '#e0a050'; ctx.fillRect(BAYS[i] - 3, by, 6, 5); ctx.fillStyle = '#8a5020'; ctx.fillRect(BAYS[i] - 2, by + 1, 1, 1); ctx.fillRect(BAYS[i] + 1, by + 3, 1, 1); } /* bonus biscuit, not a fly */
     else { ctx.fillStyle = '#3a8a3a'; const op = crocDeadly(b) ? 10 : 4; ctx.fillRect(BAYS[i] - 6, 2 * T + 14 - op, 12, op); ctx.fillStyle = '#ff3040'; ctx.fillRect(BAYS[i] - 3, 2 * T + 15 - op, 1, 1); ctx.fillRect(BAYS[i] + 2, 2 * T + 15 - op, 1, 1); } });
   for (const l of s.lanes) for (const o of l.objs) { const x = Math.round(wrapX(l, o)), y = l.row * T;
     if (o.kind === 'log') { ctx.fillStyle = '#6a3e1c'; ctx.fillRect(x, y + 3, o.len, 10); ctx.fillStyle = '#8a5428'; ctx.fillRect(x, y + 4, o.len, 2); ctx.fillStyle = '#b07a40'; ctx.fillRect(x, y + 3, 3, 10); ctx.fillRect(x + o.len - 3, y + 3, 3, 10); }

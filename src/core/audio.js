@@ -20,7 +20,7 @@ function noise(dur, vol = 0.08, delay = 0, hp = 800) {
 const seq = (notes, step, type = 'square', vol = 0.07) => notes.forEach((n, i) => n && tone(n, n, step * 0.9, type, vol, i * step));
 export const SFX = {
   blip: () => tone(880, 1320, 0.05), select: () => seq([660, 990], 0.06), coin: () => seq([988, 1319], 0.07),
-  chomp: (() => { let k = 0; return () => { k ^= 1; tone(k ? 300 : 420, k ? 420 : 300, 0.06, 'triangle', 0.1); }; })(),
+  chomp: (() => { let k = 0; return () => { k = (k + 1) % 3; noise(0.025, 0.05, 0, 2500 + k * 900); tone(700 + k * 120, 650 + k * 120, 0.025, 'square', 0.04); }; })(), /* kibble crunch */
   power: () => seq([262, 330, 392, 523, 659], 0.05, 'square'), eatGhost: () => tone(200, 1600, 0.25, 'square', 0.07),
   bark: () => { tone(520, 180, 0.09, 'square', 0.08); noise(0.05, 0.04); }, boom: () => { noise(0.35, 0.12, 0, 200); tone(140, 40, 0.3, 'triangle', 0.1); },
   hit: () => { noise(0.08, 0.07, 0, 1500); tone(400, 120, 0.08, 'square', 0.05); }, hop: () => tone(330, 660, 0.06, 'square', 0.06),
@@ -49,4 +49,4 @@ function tick() {
     if (I >= 3 && i % 4 === 0) tone(mtof(ARP[bar][0] + 24), mtof(ARP[bar][2] + 24), sp * 1.5, 'square', 0.02, d);
     mus.step++; mus.next += sp; }
 }
-SFX.march = (() => { let k = 0; const N = [98, 87, 78, 73]; return () => { tone(N[k], N[k] * 0.9, 0.09, 'square', 0.07); k = (k + 1) % 4; }; })();
+SFX.march = (() => { let k = 0; const N = [131, 165, 147]; return () => { tone(N[k], N[k] * 1.05, 0.06, 'triangle', 0.08); noise(0.03, 0.03, 0, 300); k = (k + 1) % 3; }; })(); /* rising paw-thump */

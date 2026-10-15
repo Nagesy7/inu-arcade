@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const U='http://localhost:8140', D='/workspace/inu-arcade-shots/', T=process.env.T||'after';
+const U=process.env.URL||'http://localhost:8140', D='/workspace/inu-arcade-shots/', T=process.env.T||'after';
 const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true,deviceScaleFactor:2});
 const p=await ctx.newPage(); const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 await p.goto(U+'/'); await p.waitForTimeout(900); await p.screenshot({path:D+T+'-hub.png'});

@@ -24,7 +24,7 @@ export function create(seed = 1, opts = {}) {
   s.player = { x: 104, dead: 0 }; newWave(s); return s;
 }
 export function makeShield() { const b = new Uint8Array(22 * 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 22; x++) { let on = true;
-  if (y < 4 && (x < 4 - y || x > 17 + y)) on = false; if (y >= 12 && x >= 5 && x <= 16) on = false; if (y >= 10 && y < 12 && x >= 7 && x <= 14) on = false; b[y * 22 + x] = on ? 1 : 0; } return b; }
+  const dx = Math.abs(x - 10.5); if (y < 7 && dx > 3 + y * 1.25) on = false; /* kennel: peaked roof */ if (y >= 10 && dx <= 3.5) on = false; if (y === 9 && dx <= 2.5) on = false; b[y * 22 + x] = on ? 1 : 0; } return b; }
 export const SHIELD_X = [32, 77, 122, 167];
 function newWave(s) {
   const by = waveY(s.wave); s.aliens = []; // order = bottom-left first, like the arcade's update order
@@ -130,9 +130,10 @@ export function bot(s) {
 }
 export const ghostPos = (s) => ({ x: s.player.x + 6, y: PY + 4 });
 // ---------- render ----------
-const SPR = { squid: [['...11...', '..1111..', '.111111.', '11.11.11', '11111111', '..1..1..', '.1.11.1.', '1.1..1.1'], ['...11...', '..1111..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '1......1', '.1....1.']],
-  crab: [['..1.....1..', '...1...1...', '..1111111..', '.11.111.11.', '11111111111', '1.1111111.1', '1.1.....1.1', '...11.11...'], ['..1.....1..', '1..1...1..1', '1.1111111.1', '111.111.111', '11111111111', '.111111111.', '..1.....1..', '.1.......1.']],
-  octo: [['....1111....', '.1111111111.', '111111111111', '111..11..111', '111111111111', '...11..11...', '..11.11.11..', '11........11'], ['....1111....', '.1111111111.', '111111111111', '111..11..111', '111111111111', '..111..111..', '.11..11..11.', '..11....11..']] };
+// Original "rug-pull fleet" sprites (not the arcade alien shapes): squid -> FUD drone, crab -> flying rug, octo -> grumpy bear head.
+const SPR = { squid: [['..1..1..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '..1111..', '.1....1.', '1......1'], ['..1..1..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '..1111..', '..1..1..', '..1..1..']],
+  crab: [['1.1.1.1.1.1', '11111111111', '1.........1', '1.111.111.1', '1.........1', '11111111111', '1.1.1.1.1.1', '...........'], ['...........', '1.1.1.1.1.1', '11111111111', '1.........1', '1.111.111.1', '1.........1', '11111111111', '.1.1.1.1.1.']],
+  octo: [['11........11', '111......111', '.1111111111.', '11.111111.11', '111..11..111', '111111111111', '.11.1111.11.', '..11111111..'], ['11........11', '111......111', '.1111111111.', '11.111111.11', '111..11..111', '111111111111', '.111.11.111.', '..1......1..']] };
 const TYPE_COL = { squid: '#ff5dc8', crab: '#fbf1e0', octo: '#7ee08a' };
 const PLAYER = ['.1.......1...', '.11.....11...', '.111111111...', '11111111111..', '1111211121111', '1111111111111', '1111111111111', '1111111111111'];
 export function draw(ctx, s, now, P) {
@@ -140,7 +141,7 @@ export function draw(ctx, s, now, P) {
   for (let i = 0; i < 30; i++) { ctx.fillStyle = i % 3 ? '#1a1838' : '#3a3666'; ctx.fillRect((i * 97 + 13) % W, 30 + ((i * 53) % 200), 1, 1); }
   for (const a of s.aliens) if (a.alive) P.blit(ctx, P.sprite('inv' + a.type + s.anim, SPR[a.type][s.anim], { 1: TYPE_COL[a.type] }, { outline: false }), box(a).x, a.y);
   if (s.pop) { ctx.fillStyle = '#fff'; for (let i = 0; i < 6; i++) ctx.fillRect(s.pop.x + 3 + ((i * 5) % 11), s.pop.y + ((i * 3) % 8), 1, 1); }
-  if (s.ufo) P.blit(ctx, P.sprite('ufo', ['.....111111.....', '...1111111111...', '..111111111111..', '.11.11.11.11.11.', '1111111111111111', '..111..11..111..', '...1........1...'], { 1: '#3ad0e0' }, { outline: false }), s.ufo.x, s.ufo.y);
+  if (s.ufo) P.blit(ctx, P.sprite('ufo', ['......1111......', '....11111111....', '...1111111111...', '...1.1.1.1.1.1..', '....11111111....', '......1..1......', '......1111......'], { 1: '#3ad0e0' }, { outline: false }), s.ufo.x, s.ufo.y);
   if (s.ufoPop) { ctx.font = '8px "Press Start 2P", monospace'; ctx.fillStyle = '#3ad0e0'; ctx.fillText(s.ufoPop.pts, s.ufoPop.x, 47); }
   if (s.boss) { const B = s.boss; ctx.fillStyle = '#2a4fa8'; ctx.fillRect(B.x + 4, B.y, B.w - 8, B.h); ctx.fillRect(B.x, B.y + 4, B.w, B.h - 8); ctx.fillStyle = '#ff3040'; ctx.fillRect(B.x + 10, B.y + 5, 3, 2); ctx.fillStyle = '#c8d8ff'; ctx.fillRect(B.x + 4, B.y + 11, B.w - 12, 2);
     ctx.fillStyle = '#300'; ctx.fillRect(40, 30, 144, 3); ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 30, 144 * Math.max(0, B.hp / B.max), 3); }
