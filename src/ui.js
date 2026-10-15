@@ -92,7 +92,7 @@ async function fillServerBoard(game, period) {
     const [b, P] = await Promise.all([kp.scores(game === 'arcade' ? 'all' : game, pool), kp.pools()]);
     const dec = P.decimals || 6, amt = (u) => (Number(u) / 10 ** dec).toLocaleString('en-US', { maximumFractionDigits: 4 }), me = A.wallet()?.address;
     const rows = b.entries.slice(0, 10).map((e) => `<tr><td>${e.rank}</td><td>${e.wallet === me ? '<b>you</b>' : esc(e.wallet.slice(0, 4) + '…' + e.wallet.slice(-4))}</td><td>${e.score}${game === 'arcade' ? ' pts' : ''}</td></tr>`).join('');
-    if (el()) el().innerHTML = `<p>${pool} pool: <b>${amt(P.pools[pool].accruedBaseUnits)} KIBBLE</b> so far (funded by shop revenue, paid to the combined top 3 across all Inu games). ${A.mode === 'soon' ? 'KIBBLE launching soon: pools start filling at launch.' : ''}</p>
+    if (el()) el().innerHTML = `<p>${pool} pool: <b>${amt(P.pools[pool].accruedBaseUnits)} KIBBLE</b> so far (funded by shop revenue, paid to the combined top 3 across all Inu games). ${A.mode === 'soon' ? '$KIBBLE is live; pool totals will refresh when the wallet service is reachable.' : ''}</p>
       <table><tr><th>#</th><th>Wallet</th><th>${game === 'arcade' ? 'Combined' : 'Best'}</th></tr>${rows || '<tr><td colspan=3>No wallet-signed scores yet. Sign in under 🐕 Me and play!</td></tr>'}</table>
       <p class="small"><a href="https://kibble-pay.vercel.app/prize-rules.html" target="_blank" rel="noopener">Prize Rules</a>: skill only, free entry, 18+.</p>`;
   } catch (e) { if (el()) el().textContent = 'Prize board error: ' + e.message; }

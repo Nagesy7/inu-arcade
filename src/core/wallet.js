@@ -1,9 +1,9 @@
 // Wallet adapter. Real kibble-pay SDK (https://kibble-pay.vercel.app/kibble-pay.js) by default.
-// Before the $KIBBLE mint is set every burn shows SOON. simWallet (fake 1,000,000 KIBBLE) ONLY with ?demo=1.
+// $KIBBLE is live: real burns via kibble-pay; SOON only if kibble-pay is unreachable. simWallet (fake 1,000,000 KIBBLE) ONLY with ?demo=1.
 // We never see or store seed phrases / private keys; signing happens in the user's wallet app via kibblePay.
 export const GAME = 'inu-arcade';
 export const PRIZE_VERSION = 2;
-export const SOON = 'KIBBLE launching soon: purchases open at launch.';
+export const SOON = 'KIBBLE is live, but the wallet service is unreachable right now. Try again shortly.';
 export function simWallet(storage) {
   const K = 'inuarcade.simkibble.v1'; const get = () => { const v = Number(storage?.getItem(K)); return Number.isFinite(v) && storage?.getItem(K) !== null ? v : 1000000; };
   return { id: 'sim', simulated: true, address: 'DEMO-WALLET', balance: async () => get(),
