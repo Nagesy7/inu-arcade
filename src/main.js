@@ -29,6 +29,7 @@ setWallet(DEMO ? simWallet(LS) : pendingWallet()); A.wallet = wallet; A.mode = D
 import('https://kibble-pay.vercel.app/inu-games.js').then(async (g) => { A.glue = g;
   const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
   const pj = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
+  g.mountHome?.(); // 🏠 Back to Inu Verse (title/pause/results; confirms + saves via globalThis.__inuHome)
   if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v'], position: 'top-right',
     progress: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return (p.plays || 0) * 10 + (p.bones || 0) + (p.tickets || 0) * 5; },
     label: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return `${p.plays || 0} plays · ${p.bones || 0} bones · ${p.tickets || 0} tickets`; },
@@ -284,3 +285,5 @@ try { const raw = new URLSearchParams(location.search).get('p'); if (raw && raw.
   const p = normalizeProfile(JSON.parse(json), new URLSearchParams(location.search).get('wallet') || undefined);
   const keep = A.profile.outfit; A.profile = p; for (const k of Object.keys(keep || {})) if (!A.profile.outfit[k] && keep[k]) A.profile.outfit[k] = keep[k];
   LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile)); } } catch {}
+// 🏠 Back to Inu Verse hooks (kibble-pay mountHome): confirm mid-match, save first.
+globalThis.__inuHome = { busy: () => A.cab ? 'Leave this cabinet and go back to Inu Verse? Your tickets and scores are saved first.' : false, save: () => save() };
