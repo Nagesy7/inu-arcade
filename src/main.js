@@ -250,10 +250,13 @@ for (const ev of ['keydown', 'touchstart', 'touchend', 'pointerup', 'click']) ad
 document.addEventListener('visibilitychange', () => { if (!document.hidden) unlockAudio(); });
 
 // ---------- loop ----------
+// vsync snap: rAF timestamps wobble +-1-2ms, so a raw 1/60 accumulator ran 0 or 2 sim steps on many frames (visible stutter).
+export function snapDt(dt) { const k = Math.round(dt * 60); return k >= 1 && Math.abs(dt - k / 60) < 0.002 ? k / 60 : dt; }
 let last = performance.now(), acc = 0;
 function frame(t) {
-  const dt = Math.min(0.1, (t - last) / 1000); last = t; acc += dt; const now = t / 1000;
-  while (acc >= 1 / 60) { acc -= 1 / 60; const inp = input.snapshot(); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
+  const dt = snapDt(Math.min(0.1, (t - last) / 1000)); last = t; acc += dt; const now = t / 1000; let nSteps = 0;
+  while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++; const inp = input.snapshot(); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
+  (window.__stepHist ||= {})[nSteps] = (window.__stepHist[nSteps] || 0) + 1; // jitter probe
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
   if (A.scene === 'lobby') drawLobby(now); else if (A.scene === 'cab') drawCab(now);
   bloom();
