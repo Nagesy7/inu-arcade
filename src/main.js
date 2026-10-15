@@ -28,6 +28,11 @@ setWallet(DEMO ? simWallet(LS) : pendingWallet()); A.wallet = wallet; A.mode = D
 // kibble-pay glue: real wallet + footer (Terms / Prize Rules). Demo (fake KIBBLE) only with ?demo=1.
 import('https://kibble-pay.vercel.app/inu-games.js').then(async (g) => { A.glue = g;
   const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
+  const pj = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
+  if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v'], position: 'top-right',
+    progress: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return (p.plays || 0) * 10 + (p.bones || 0) + (p.tickets || 0) * 5; },
+    label: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return `${p.plays || 0} plays · ${p.bones || 0} bones · ${p.tickets || 0} tickets`; },
+    onWallet: ({ address, tier }) => { A.holderTier = address ? tier : null; if (address) syncWallet().catch(() => {}); } });
   if (K.kp) { A.kp = K.kp; setWallet(kibblePayWallet(K.kp)); if (K.kp.session && K.kp.address) syncWallet().catch(() => {}); } }).catch(() => { if (!DEMO) A.mode = 'offline'; });
 // after sign-in: wallet-owned burn skins + the wallet's shared Shiba
 export async function syncWallet() { const w = wallet(); if (!w?.address || w.simulated) return;
