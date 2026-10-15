@@ -7,10 +7,10 @@ Only the mechanics are borrowed. All names, characters and art are original and 
 
 | Path | Cabinet | Mechanic |
 |---|---|---|
-| `/kibble-chomp` | Kibble Chomp | maze chase: kibble 10, power bone 50, scared cats 200/400/800/1600, maze clear +500, faster cats each level |
-| `/bark-invaders` | Bark Invaders | fixed shooter: 9×4 rug-pull fleet (10/20/30), erodible kennel shields, whale bonus ship, fleet speeds up as it thins |
-| `/pup-crossing` | Pup Crossing | lane hopper: 5 road lanes, 4 river lanes (logs + duck rafts), 5 kennels, 30 s timer, +1000 and faster lanes when all kennels are full |
-| `/bone-breaker` | Bone Breaker | paddle + ball: 13×6 crate wall, angle by hit position, power-ups (wide, multi-ball, slow-mo, extra life), 3 rotating layouts, 2-hit crates from level 3 |
+| `/kibble-chomp` | Kibble Chomp | maze chase: kibble 10, power bone 40, scared cats 250/500/750/1000 (they flee), bonus treats at 60/150 kibble, 4 cat personalities (Tracker/Guard/Flanker/Moody) |
+| `/bark-invaders` | Bark Invaders | fixed shooter: 43-dog arrowhead fleet (rows 5/7/9/11/11; 40/25/15 pts), pebble (aimed) + zigzag (sweeping) bombs, diving pups, balloon bonus 300→100 |
+| `/pup-crossing` | Pup Crossing | lane hopper: 4 dog-park gates, 50 s timer, bins/scooters/mowers/vans/buses then flipping frisbees, pool noodles and a raft, lawn sprinklers, biscuit +250, toy +150 |
+| `/bone-breaker` | Bone Breaker | paddle + ball: 12×7 crate wall, 3 screen maps, tough 2-hit crates, rally speed-ups, paddle wears down every 20 hits |
 | hall cabinet | Inu Rescue | links to https://inu-rescue.vercel.app (the first cabinet) |
 
 Every cabinet has a title screen, attract mode (bot demo), play, pause (START), game over, 3-letter initials entry, a results card, its own URL and its own share card (`og/*.png`, per-game `og:`/`twitter:` tags in `/<game>/index.html`) plus a share-to-X button carrying the score.
@@ -67,9 +67,21 @@ node scripts/build-pages.mjs && node scripts/og.mjs   # regenerate per-game page
 export PATH=$HOME/.local/bin:$PATH; vercel deploy --prod --yes
 ```
 
-## Arcade-accurate Classic rules (v3)
+## Remixed rules (v2 rules, current)
+Every cabinet is an original Inu design. **Classic** = classic-difficulty rules on these original layouts and tables; **Inu Mode** layers its twists on top. Tables are exported from each module and asserted in `tests/rules.test.mjs`.
+- **Kibble Chomp**: kibble 10, power bone 40, scared-cat chain 250/500/750/1000, extra life at 8,000. Cats: Tracker (chases you), Guard (cuts you off ahead), Flanker (mirrors Tracker), Moody (swaps mood every 3 s). Scared cats run away for `max(1.5, 8 − 0.6·(level−1))` s. Bonus treats (150→2000) appear at 60 and 150 kibble. The house releases cats on a timer (level 1: 0, 4, 8, 12 s) or after 12 kibble, and 0.6× faster after you lose a life. Dinner-bell rush only from level 2.
+- **Bark Invaders**: 43 dogs in an arrowhead (5/7/9/11/11; 40/25/15). The fleet steps faster as it thins and starts lower each wave (128 + 12·((wave−1) mod 6)). Two bomb types: pebble (aimed) and zigzag (sweeping). Divers peel off (+2 each). Balloon bonus is worth 300 to 100 (earlier = more). Extra life at 2,000. Wave 1 is gentler: slower volley and divers start later.
+- **Pup Crossing**: 4 dog-park gates, 50 s timer, 10 per step, 60 + 10/s per gate, +800 for all four, biscuit +250, toy +150 (Inu Mode: lost puppy +300), extra life at 15,000. Shut gates and fences kill; sprinklers splash. Level 1 is forgiving: lanes at 0.75× speed, no flipping frisbees, shorter and smaller sprinkler bursts, 3 px edge grace on floaters. Flips start at level 2 (second flipper at 3) and lanes speed up 10% per level from level 2 (cap 1.7×).
+- **Bone Breaker**: 12×7 crates across 3 screen maps, rows worth 6/5/4/3/2/2/1, tough 2-hit crates, ball speed ladder 1.6→3.2 every 10 rally hits and on reaching the deep rows, paddle 24 px that wears 2 px every 20 hits (minimum 16), max angle 62°. Classic max is about 714.
+- **Leaderboards**: local boards and ghosts use `inuarcade.scores.v2` / `inuarcade.ghost.v2.*`, so pre-remix scores never mix. House scores (INU/PUP/DOG) were rescaled for v2 from the human-sim medians.
+- **Prize scores**: posted to kibble-pay as `{game, score, durationMs, v: 2}` (`kp.submitScore(game, score, ms, { v: 2 })`) with the same game ids (`kibble-chomp`, `bark-invaders`, `pup-crossing`, `bone-breaker`).
+- **Difficulty tuning**: `node scripts/human-sim.mjs 16` replays each cabinet with a human-like bot (about 250 ms reaction, held decisions, 6% wrong inputs, 4% dropped inputs, occasional zone-outs) and prints the median survival time per cabinet.
+
+<details><summary>Legacy: arcade-accurate Classic rules (v3, pre-remix, retired)</summary>
+
 Classic mode is a faithful reimplementation of the original arcade *mechanics* (original names/art). Inu Mode layers its twists on top of the same rules. Rule tables are exported from each module and asserted in `tests/rules.test.mjs`.
 - **Kibble Chomp** (224x288): 28x31 maze with a side tunnel, 240 kibble + 4 power bones. Per-level speed table (pac / pac-fright / cat / tunnel / fright / Elroy 1+2), fright time 6,5,4,3,2,5,2,2,1,5,2,1,1,3,1,1,0,1,0… seconds, scatter/chase table per level (7/20/7/20/5/20/5/∞; then 1033 s and 1/60 s), the 4 targeting personalities including the up-direction overflow quirk, no-up tiles, cornering, dot stalls, house dot counters (30/60 on L1, 50 on L2), global counter after a death, idle release timer, Elroy speed-ups, bonus items at 70/170 dots (100→5000), 200/400/800/1600 combos, extra life at 10,000.
 - **Bark Invaders** (224x256): 11x5 rack moving one alien per frame (so speed rises as aliens die), 8 px drop, one player shot, rolling/plunger/squiggly bombs with column tables, score-based reload rate, mystery ship scored by shot count, pixel-eroded shields, wave start heights 136→192, extra life at 1500.
 - **Pup Crossing** (224x256): 5 road + 5 river lanes, diving ducks, 60 s timer, 10/step, 50 + 10/s per kennel, 1000 for all five, bonus fly and lady pup (+200), crocs in kennels, median and log snakes, croc logs, per-level speed ramp, extra life at 20,000.
 - **Bone Breaker** (224x256): 8 rows x 14 bricks scoring 1/1/3/3/5/5/7/7, speed-ups at 4 and 12 brick hits and on first orange/red contact, paddle halves after the ball hits the top wall, 8-segment angles, 2 screens (max 896). Interpretation: speed and paddle size reset with each new ball.
+</details>

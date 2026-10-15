@@ -31,7 +31,7 @@ test('chomp: Inu speed curves ramp smoothly and level off; dinner bell rush near
   k.x = 20; k.y = 14 * 8 + 4; assert.ok(C.catSpeed(s, k) < base, 'hedge tunnel slowdown');
 });
 test('chomp: scared time shrinks per level but never hits zero; nap/prowl mood clock with shrinking naps', () => {
-  assert.equal(C.scaredSecs(1), 7); assert.ok(C.scaredSecs(5) < C.scaredSecs(1)); assert.equal(C.scaredSecs(40), 1.5);
+  assert.equal(C.scaredSecs(1), 8); assert.ok(C.scaredSecs(5) < C.scaredSecs(1)); assert.equal(C.scaredSecs(40), 1.5);
   const m1 = C.moodTable(1); assert.equal(m1.length, 8); assert.equal(m1[7], Infinity); assert.ok(m1[0] > m1[2] && m1[2] > m1[4], 'naps shrink'); assert.ok(C.moodTable(6)[0] < m1[0]);
   const s = C.create(1); s.ready = 0; s.pac.x = 1000; s.pac.y = 1000; let changed = -1; s.cats.forEach((c) => (c.state = 'house')); s.roundF = -1e9; s.sinceRelease = -1e9;
   for (let f = 1; f <= m1[0] * 60 + 2; f++) { C.step(s, F, {}); if (changed < 0 && s.phase === 1) changed = f; } assert.equal(changed, m1[0] * 60); assert.equal(C.scatterMode(s), false);
@@ -45,8 +45,8 @@ test('chomp: four original personalities (tracker, guard, flanker, moody) and in
   s.phase = 0; s.cats.forEach((c, i) => assert.deepEqual(C.catTarget(s, c), C.BEDS[i])); for (const b of C.BEDS) assert.ok(!C.isWall(b.x, b.y), 'beds are inside the maze');
 });
 test('chomp: timed house release (faster each level) plus release after 12 kibble', () => {
-  assert.deepEqual(C.releaseAt(1), [0, 2.5, 5.5, 9]); assert.ok(C.releaseAt(4)[3] < 9 && C.releaseAt(20)[3] >= 9 * 0.4 - 1e-9); assert.equal(C.RELEASE_DOTS, 12);
-  const s = C.create(1); s.ready = 0; s.pac.x = 1000; C.step(s, F, {}); assert.equal(s.cats[1].state, 'house'); for (let i = 0; i < 2.5 * 60; i++) C.step(s, F, {}); assert.notEqual(s.cats[1].state, 'house', 'second cat out at 2.5s');
+  assert.deepEqual(C.releaseAt(1), [0, 4, 8, 12]); assert.deepEqual(C.releaseAt(2), [0, 2.2, 4.84, 7.92]); assert.ok(C.releaseAt(4)[3] < 9 && C.releaseAt(20)[3] >= 9 * 0.4 - 1e-9); assert.equal(C.RELEASE_DOTS, 12);
+  const s = C.create(1); s.ready = 0; s.pac.x = 1000; C.step(s, F, {}); assert.equal(s.cats[1].state, 'house'); for (let i = 0; i < 4 * 60; i++) C.step(s, F, {}); assert.notEqual(s.cats[1].state, 'house', 'second cat out at 4s on level 1');
   assert.equal(s.cats[2].state, 'house'); s.sinceRelease = 12; C.step(s, F, {}); assert.notEqual(s.cats[2].state, 'house', '12 kibble also opens the door');
 });
 test('chomp: scared cats flee (no reversal tables); no tile quirks', () => {
@@ -128,7 +128,8 @@ test('crossing: traffic kills, water kills, platforms carry, timer kills', () =>
 });
 test('crossing: flipping frisbees cycle up/wobble/under/back; standing on a flipped one drowns', () => {
   assert.equal(X.flipState(0), 'up'); assert.equal(X.flipState(X.FLIP.steady), 'wobble'); assert.equal(X.flipState(X.FLIP.steady + X.FLIP.wobble), 'under'); assert.equal(X.flipState(X.FLIP.steady + X.FLIP.wobble + X.FLIP.flipped), 'back');
-  const s = X.create(1); const l = s.lanes.find((k) => k.row === 7); const o = l.objs.find((q) => q.flip); assert.ok(o); l.v = 0; s.pup.row = 7; s.pup.x = X.wrapX(l, o) + 8;
+  assert.ok(!X.create(1).lanes.some((l) => l.objs.some((o) => o.flip)), 'level 1: no flipping frisbees');
+  const s = X.create(1); s.level = 2; X.buildLevel(s); const l = s.lanes.find((k) => k.row === 7); const o = l.objs.find((q) => q.flip); assert.ok(o); l.v = 0; s.pup.row = 7; s.pup.x = X.wrapX(l, o) + 8;
   s.frame = X.FLIP.steady + X.FLIP.wobble - o.ph + 1; X.step(s, F, {}); assert.equal(s.lastDeath, 'splash');
 });
 test('crossing: sprinklers spray the lawn on a cycle; more heads each level', () => {
@@ -141,7 +142,7 @@ test('crossing: gate gives 60 + 10/sec, biscuit +250, shut gate and fence kill, 
   s.bay[0] = { kind: 'fly', f: 0 }; s.best = 3; s.timerF = 30 * 60 + 30; X.step(s, F, { up: true }); assert.equal(s.score, 10 + 60 + 30 * 10 + 250);
   s.bay[1] = { kind: 'shut', f: 100 }; s.pup.row = 3; s.pup.x = X.GATES[1]; for (let i = 0; i < 10; i++) X.step(s, F, {}); s.bay[1] = { kind: 'shut', f: 100 }; X.step(s, F, { up: true }); assert.equal(s.lastDeath, 'gate');
   const h = X.create(1); h.pup.row = 2; h.pup.x = 58; h.lanes.forEach((l) => (l.objs = [])); X.step(h, F, {}); assert.equal(h.lastDeath, 'fence');
-  const lv = X.create(1); lv.homes = [1, 1, 1, 0]; lv.pup.row = 2; lv.pup.x = X.GATES[3]; X.step(lv, F, {}); assert.equal(lv.level, 2); assert.ok(X.speedMul(2) > 1 && lv.sprinklers.length === 2);
+  const lv = X.create(1); lv.homes = [1, 1, 1, 0]; lv.pup.row = 2; lv.pup.x = X.GATES[3]; X.step(lv, F, {}); assert.equal(lv.level, 2); assert.ok(X.speedMul(2) > X.speedMul(1) && X.speedMul(3) > 1 && lv.sprinklers.length === 2);
 });
 test('crossing: squeaky toy on a noodle +150 (no escort); bot plays', () => {
   const s = X.create(1); s.lanes.forEach((l) => (l.v = 0)); s.ladyT = 1; X.step(s, F, {}); assert.ok(s.lady); const l = s.lanes.find((k) => k.row === 6); s.pup.row = 6; s.pup.x = X.wrapX(l, l.objs[s.lady.obj]) + s.lady.off; if (s.pup.x < 10 || s.pup.x > 214) { l.objs[s.lady.obj].x -= s.pup.x - 100; s.pup.x = 100; }

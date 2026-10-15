@@ -14,10 +14,10 @@ export const PTS = { dot: 10, energizer: 40, cats: [250, 500, 750, 1000], extraL
 const PX100 = 75.75757625 / 60; // reference speed in px/frame
 // Inu speed curves (fraction of reference speed): smooth ramps that level off by level 9-12.
 export function speeds(level) { const L = Math.min(level, 12) - 1;
-  return { pup: Math.min(0.97, 0.82 + 0.025 * L), pupScared: Math.min(1, 0.9 + 0.02 * L), cat: Math.min(0.95, 0.74 + 0.03 * L), hedge: 0.48, scared: Math.min(0.62, 0.52 + 0.01 * L), rush: 0.06 }; }
+  return { pup: Math.min(0.97, 0.86 + 0.02 * L), pupScared: Math.min(1, 0.9 + 0.02 * L), cat: Math.min(0.95, 0.62 + 0.045 * L), /* human-tuned: gentle L1-2, same ceiling */ hedge: 0.48, scared: Math.min(0.62, 0.52 + 0.01 * L), rush: level >= 2 ? 0.06 : 0 }; }
 export const DINNER_BELL = 0.2; // when <= 20% of kibble is left every cat gains +rush speed
 export const dinnerBell = (s) => dotsLeft(s) <= Math.round(s.total * DINNER_BELL);
-export const scaredSecs = (level) => Math.max(1.5, 7 - 0.5 * (level - 1)); // shrinks but never vanishes
+export const scaredSecs = (level) => Math.max(1.5, 8 - 0.6 * (level - 1)); // shrinks but never vanishes
 export const frightSecs = scaredSecs;
 // mood clock in seconds, alternating [nap, prowl, nap, prowl, ...]; naps shrink each cycle and each level
 export function moodTable(level) { const out = []; let nap = Math.max(2, 6 - 0.5 * (level - 1));
@@ -26,7 +26,7 @@ export const BONUS = [null, ['BISCUIT', 150], ['CHEW TOY', 250], ['BACON', 400],
 export const bonusFor = (level) => BONUS[Math.min(level, 8)];
 export const BONUS_DOTS = [60, 150], BONUS_SECS = 8;
 // house: each cat walks out at its own time (seconds into the round, quicker each level) or after 12 kibble since the last exit
-export const releaseAt = (level) => [0, 2.5, 5.5, 9].map((t) => Math.round(t * Math.max(0.4, 1 - 0.12 * (level - 1)) * 100) / 100);
+export const releaseAt = (level) => (level === 1 ? [0, 4, 8, 12] : [0, 2.5, 5.5, 9]).map((t) => Math.round(t * Math.max(0.4, 1 - 0.12 * (level - 1)) * 100) / 100);
 export const RELEASE_DOTS = 12;
 export const BEDS = [{ x: 6, y: 5 }, { x: 21, y: 5 }, { x: 6, y: 26 }, { x: 21, y: 26 }]; // nap spots inside the maze
 export const TRAIL_LAG = 8, MOODY_SWAP = 3; // Tracker aims 8 scent marks (~1s) behind you; Moody swaps every 3s

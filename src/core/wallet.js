@@ -2,6 +2,7 @@
 // Before the $KIBBLE mint is set every burn shows SOON. simWallet (fake 100 KIBBLE) ONLY with ?demo=1.
 // We never see or store seed phrases / private keys; signing happens in the user's wallet app via kibblePay.
 export const GAME = 'inu-arcade';
+export const PRIZE_VERSION = 2;
 export const SOON = 'KIBBLE launching soon: purchases open at launch.';
 export function simWallet(storage) {
   const K = 'inuarcade.simkibble.v1'; const get = () => { const v = Number(storage?.getItem(K)); return Number.isFinite(v) && storage?.getItem(K) !== null ? v : 100; };
@@ -18,6 +19,8 @@ export function kibblePayWallet(kp) {
     async burn({ amount, itemId }) { if (!kp.cfg?.provisioned) return { ok: false, reason: SOON };
       const r = await kp.burn(String(amount), { itemId, game: GAME }); return r?.ok ? { ok: true, sig: r.signature } : { ok: false, reason: r?.error || 'Burn failed' }; },
     async inventory() { return (await kp.inventory(GAME))?.[GAME] || {}; },
-    submitScore: (game, score, ms) => kp.submitScore(game, score, ms) };
+    // v2 (remixed rules) prize scores: same game ids, body {game, score, durationMs, v: 2}. kibble-pay keeps them on
+    // their own board (sc:<pool>:<period>:<game>@v2) (kibble-pay ff77ee1); scores without v are hidden v1.
+    submitScore: (game, score, ms) => kp.submitScore(game, score, ms, { v: PRIZE_VERSION }) };
 }
 let active = null; export const wallet = () => active; export const setWallet = (w) => (active = w);

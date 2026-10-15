@@ -13,7 +13,7 @@ export const waveY = (wave) => 128 + 12 * ((wave - 1) % 6); // bottom-row start 
 export const stepFrames = (alive, total = FLEET) => Math.max(3, Math.round(3 + 37 * (alive / total) ** 1.3));
 export const STEP_X = 2, STEP_DROP = 6;
 // volley reload: frames between enemy shots on Inu's own curve (eases from 54 toward 14 as your score climbs)
-export const reloadFrames = (score) => Math.max(14, Math.round(54 - 6 * Math.log2(1 + score / 150)));
+export const reloadFrames = (score, wave = 2) => Math.max(14, Math.round(54 - 6 * Math.log2(1 + score / 150))) + (wave === 1 ? 18 : 0); // wave 1 breathes
 export const maxBombs = (wave) => Math.min(4, 2 + Math.floor((wave - 1) / 2));
 export const BOMB_SPEED = 1.5, BOMB_SPEED_FAST = 2; // fast once 6 or fewer remain
 export const DIVE = { every: 12 * 60, first: 8 * 60, vy: 1.1, sway: 22, pts: 2 }; // a wing-tip diver swoops every 12s (double points if shot)
@@ -35,7 +35,7 @@ function newWave(s) {
   const by = waveY(s.wave); s.aliens = []; // arrowhead: narrow tip on top, full width at the bottom
   for (let r = ROWS - 1; r >= 0; r--) { const w = ROW_WIDTH[r], c0 = (COLS - w) / 2; for (let k = 0; k < w; k++) { const c = c0 + k; s.aliens.push({ r, c, type: ROW_TYPE[r], x: 24 + c * 16, y: by - (ROWS - 1 - r) * 16, alive: true }); } }
   s.total = s.aliens.length; s.stepT = 0; s.dir = 1; s.anim = 0; s.shot = null; s.bombs = {}; s.sinceBomb = 0; s.volley = 0; s.sweepCol = 0; s.sweepDir = 1;
-  s.diver = null; s.diveT = DIVE.first; s.ufo = null; s.ufoT = MYSTERY_FRAMES; s.shields = SHIELD_X.map(makeShield); s.player.dead = 0; s.player.x = 104; s.ready = 60;
+  s.diver = null; s.diveT = s.wave === 1 ? DIVE.first * 2 : DIVE.first; s.ufo = null; s.ufoT = MYSTERY_FRAMES; s.shields = SHIELD_X.map(makeShield); s.player.dead = 0; s.player.x = 104; s.ready = 60;
   s.boss = isBossWave(s) ? { x: 80, y: 44, w: 48, h: 16, hp: 30 + s.wave * 3, max: 30 + s.wave * 3, vx: 0.6, fireT: 60 } : null;
 }
 export const alive = (s) => s.aliens.filter((a) => a.alive);
@@ -92,7 +92,7 @@ function bombs(s) {
     if (!s.player.dead && hit(b, pb)) { delete s.bombs[k]; playerHit(s); continue; }
     if (erode(s, b, BOMB_MASK)) { delete s.bombs[k]; continue; }
     if (b.y + b.h >= GROUND) { delete s.bombs[k]; fx(s, b.x, GROUND - 2, '#ff6a4a', 3); } }
-  if (!al.length || s.player.dead || s.sinceBomb < reloadFrames(s.score)) return;
+  if (!al.length || s.player.dead || s.sinceBomb < reloadFrames(s.score, s.wave)) return;
   const live = Object.values(s.bombs).filter((b) => b.kind !== 'boss').length; if (live >= maxBombs(s.wave)) return;
   const cols = [...new Set(al.map((a) => a.c))].sort((p, q) => p - q); let src = null, kind;
   if (s.volley++ % 2 === 0) { kind = 'pebble'; // aimed: the column nearest the player, sometimes one off

@@ -12,14 +12,15 @@ export const isRiver = (r) => r >= 3 && r <= 7, isRoad = (r) => r >= 9 && r <= 1
 export const LANES = [
   [13, 'bin', -0.6, 12, 4, 56], [12, 'scooter', 0.9, 16, 3, 80], [11, 'mower', -0.45, 20, 3, 74], [10, 'van', 1.2, 24, 2, 112], [9, 'bus', -0.7, 40, 2, 120],
   [7, 'frisbee2', 0.6, 32, 4, 56], [6, 'noodle', -0.55, 56, 3, 84], [5, 'frisbee3', 0.9, 48, 3, 80], [4, 'noodle', -1.1, 88, 2, 150], [3, 'raft', 0.7, 40, 3, 90]];
-export const speedMul = (level) => Math.min(1.7, 1 + 0.1 * (level - 1));
+export const speedMul = (level) => (level === 1 ? 0.75 : Math.min(1.7, 1 + 0.1 * (level - 2))); // L1 is a gentle warm-up
 export const FLIP = { steady: 150, wobble: 40, flipped: 50, back: 30 }; // frames: frisbees wobble, flip over (unsafe), then right themselves
 const CYCLE = FLIP.steady + FLIP.wobble + FLIP.flipped + FLIP.back;
 export const flipState = (f) => { const p = ((f % CYCLE) + CYCLE) % CYCLE; return p < FLIP.steady ? 'up' : p < FLIP.steady + FLIP.wobble ? 'wobble' : p < FLIP.steady + FLIP.wobble + FLIP.flipped ? 'under' : 'back'; };
 export const diveState = flipState;
 export const SPRINKLER = { period: 210, on: 80, reach: 20 }; // spray for 80 of every 210 frames, deadly within 20px
 export const sprinklerXs = (level) => (level <= 1 ? [112] : level === 2 ? [60, 164] : [40, 112, 184]);
-export const sprinklerOn = (f, i) => (f + i * 70) % SPRINKLER.period < SPRINKLER.on;
+export const sprinklerOn = (f, i, level = 2) => (f + i * 70) % SPRINKLER.period < (level === 1 ? 60 : SPRINKLER.on); // L1: shorter bursts
+export const EDGE_GRACE = 3; // L1 only: a paw on the edge of a platform still counts
 export const LEAP = { cd: 5 }, RESCUE_PTS = 300;
 const fx = (s, x, y, c, n = 8) => s.fx.push({ x, y, c, n }), pop = (s, x, y, text, c = '#7ef0ff') => s.pops.push({ x, y, text, c, t: 1 });
 export function create(seed = 1, opts = {}) {
@@ -30,7 +31,7 @@ export function create(seed = 1, opts = {}) {
 export function buildLevel(s) {
   const m = speedMul(s.level);
   s.lanes = LANES.map(([row, kind, v, len, count, gap], li) => { const objs = []; let n = count; if (kind === 'van' && s.level >= 3) n = 3; if (kind === 'bin' && s.level >= 2) n = 5;
-    const span = Math.max(W + 64, n * gap); for (let i = 0; i < n; i++) objs.push({ x: (i * span) / n + li * 11, len, kind, ph: i * 83, flip: kind.startsWith('frisbee') && (i === 1 || (s.level >= 2 && i === 3)) ? 1 : 0 });
+    const span = Math.max(W + 64, n * gap); for (let i = 0; i < n; i++) objs.push({ x: (i * span) / n + li * 11, len, kind, ph: i * 83, flip: kind.startsWith('frisbee') && s.level >= 2 && (i === 1 || (s.level >= 3 && i === 3)) ? 1 : 0 });
     return { row, kind, v: v * m, objs, span }; });
   s.sprinklers = sprinklerXs(s.level);
   s.bay = [null, null, null, null]; s.bayT = 200; s.lady = null; s.ladyT = s.inu ? 300 : 700;
@@ -46,7 +47,7 @@ export function step(s, dt, inp) {
   if (s.inu) s.leapCd = Math.max(0, s.leapCd - dt);
   s.acc += dt * 60; while (s.acc >= 1 && !s.over) { s.acc -= 1; frame(s); }
 }
-export const sprayHits = (s, x) => s.sprinklers.some((sx, i) => sprinklerOn(s.frame, i) && Math.abs(x - sx) < SPRINKLER.reach);
+export const sprayHits = (s, x) => s.sprinklers.some((sx, i) => sprinklerOn(s.frame, i, s.level) && Math.abs(x - sx) < (s.level === 1 ? 16 : SPRINKLER.reach));
 function frame(s) {
   s.frame++; s.t += 1 / 60; const inp = s.inp || {};
   for (const l of s.lanes) for (const o of l.objs) o.x += l.v;
@@ -62,7 +63,7 @@ function frame(s) {
   }
   if (--s.timerF <= 0) return kill(s, 'time');
   if (p.row === HOME_ROW) return reachHome(s);
-  if (isRiver(p.row)) { const l = s.lanes.find((k) => k.row === p.row), o = objUnder(s, p.row, p.x);
+  if (isRiver(p.row)) { const l = s.lanes.find((k) => k.row === p.row), g = s.level === 1 ? EDGE_GRACE : 0, o = objUnder(s, p.row, p.x) || (g && (objUnder(s, p.row, p.x - g) || objUnder(s, p.row, p.x + g)));
     if (!o) return kill(s, 'splash'); if (o.flip && flipState(s.frame + o.ph) === 'under') return kill(s, 'splash');
     p.x += l.v; if (p.x < 4 || p.x > W - 4) return kill(s, 'splash');
     if (s.lady && s.lady.row === p.row) { const ll = s.lanes.find((k) => k.row === s.lady.row); const lx = wrapX(ll, ll.objs[s.lady.obj]) + s.lady.off; if (Math.abs(lx - p.x) < 10) grabToy(s); }
@@ -94,7 +95,7 @@ export function bot(s) {
   const p = s.pup; if (s.dead || p.hop) return {};
   const ahead = (row, x, f) => { // is (row,x) safe for the next f frames?
     if (row === HOME_ROW) return GATES.some((bx, i) => !s.homes[i] && Math.abs(x - bx) <= 6 && s.bay[i]?.kind !== 'shut');
-    if (row === MEDIAN) { for (let k = 0; k <= f; k += 4) if (s.sprinklers.some((sx, i) => sprinklerOn(s.frame + k, i) && Math.abs(x - sx) < SPRINKLER.reach + 4)) return false; return true; }
+    if (row === MEDIAN) { for (let k = 0; k <= f; k += 4) if (s.sprinklers.some((sx, i) => sprinklerOn(s.frame + k, i, s.level) && Math.abs(x - sx) < SPRINKLER.reach + 4)) return false; return true; }
     const l = s.lanes.find((k) => k.row === row); if (!l) return true;
     for (let k = 0; k <= f; k += 4) { const fake = { ...s, lanes: s.lanes.map((q) => (q === l ? { ...q, objs: q.objs.map((o) => ({ ...o, x: o.x + q.v * k })) } : q)) };
       if (isRoad(row) && (objUnder(fake, row, x - 7) || objUnder(fake, row, x + 7))) return false;
@@ -118,7 +119,7 @@ export function draw(ctx, s, now, P) {
   ctx.fillStyle = '#2a6a2a'; ctx.fillRect(0, 2 * T - 4, W, T + 4); ctx.fillStyle = '#c8c8d8'; for (let x = 0; x < W; x += 6) ctx.fillRect(x, 2 * T, 1, T); ctx.fillRect(0, 2 * T + 2, W, 1); ctx.fillRect(0, 2 * T + 10, W, 1); /* park fence */
   for (const gx of GATES) { ctx.fillStyle = '#1e4a1e'; ctx.fillRect(gx - 10, 2 * T, 20, T); ctx.fillStyle = '#8a5a2a'; ctx.fillRect(gx - 11, 2 * T - 3, 2, T + 3); ctx.fillRect(gx + 9, 2 * T - 3, 2, T + 3); }
   ctx.fillStyle = '#3a7a34'; ctx.fillRect(0, MEDIAN * T, W, T); ctx.fillStyle = '#2b1f4a'; ctx.fillRect(0, START_ROW * T, W, T); ctx.fillStyle = '#4a8a3e'; for (let x = 0; x < W; x += 6) ctx.fillRect(x, MEDIAN * T + ((x * 7) % 12) + 2, 1, 2);
-  s.sprinklers.forEach((sx, i) => { ctx.fillStyle = '#9a9aa8'; ctx.fillRect(sx - 2, MEDIAN * T + 10, 4, 4); if (sprinklerOn(s.frame, i)) { ctx.fillStyle = 'rgba(159,208,255,0.75)'; for (let k = 0; k < 14; k++) { const a = (k / 13) * Math.PI, r = SPRINKLER.reach * (0.6 + 0.4 * ((s.frame + k * 3) % 8) / 8); ctx.fillRect(sx + Math.cos(a) * r, MEDIAN * T + 11 - Math.sin(a) * r * 0.45, 2, 1); } } });
+  s.sprinklers.forEach((sx, i) => { ctx.fillStyle = '#9a9aa8'; ctx.fillRect(sx - 2, MEDIAN * T + 10, 4, 4); if (sprinklerOn(s.frame, i, s.level)) { ctx.fillStyle = 'rgba(159,208,255,0.75)'; for (let k = 0; k < 14; k++) { const a = (k / 13) * Math.PI, r = SPRINKLER.reach * (0.6 + 0.4 * ((s.frame + k * 3) % 8) / 8); ctx.fillRect(sx + Math.cos(a) * r, MEDIAN * T + 11 - Math.sin(a) * r * 0.45, 2, 1); } } });
   ctx.fillStyle = '#1a1a22'; ctx.fillRect(0, 9 * T, W, 5 * T); ctx.fillStyle = '#4a4a5a'; for (let r = 9; r < 13; r++) for (let x = 0; x < W; x += 16) ctx.fillRect(x, (r + 1) * T - 1, 8, 1);
   s.homes.forEach((h, i) => { const gx = GATES[i]; if (h) P.blit(ctx, P.sprite('pupH', PUP.up, { 1: '#e8892e', 2: '#14101c' }, { outline: false }), gx - 5, 2 * T + 3); const b = s.bay[i]; if (!b) return;
     if (b.kind === 'fly') { const by = 2 * T + 5 + (s.frame % 16 < 8 ? 0 : 1); ctx.fillStyle = '#e0a050'; ctx.fillRect(gx - 3, by, 6, 5); ctx.fillStyle = '#8a5020'; ctx.fillRect(gx - 2, by + 1, 1, 1); ctx.fillRect(gx + 1, by + 3, 1, 1); }

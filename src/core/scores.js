@@ -48,6 +48,9 @@ export function createScoreStore(storage, key = SCORES_KEY) {
 // Optional server sync (kibble-pay-ready stub at /api/scores). Fire-and-forget; local board stays the source of truth for now.
 export async function postScore(game, entry, base = '') { try { const r = await fetch(base + '/api/scores', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ game, ...entry }) }); return r.ok ? r.json() : null; } catch { return null; } }
 // House demo scores so a fresh cabinet has something to beat. Flagged house: shown, never eligible for prizes.
+// House scores for the v2 (remixed) rules, scaled from the human-sim medians (scripts/human-sim.mjs): INU ~2x a typical
+// first-session run, PUP ~ typical, DOG ~ beginner. Bone Breaker classic tops out at MAX_SCORE (714) over 3 screens.
+export const HOUSE = { 'kibble-chomp': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bark-invaders': [['INU', 2500], ['PUP', 1200], ['DOG', 500]], 'pup-crossing': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bone-breaker': [['INU', 650], ['PUP', 400], ['DOG', 200]] };
 export function seedHouse(db, now = Date.now()) { if (db._seeded) return db; db._seeded = 1;
-  const H = { 'kibble-chomp': [['INU', 2400], ['PUP', 1200], ['DOG', 600]], 'bark-invaders': [['INU', 1500], ['PUP', 800], ['DOG', 300]], 'pup-crossing': [['INU', 900], ['PUP', 450], ['DOG', 200]], 'bone-breaker': [['INU', 1600], ['PUP', 700], ['DOG', 300]] };
+  const H = HOUSE;
   for (const [g, list] of Object.entries(H)) for (const [name, score] of list) addScore(db, g, { name, score, at: now, house: true }); return db; }
