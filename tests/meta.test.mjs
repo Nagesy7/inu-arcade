@@ -24,7 +24,7 @@ test('rewards: tickets by skill tier, bones capped daily, fixed prize counter', 
 });
 test('rewards: neon skin by tickets, gold skin by (simulated) burn', async () => {
   const w = R.newWallet(); w.tickets = 12; assert.ok(R.unlockSkinWithTickets(w, 'bone-breaker').ok); assert.equal(w.tickets, 0);
-  const sw = simWallet(mem()); assert.equal(await sw.balance(), 100); const r = await R.unlockSkinWithBurn(w, 'bone-breaker', sw); assert.ok(r.ok && r.simulated); assert.equal(await sw.balance(), 75);
+  const sw = simWallet(mem()); assert.equal(await sw.balance(), 1000000); const r = await R.unlockSkinWithBurn(w, 'bone-breaker', sw); assert.ok(r.ok && r.simulated); assert.equal(await sw.balance(), 750000);
   assert.deepEqual(w.skins['bone-breaker'], ['neon', 'gold']);
 });
 test('house scores never win prizes', async () => { const S = await import('../src/core/scores.js'); const db = S.seedHouse({}); S.addScore(db, 'kibble-chomp', { name: 'ZAC', score: 10 }); const p = S.payouts('daily', S.arcadeBoard(db, 'daily')); assert.equal(p[0].name, 'ZAC'); assert.equal(p[1].name, '---'); });

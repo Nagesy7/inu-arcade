@@ -18,7 +18,7 @@ export const SHOP = [
   { id: 'trail-stars', name: 'Lobby Star Trail', tickets: 25, slot: null },
 ];
 // Per-cabinet skin hooks: sponsor slot (simulated) + burn-to-unlock skin paid with (simulated) $KIBBLE.
-export const SKINS = { gold: { name: 'Gold Cabinet', burn: 25 }, neon: { name: 'Neon Cabinet', tickets: 12 } };
+export const SKINS = { gold: { name: 'Gold Cabinet', burn: 250000 }, neon: { name: 'Neon Cabinet', tickets: 12 } };
 export const SPONSORS = { 'kibble-chomp': null, 'bark-invaders': null, 'pup-crossing': null, 'bone-breaker': null }; // e.g. { name: 'Your Brand', url } set server-side later
 export function newWallet() { return { bones: 0, tickets: 0, owned: [], skins: {}, today: '', todayBones: 0, plays: 0 }; }
 export function grant(w, game, score, now = new Date()) {
