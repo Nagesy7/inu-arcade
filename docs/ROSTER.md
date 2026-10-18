@@ -54,13 +54,20 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Genre inspiration (internal only):** digging / tunnel cabinets as loose genre only. No source-game names, characters, sprites, sounds or layouts.
 - **Kibble Pay:** registered (`bone-digger`, max 180,000 = ~10× best human-sim run 18,062, 400/s, min 5 s, version 2; arcade-run quest; Inu Score v5, 12 games, max 16,000; kibble-pay c077ae5).
 
+### Pip's Big Bark (approved name)
+
+- **Status:** LIVE at `/pips-big-bark` (Oct 18). Name lives in one constant (`NAME` in `src/games/pip.js`).
+- **Built to the spec below:** all 6 stages, every listed mechanic, the five named bosses plus one mini-boss. Boss mapping: 1 Plaza Rooftops → Sir Whiskerton on his rocket scooter; 2 Hanami Park → PETAL-VAC 3000 (rug-bot street sweeper, mini-boss); 3 Biscuit Beach → Tide Croc; 4 Pawprint Shrine Isle → Lantern Fox; 5 Kibble Mines → Mine Mole; 6 Syndicate Tower → Grey Cat Boss in the giant claw machine. Three buttons (A jump/wag/glide, B bark, C Bone-erang), 8-way stick. `$KIBBLE` buys cosmetics only (scarf colours via the cabinet's neon/gold skins).
+- **Genre inspiration (internal only):** kid-hero side-scrolling platformers as loose genre only. No source-game names, characters, moves, sprites, sounds or layouts.
+- **Kibble Pay:** registered (`pips-big-bark`, max 380,000 = ~10× best human-sim run 37,740, 400/s, min 5 s, version 2; arcade-run quest; Inu Score v6, 13 games, max 17,000; kibble-pay 2241351).
+
 ## Build order
 
 1. Joystick toggle (in progress)
 2. Street Sniffer (LIVE, working name pending approval)
 3. Paw-Fu Tower (LIVE, working name pending approval)
 4. Bone Digger (LIVE, working name pending approval)
-5. Pip's Big Bark (queued #4)
+5. Pip's Big Bark (LIVE)
 
 Mask Pup and the Inu fighter are logged only for now, not scheduled.
 
@@ -84,7 +91,7 @@ Mask Pup and the Inu fighter are logged only for now, not scheduled.
 - **Twist:** Tunnel for buried kibble and bones; burrowing enemies (moles, snakes) handled with an original mechanic (bark-pump or bone throw); falling rocks, depth layers, bonus bones.
 - **Genre inspiration (internal only):** digging / tunnel cabinets (e.g. Dig Dug). No Dig Dug, Pooka, Fygar or other source-game names, characters, sprites, sounds or layouts.
 
-### Pip's Big Bark (approved name)
+### Pip's Big Bark (approved name) — ✅ LIVE (see Live cabinets)
 
 - **Hero:** Pip, a scrappy young Shiba with an oversized red scarf.
 - **Story:** the Grey Cat Syndicate and its rug bots scattered Pip's pack across Inu Verse, and Pip brings them home.

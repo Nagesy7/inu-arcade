@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -76,18 +76,19 @@ addEventListener('popstate', () => go(routeId(), false));
 // ---------- lobby ----------
 export const CABS = [
   { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 4 },
-  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 42 },
-  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 80 },
-  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 118 },
-  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 156 },
-  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 194 },
-  { id: 'paw-fu-tower', title: Pawfu.META.title, short: Pawfu.META.short, color: Pawfu.META.color, x: 232 },
-  { id: 'bone-digger', title: Digger.META.title, short: Digger.META.short, color: Digger.META.color, x: 270 },
+  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 38 },
+  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 72 },
+  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 106 },
+  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 140 },
+  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 174 },
+  { id: 'paw-fu-tower', title: Pawfu.META.title, short: Pawfu.META.short, color: Pawfu.META.color, x: 208 },
+  { id: 'bone-digger', title: Digger.META.title, short: Digger.META.short, color: Digger.META.color, x: 242 },
+  { id: 'pips-big-bark', title: Pip.META.title, short: Pip.META.short, color: Pip.META.color, x: 276 },
 ];
-const CW = 36, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
+const CW = 32, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
-function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
+function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn', 'threebtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
 function lobbyTargets() { return [...CABS.map((c) => ({ kind: 'cab', id: c.id, x: c.x + CW / 2, y: FLOOR_Y + 8, label: c.title })), { kind: 'prizes', x: COUNTER.x + COUNTER.w / 2, y: COUNTER.y - 10, label: 'PRIZE COUNTER' }, { kind: 'scores', x: BOARD.x + BOARD.w / 2, y: FLOOR_Y + 8, label: 'HI-SCORE BOARD' }]; }
 function nearTarget(L) { return lobbyTargets().find((t) => Math.abs(t.x - L.x) < 18 && Math.abs(t.y - L.y) < 16); }
 function activate(t) { if (!t) return; sfx('select'); if (t.kind === 'cab') go(t.id); else if (t.kind === 'prizes') showPrizes(); else if (t.kind === 'scores') showScores(); }
@@ -143,6 +144,7 @@ function drawCabinet(c, now, skin) {
   else if (c.id === 'paw-fu-tower') { ctx.fillStyle = '#7a4a22'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 6 : 0), sy + 6 + i * 7, 24, 1); ctx.fillStyle = '#5f9a3a'; ctx.fillRect(sx + 24, sy + 7, 1, 6); ctx.fillRect(sx + 27, sy + 7, 1, 6); const k = Math.floor(t * 3) % 2; PIX.blit(ctx, PIX.shibaHead(), sx + 6, sy + 10, 1); ctx.fillStyle = '#f4f2ff'; ctx.fillRect(sx + 8, sy + 19, 5, 2); if (k) { ctx.fillRect(sx + 13, sy + 18, 5, 1); ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 18, sy + 17, 2, 2); } ctx.fillStyle = '#9b59d6'; ctx.fillRect(sx + 21 - k, sy + 17, 6, 3); }
   else if (c.id === 'street-sniffer') { ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 8, 30, 6); ctx.fillStyle = '#fbf1e0'; for (let i = 0; i < 5; i++) ctx.fillRect(sx + 2 + i * 6, sy + 11, 3, 1); ctx.fillStyle = '#f2c14e'; ctx.fillRect(sx + ((t * 12) % 40) - 8, sy + 9, 7, 4); ctx.fillStyle = '#c88a3c'; for (let i = 0; i < 4; i++) ctx.fillRect(sx + 3 + i * 7, sy + 18, 2, 2); ctx.fillStyle = '#3b8a5a'; ctx.fillRect(sx + 25, sy + 1, 4, 6); PIX.blit(ctx, PIX.shibaHead(), sx + 2 + ((t * 5) % 16), sy + 15, 1); }
   else if (c.id === 'bone-digger') { ctx.fillStyle = '#8a5a32'; ctx.fillRect(sx, sy + 5, 30, 17); ctx.fillStyle = '#5fb8f0'; ctx.fillRect(sx, sy, 30, 5); ctx.fillStyle = '#2a160c'; const d = (t * 6) % 14; ctx.fillRect(sx + 4, sy + 5, 4, 6 + d); ctx.fillRect(sx + 4, sy + 9 + d, 16, 4); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 19, sy + 16, 5, 1); ctx.fillRect(sx + 19, sy + 15, 1, 3); ctx.fillRect(sx + 23, sy + 15, 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4, sy + 5 + d, 4, 4); ctx.fillStyle = '#8a8494'; ctx.fillRect(sx + 12, sy + 6, 5, 4); }
+  else if (c.id === 'pips-big-bark') { ctx.fillStyle = '#ff8a5c'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#5a2a6a'; ctx.fillRect(sx, sy + 8, 6, 14); ctx.fillRect(sx + 14, sy + 5, 7, 17); ctx.fillStyle = '#d0603a'; ctx.fillRect(sx, sy + 18, 30, 4); const px = sx + ((t * 9) % 30) - 4, hop = Math.round(Math.abs(Math.sin(t * 4)) * 4); ctx.fillStyle = '#e8892e'; ctx.fillRect(px, sy + 13 - hop, 6, 5); ctx.fillStyle = '#e33b3b'; ctx.fillRect(px - 3, sy + 14 - hop + Math.round(Math.sin(t * 12)), 4, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(px + 7, sy + 14 - hop, 1, 1); ctx.fillRect(px + 9, sy + 13 - hop, 1, 3); ctx.fillStyle = '#8a94b0'; ctx.fillRect(sx + 24 - ((t * 3) % 6), sy + 14, 5, 4); }
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
   ctx.restore();
   ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 8, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 20, y + 43, 3, 3); ctx.fillRect(x + 25, y + 43, 3, 3);
@@ -155,11 +157,11 @@ function drawCabinet(c, now, skin) {
 const modeKey = (C) => MET.boardKey(C.id, C.gmode);
 const ghostKey = (C) => 'inuarcade.ghost.v2.' + modeKey(C); // v2: old replays would desync on the remixed rules
 function openCab(id) {
-  const G = GAMES[id]; setRes(G.W, G.H); document.body.classList.toggle('twobtn', G.META.buttons === 2); A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
+  const G = GAMES[id]; setRes(G.W, G.H); document.body.classList.toggle('twobtn', G.META.buttons >= 2); document.body.classList.toggle('threebtn', G.META.buttons === 3); A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
   if (!MET.MODE_IDS.includes(A.cab.gmode)) A.cab.gmode = 'classic';
   document.title = `${G.META.title.replace(/\b\w+/g, (w) => w[0] + w.slice(1).toLowerCase())} · Inu Arcade`;
 }
-function newRun(C, seed) { const mod = MET.modFor(C.gmode); const s = MET.applyMod(C.G.create(seed, { inu: C.gmode !== 'classic' }), mod); return { s, mod }; }
+function newRun(C, seed) { const mod = MET.modFor(C.gmode); const s = MET.applyMod(C.G.create(seed, { inu: C.gmode !== 'classic' }), mod); C.G.applySkin?.(s, A.purse.skins[C.id] || []); return { s, mod }; }
 function startPlay() { const C = A.cab; const seed = C.gmode === 'daily' ? MET.dailySeed(C.id) : (Math.random() * 1e9) | 0; const r = newRun(C, seed);
   C.s = r.s; C.mod = r.mod; C.seed = seed; C.masks = []; C.runStart = Date.now(); C.mode = 'play'; C.t = 0; C.paused = false; C.parts = [];
   const g = loadGhost(C); C.ghost = g ? { g, s: MET.applyMod(C.G.create(g.seed, { inu: g.mode !== 'classic' }), g.mod), ms: MET.decode(g.rle), i: 0 } : null;
@@ -179,7 +181,7 @@ function updateCab(dt, inp) {
   if (C.mode === 'play') { if (P.has('start')) { C.paused = !C.paused; sfx('blip'); } if (C.paused) { setMusic(false); return; }
     const m = MET.toMask(inp); C.masks.push(m); G.step(C.s, dt * (C.mod?.speed || 1), MET.fromMask(m)); for (const e of C.s.ev) sfx(e); stepFx(C, dt);
     if (C.ghost && !C.ghost.s.over && C.ghost.i < C.ghost.ms.length) { const gs = C.ghost.s; G.step(gs, dt * (C.ghost.g.mod?.speed || 1), MET.fromMask(C.ghost.ms[C.ghost.i++])); gs.fx.length = 0; gs.pops.length = 0; gs.ev.length = 0; }
-    setMusic(true, Math.min(3, (C.s.level - 1) + (C.s.lives <= 1 ? 1 : 0) + (C.gmode !== 'classic' ? 1 : 0)));
+    setMusic(true, Math.min(3, (C.s.level - 1) + (C.s.lives <= 1 ? 1 : 0) + (C.gmode !== 'classic' ? 1 : 0)), C.G.META.music || 'arcade');
     if (C.s.over) { C.mode = 'over'; C.t = 0; setMusic(false); C.final = MET.finalScore(C.s.score, C.mod); } return; }
   stepFx(C, dt);
   if (C.mode === 'over') { if (C.t > 2.2) { if (C.final > 0) { C.mode = 'initials'; C.ini = [...A.initials]; C.cur = 0; } else { C.mode = 'title'; } C.t = 0; } return; }
@@ -234,7 +236,7 @@ function drawCab(now) {
   }
   const sh = C.s.shake > 0 && C.mode === 'play' ? C.s.shake * 8 : 0; ctx.save(); if (sh) ctx.translate(Math.round((Math.random() - 0.5) * sh), Math.round((Math.random() - 0.5) * sh));
   G.draw(ctx, C.s, now, PIX);
-  if (C.ghost && C.mode === 'play' && !C.ghost.s.over && G.ghostPos) { const gp = G.ghostPos(C.ghost.s); ctx.globalAlpha = 0.35; ctx.fillStyle = '#9fd0ff'; ctx.fillRect(gp.x - 5, gp.y - 5, 10, 10); ctx.globalAlpha = 0.7; ctx.font = '6px Silkscreen, monospace'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('BEST', gp.x - 8, gp.y - 7); ctx.globalAlpha = 1; }
+  if (C.ghost && C.mode === 'play' && !C.ghost.s.over && G.ghostPos) { const gp = G.ghostPos(C.ghost.s, C.s); ctx.globalAlpha = 0.35; ctx.fillStyle = '#9fd0ff'; ctx.fillRect(gp.x - 5, gp.y - 5, 10, 10); ctx.globalAlpha = 0.7; ctx.font = '6px Silkscreen, monospace'; ctx.fillStyle = '#9fd0ff'; ctx.fillText('BEST', gp.x - 8, gp.y - 7); ctx.globalAlpha = 1; }
   for (const p of C.parts) { ctx.globalAlpha = Math.min(1, p.t * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x | 0, p.y | 0, 1.5, 1.5); } ctx.globalAlpha = 1;
   for (const p of C.s.pops) { ctx.globalAlpha = Math.min(1, p.t * 2); text(p.text, Math.max(30, Math.min(W - 30, p.x)), p.y, p.c, 5, 'center'); } ctx.globalAlpha = 1;
   ctx.restore(); drawHUD(C);
@@ -269,7 +271,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) unlo
 export function snapDt(dt) { const k = Math.round(dt * 60); return k >= 1 && Math.abs(dt - k / 60) < 0.002 ? k / 60 : dt; }
 let last = performance.now(), acc = 0;
 // B (second action) only exists in two-button cabinets while playing; everywhere else it acts as A, so X keeps working as before.
-function twoBtn(inp) { if (!(A.scene === 'cab' && A.cab?.mode === 'play' && A.cab.G.META.buttons === 2)) { if (inp.b) inp.a = true; if (inp.pressed.has('b')) inp.pressed.add('a'); } return inp; }
+function twoBtn(inp) { const n = A.scene === 'cab' && A.cab?.mode === 'play' ? A.cab.G.META.buttons || 1 : 1; if (n < 3) { if (inp.c) inp.b = true; if (inp.pressed.has('c')) inp.pressed.add('b'); inp.c = false; }
+  if (n < 2) { if (inp.b) inp.a = true; if (inp.pressed.has('b')) inp.pressed.add('a'); } return inp; }
 function frame(t) {
   const dt = snapDt(Math.min(0.1, (t - last) / 1000)); last = t; acc += dt; const now = t / 1000; let nSteps = 0;
   while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++; const inp = twoBtn(input.snapshot()); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }

@@ -22,6 +22,9 @@ body.touch #pad{display:block}
 .bbtn{right:84px;bottom:2px;width:60px;height:60px;border-radius:50% !important;font-size:18px !important;background:#4fc3e855 !important}
 .bbtn.on{background:#4fc3e8cc !important}
 body:not(.twobtn) #pad .bbtn{display:none}
+.cbtn{right:88px;bottom:66px;width:52px;height:52px;border-radius:50% !important;font-size:16px !important;background:#f2c14e55 !important}
+.cbtn.on{background:#f2c14ecc !important}
+body:not(.threebtn) #pad .cbtn{display:none}
 .sbtn{right:0;top:0;width:70px;height:30px;font-size:10px !important;font-family:Silkscreen,monospace !important}
 .sbtn.bk{right:76px}
 #panel{position:fixed;inset:0;background:#05031099;display:flex;align-items:center;justify-content:center;z-index:10;touch-action:auto}

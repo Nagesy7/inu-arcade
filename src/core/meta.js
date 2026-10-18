@@ -24,11 +24,11 @@ export const modFor = (mode, now) => (mode === 'classic' ? null : weeklyModifier
 export function applyMod(s, mod) { if (mod?.lives) s.lives = mod.lives; return s; }
 export const finalScore = (raw, mod) => Math.floor(raw * (mod?.mult || 1));
 // ---- ghost replays: input bitmask per 1/60 tick, run-length encoded ----
-const BITS = { left: 1, right: 2, up: 4, down: 8, a: 16, b: 32 }; // b = second action button (two-button cabinets)
+const BITS = { left: 1, right: 2, up: 4, down: 8, a: 16, b: 32, c: 64 }; // b / c = second / third action buttons (two- and three-button cabinets)
 export const toMask = (inp) => Object.entries(BITS).reduce((m, [k, b]) => (inp[k] ? m | b : m), 0);
-export const fromMask = (m) => ({ left: !!(m & 1), right: !!(m & 2), up: !!(m & 4), down: !!(m & 8), a: !!(m & 16), b: !!(m & 32), pressed: new Set() });
-export function encode(masks) { const out = []; for (let i = 0; i < masks.length;) { let j = i; while (j < masks.length && masks[j] === masks[i] && j - i < 4095) j++; out.push((masks[i]).toString(36) + (j - i).toString(36)); i = j; } return out.join('.'); }
-export function decode(str) { const out = []; if (!str) return out; for (const tok of str.split('.')) { const m = parseInt(tok[0], 36), n = parseInt(tok.slice(1), 36); for (let k = 0; k < n; k++) out.push(m); } return out; }
+export const fromMask = (m) => ({ left: !!(m & 1), right: !!(m & 2), up: !!(m & 4), down: !!(m & 8), a: !!(m & 16), b: !!(m & 32), c: !!(m & 64), pressed: new Set() });
+export function encode(masks) { const out = []; for (let i = 0; i < masks.length;) { let j = i; while (j < masks.length && masks[j] === masks[i] && j - i < 4095) j++; out.push((masks[i] < 36 ? masks[i].toString(36) : '~' + masks[i].toString(36).padStart(2, '0')) + (j - i).toString(36)); i = j; } return out.join('.'); }
+export function decode(str) { const out = []; if (!str) return out; for (const tok of str.split('.')) { const w = tok[0] === '~' ? 3 : 1, m = parseInt(w === 3 ? tok.slice(1, 3) : tok[0], 36), n = parseInt(tok.slice(w), 36); for (let k = 0; k < n; k++) out.push(m); } return out; }
 export function replay(G, ghost, ticks = Infinity) { const s = applyMod(G.create(ghost.seed, { inu: ghost.mode !== 'classic' }), ghost.mod); const ms = decode(ghost.rle); const dt = (1 / 60) * (ghost.mod?.speed || 1);
   for (let i = 0; i < ms.length && i < ticks && !s.over; i++) G.step(s, dt, fromMask(ms[i])); return s; }
 // ---- achievements (each pays a fixed number of tickets, once) ----
@@ -53,6 +53,9 @@ export const ACHIEVEMENTS = [
   { id: 'bd-crush', name: 'Rock Bottom', desc: 'Bone Digger: crush a pest with a boulder', tickets: 4, test: (r) => r.game === 'bone-digger' && r.stats.crushes >= 1 },
   { id: 'bd-deep', name: 'Crystal Paws', desc: 'Bone Digger: clear 3 yards in one run', tickets: 5, test: (r) => r.game === 'bone-digger' && r.stats.yards >= 3 },
   { id: 'bd-boom', name: 'Boomerang Bone', desc: 'Bone Digger (Inu): throw 3 Bone Boomerangs in one run', tickets: 4, test: (r) => r.game === 'bone-digger' && r.stats.booms >= 3 },
+  { id: 'pip-boss', name: 'Big Bark Energy', desc: "Pip's Big Bark: beat Sir Whiskerton", tickets: 5, test: (r) => r.game === 'pips-big-bark' && r.stats.bosses >= 1 },
+  { id: 'pip-pack', name: 'Pack Leader', desc: "Pip's Big Bark: have 3 pups following at once", tickets: 4, test: (r) => r.game === 'pips-big-bark' && r.stats.maxPack >= 3 },
+  { id: 'pip-howl', name: 'Full Moon', desc: "Pip's Big Bark (Inu): unleash 3 Pack Howls in one run", tickets: 4, test: (r) => r.game === 'pips-big-bark' && r.stats.howls >= 3 },
   { id: 'daily', name: 'Daily Grind', desc: 'Finish a Daily Challenge', tickets: 3, test: (r) => r.mode === 'daily' },
   { id: 'all-four', name: 'Arcade Rat', desc: 'Play all four cabinets', tickets: 5, test: (r, p) => ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'].every((g) => p.played?.[g]) },
 ];
