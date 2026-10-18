@@ -36,11 +36,11 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 2. Street Sniffer (queued #1)
 3. Paw-Fu Tower (queued #2)
 4. Bone Digger (queued #3)
-5. Shiba Blaster (queued #4)
+5. Pip's Big Bark (queued #4)
 
 Mask Pup and the Inu fighter are logged only for now, not scheduled.
 
-## Queued cabinets (all original; working names pending Zachary's approval)
+## Queued cabinets (all original)
 
 ### 1. Street Sniffer *(working name — pending Zachary's approval)*
 
@@ -60,11 +60,21 @@ Mask Pup and the Inu fighter are logged only for now, not scheduled.
 - **Twist:** Tunnel for buried kibble and bones; burrowing enemies (moles, snakes) handled with an original mechanic (bark-pump or bone throw); falling rocks, depth layers, bonus bones.
 - **Genre inspiration (internal only):** digging / tunnel cabinets (e.g. Dig Dug). No Dig Dug, Pooka, Fygar or other source-game names, characters, sprites, sounds or layouts.
 
-### 4. Shiba Blaster *(working name — pending Zachary's approval)*
+### Pip's Big Bark (approved name)
 
-- **Player-facing name (pending):** Shiba Blaster
-- **Twist:** Original Inu run-and-gun platformer (not a remake). A Shiba hero runs through Inu Verse-themed levels (the plaza, Hanami Park, Biscuit Beach, Pawprint Shrine Isle…) with bark blasts or a bone blaster against rival meme-coin bots and cats; jumps, ledges, moving platforms, patterned enemies, power-ups, a boss per level, level timer, multi-touch move+jump+shoot.
-- **Genre inspiration (internal only):** classic kid-hero side-scrolling run-and-gun / platformers. No Sega, Alex Kidd or other source-game names, characters, sprites, music, sounds or layouts.
+- **Hero:** Pip, a scrappy young Shiba with an oversized red scarf.
+- **Story:** the Grey Cat Syndicate and its rug bots scattered Pip's pack across Inu Verse, and Pip brings them home.
+- **Mechanics:**
+  - **Bark Blast:** tap for a quick yip shot, hold to charge a big bark that stuns a whole row.
+  - **Bone-erang:** a thrown bone that curves back, hitting on the way out and collecting pickups on the return.
+  - **Sniff Mode:** a brief reveal of hidden bones, secret doors and buried treats.
+  - **Zoomies meter:** fills from kibble; triggers a speed burst with wall-bounces.
+  - **Tail-wag double jump** and a **scarf glide**.
+  - **Pack followers:** each rescued pup trails Pip with a small helper perk (one fetches coins, one barks a warning before traps). Taking a hit sends one follower home.
+- **Levels:** 1 Plaza Rooftops (laundry lines, pigeons); 2 Hanami Park (a petal storm hides enemies); 3 Biscuit Beach (rising and falling tide); 4 Pawprint Shrine Isle (lantern climb); 5 Kibble Mines (minecart rides); 6 Syndicate Tower (vertical climb).
+- **Bosses:** Sir Whiskerton on a scooter, the Tide Croc, the Lantern Fox, the Mine Mole, the Grey Cat Boss in a giant claw machine.
+- **Rules:** original chiptune music; phone landscape with multi-touch move+jump+shoot; the joystick toggle; everything earned in play; `$KIBBLE` buys cosmetic scarves and colours only, with no gameplay effect; server-side Inu Score and prize boards; free entry; skill prizes only.
+- **Genre inspiration (internal only):** kid-hero side-scrolling platformers. Not a remake.
 
 ## Planned (approved, not scheduled)
 
@@ -107,3 +117,9 @@ Fully original Inu arcade fighter — no Capcom or Street Fighter names, charact
 - Phone landscape with the joystick toggle; no stacked sounds; jitter-free movement; Back to Inu Verse button; Connect Wallet; each cabinet has its own link and share card.
 - Scores go server-side to the Inu Score (kibble-pay `/api/inu-score`, contract `/workspace/inu-shared/inu-score.md`) and the Kibble Pay prize boards (v:2). `TEST_WALLETS` respected.
 - `$KIBBLE` buys cosmetics only and never changes gameplay; entry is free and prizes are skill only.
+
+## Pending originality fixes (from Oct 18 audit)
+
+- **Internal Pac / ghost / blinky / Elroy / waka identifiers and strings** in `src/games/chomp.js`, `src/core/audio.js` (`eatGhost`), tests (`tests/rules.test.mjs`, `tests/polish.test.mjs`, `tests/modern.test.mjs`), `README.md` and `scripts/e2e.mjs` — to be renamed to Inu terms after the joystick ship.
+- **`invaders.js` / `aliens` / squid-crab-octo identifiers** (file name, import alias, `s.aliens`, sprite comments) — to be renamed.
+- **OPEN QUESTION for Zachary:** should the player-facing title **Bark Invaders** be renamed? It shares the word "Invaders" with a classic fixed-shooter title.
