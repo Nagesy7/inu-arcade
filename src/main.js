@@ -2,6 +2,7 @@
 import { createInput } from './core/input.js';
 import { sfx, unlockAudio, isMuted, setMuted, setMusic, audioState } from './core/audio.js';
 import { fitBox } from './core/layout.js';
+import * as JOY from './core/joystick.js';
 import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
 import * as S from './core/scores.js';
@@ -10,7 +11,7 @@ import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
 import * as Chomp from './games/chomp.js'; import * as Invaders from './games/invaders.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js';
-import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements } from './ui.js';
+import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
 export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Invaders, 'pup-crossing': Crossing, 'bone-breaker': Breaker };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
@@ -30,7 +31,7 @@ import('https://kibble-pay.vercel.app/inu-games.js').then(async (g) => { A.glue 
   const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
   const pj = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
   g.mountHome?.(); // 🏠 Back to Inu Verse (title/pause/results; confirms + saves via globalThis.__inuHome)
-  if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v'], position: 'top-right',
+  if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v', JOY.SETTINGS_KEY], position: 'top-right',
     progress: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return (p.plays || 0) * 10 + (p.bones || 0) + (p.tickets || 0) * 5; },
     label: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return `${p.plays || 0} plays · ${p.bones || 0} bones · ${p.tickets || 0} tickets`; },
     onWallet: ({ address, tier }) => { A.holderTier = address ? tier : null; if (address) syncWallet().catch(() => {}); } });
@@ -264,6 +265,13 @@ function frame(t) {
 }
 A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const setCrt = () => { document.body.classList.toggle('crt', A.crt); crtB.textContent = A.crt ? '📺 CRT' : '📺 off'; }; setCrt(); crtB.onclick = () => { A.crt = !A.crt; LS.setItem('inuarcade.crt', A.crt ? '1' : '0'); setCrt(); };
 $('#b-ach').onclick = () => showAchievements();
+// Settings (⚙): optional virtual joystick, shared by every cabinet. Saved in localStorage + the wallet cloud save.
+{ const sb = document.createElement('button'); sb.className = 'tb'; sb.id = 'b-settings'; sb.title = 'Settings'; sb.textContent = '⚙'; sb.setAttribute('aria-label', 'Settings');
+  $('#bar').insertBefore(sb, $('#purse')); sb.onclick = () => showSettings(); }
+A.settings = JOY.loadSettings(LS);
+A.joy = JOY.createJoystick($('#pad'), () => JOY.joyMode(A.cab?.id, A.cab?.mode === 'play'));
+input.setJoystick(A.joy); A.joy.set(A.settings.joystick);
+A.setJoystick = (on) => { A.settings.joystick = !!on; JOY.saveSettings(LS, { joystick: !!on }); input.clear(); A.joy.set(!!on); A.walletUi?.save?.().catch?.(() => {}); };
 $('#b-lobby').onclick = () => go(null); $('#b-scores').onclick = () => showScores(A.cab?.id); $('#b-prizes').onclick = () => showPrizes(); $('#b-profile').onclick = () => showProfile();
 const mb = $('#b-mute'); const setMb = () => { mb.textContent = isMuted() ? '🔇' : '🔊'; mb.setAttribute('aria-label', isMuted() ? 'Unmute sound' : 'Mute sound'); mb.setAttribute('aria-pressed', String(isMuted())); }; setMb();
 const toggleMute = () => { unlockAudio(); setMuted(!isMuted()); setMb(); }; mb.onclick = toggleMute;

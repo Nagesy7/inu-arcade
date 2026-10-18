@@ -32,6 +32,7 @@ Each cabinet's title screen has a mode select (◀ ▶ / tap). **Every mode has 
 ## Controls
 Desktop: arrows/WASD move, Space/Z/J = A, Enter = START, Esc = back to the hall. Click a cabinet to walk to it and play.
 Phone (landscape): on-screen D-pad, A, START and BACK, with multi-touch and finger-sliding between buttons. Tap a cabinet in the hall to play.
+Optional **joystick** (⚙ Settings → Joystick controls, OFF by default): a semi-transparent left-thumb stick with a dead zone replaces the D-pad (4-way in Kibble Chomp / Pup Crossing, left/right in Bark Invaders / Bone Breaker, 4-way in menus, 8-way in the hall). A/START/BACK stay on the right and work together with the stick. One setting for every cabinet (`src/core/joystick.js`, key `inuarcade.settings.v1`, also in the wallet cloud save). `node scripts/joystick-check.mjs` checks it never covers the playfield at 667x375 / 750x342 and runs the toggle test; `JOY=1 node scripts/phone-playtest.mjs` plays with it on.
 
 ## Scores, prizes, rewards
 - Per-game boards and a combined **Arcade** board (each game's top score in the period = 1000 pts, others get a share). Daily, weekly (from Monday), monthly and all-time.

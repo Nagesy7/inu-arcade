@@ -47,3 +47,13 @@ body.touch #bar{display:grid;grid-template-columns:1fr 1fr;width:112px;gap:3px}b
 
 body.touch #inu-legal{font-size:9px!important;opacity:.75;left:max(6px,env(safe-area-inset-left))!important;right:auto!important;top:4px!important;bottom:auto!important;max-width:20vw;white-space:normal!important;line-height:1.5;}
 #stage{box-sizing:border-box}
+/* optional virtual joystick (Settings > Joystick controls), OFF by default */
+#joy{position:absolute;left:calc(max(12px,env(safe-area-inset-left)) + 19px);bottom:33px;width:112px;height:112px;border-radius:50%;background:#ffffff14;border:2px solid #ffffff40;pointer-events:auto;touch-action:none;box-sizing:border-box}
+#joy[hidden]{display:none}
+#joy .knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:#ffffff38;border:2px solid #ffffff80;pointer-events:none;box-sizing:border-box}
+#joy.on .knob{background:#f2c14e88;border-color:var(--gold)}
+body.joy .dpad{display:none}
+.sw{display:flex;align-items:center;gap:8px;cursor:pointer;margin:8px 0}.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.swt{display:inline-block;width:40px;height:22px;border-radius:11px;background:#2a1f55;border:2px solid var(--purple);position:relative;flex:none}
+.swt::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--cream);transition:left .15s}
+.sw input:checked+.swt{background:var(--green)}.sw input:checked+.swt::after{left:20px}.sw input:focus-visible+.swt{outline:2px solid var(--gold)}

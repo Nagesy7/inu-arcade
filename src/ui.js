@@ -81,6 +81,12 @@ export function showRescue() {
   <p><a class="btn gold" href="${RESCUE_URL}" target="_blank" rel="noopener">Play Inu Rescue ↗</a><button class="btn" id="rs-back">Stay in the hall</button></p>`, 'rescue');
   $('#rs-back').onclick = closePanel;
 }
+export function showSettings() {
+  const on = !!A.settings?.joystick;
+  openPanel(`<h2>⚙ Settings</h2><label class="sw"><input type="checkbox" id="set-joy" role="switch" ${on ? 'checked' : ''}><span class="swt"></span> <b>Joystick controls</b></label>
+  <p class="small">Off (default): the classic d-pad buttons. On: a thumb stick on the left (4-way in Kibble Chomp and Pup Crossing, left/right in Bark Invaders and Bone Breaker). A, START and BACK stay on the right. This setting applies to every cabinet and is saved on this device and to your wallet save when you are connected.</p>`, 'settings');
+  $('#set-joy').onchange = (e) => { A.setJoystick(e.target.checked); sfx('blip'); };
+}
 export function showAchievements() { const got = A.purse.ach || {};
   openPanel(`<h2>Achievements</h2><p class="small">${Object.keys(got).length}/${MET.ACHIEVEMENTS.length} unlocked. Each pays a fixed number of prize tickets once.</p><div class="grid">${MET.ACHIEVEMENTS.map((a) => `<div class="card ach ${got[a.id] ? '' : 'locked'}"><div>${got[a.id] ? '🏅' : '🔒'}</div><div><b>${esc(a.name)}</b><br><span class="small">${esc(a.desc)}</span><br>🎟 ${a.tickets}</div></div>`).join('')}</div>`, 'ach'); }
 
