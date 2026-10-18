@@ -21,7 +21,7 @@ const seq = (notes, step, type = 'square', vol = 0.07) => notes.forEach((n, i) =
 export const SFX = {
   blip: () => tone(880, 1320, 0.05), select: () => seq([660, 990], 0.06), coin: () => seq([988, 1319], 0.07),
   chomp: (() => { let k = 0; return () => { k = (k + 1) % 3; noise(0.025, 0.05, 0, 2500 + k * 900); tone(700 + k * 120, 650 + k * 120, 0.025, 'square', 0.04); }; })(), /* kibble crunch */
-  power: () => seq([262, 330, 392, 523, 659], 0.05, 'square'), eatGhost: () => tone(200, 1600, 0.25, 'square', 0.07),
+  power: () => seq([262, 330, 392, 523, 659], 0.05, 'square'), eatCat: () => tone(200, 1600, 0.25, 'square', 0.07),
   bark: () => { tone(520, 180, 0.09, 'square', 0.08); noise(0.05, 0.04); }, boom: () => { noise(0.35, 0.12, 0, 200); tone(140, 40, 0.3, 'triangle', 0.1); },
   hit: () => { noise(0.08, 0.07, 0, 1500); tone(400, 120, 0.08, 'square', 0.05); }, hop: () => tone(330, 660, 0.06, 'square', 0.06),
   splash: () => noise(0.4, 0.09, 0, 400), honk: () => seq([392, 0, 392], 0.08, 'sawtooth', 0.05), home: () => seq([523, 659, 784, 1047], 0.07),

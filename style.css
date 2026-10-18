@@ -57,3 +57,11 @@ body.joy .dpad{display:none}
 .swt{display:inline-block;width:40px;height:22px;border-radius:11px;background:#2a1f55;border:2px solid var(--purple);position:relative;flex:none}
 .swt::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--cream);transition:left .15s}
 .sw input:checked+.swt{background:var(--green)}.sw input:checked+.swt::after{left:20px}.sw input:focus-visible+.swt{outline:2px solid var(--gold)}
+/* kibble-pay Connect Wallet + 🏠 (top-right, fixed) and the arcade toolbar: compact the pill and keep the toolbar clear of it.
+   main.js placeBar(): phones put the toolbar under the pill, desktop puts it to the left of the pill. */
+#inu-wallet-btn{min-height:30px!important;padding:4px 10px!important;font-size:11px!important;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+#inu-home{width:32px!important;height:32px!important;font-size:16px!important}
+body.touch #inu-wallet-btn{min-height:34px!important;padding:3px 8px!important;font-size:10px!important;max-width:118px}
+body.touch #inu-home{width:34px!important;height:34px!important}
+body.touch #bar{grid-template-columns:1fr 1fr 1fr;width:160px}body.touch #purse{grid-column:1/4}
+body.touch .tb{white-space:nowrap;overflow:hidden;text-overflow:clip;font-size:8px;padding:3px 2px}

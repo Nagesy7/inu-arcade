@@ -1,20 +1,20 @@
 import test from 'node:test'; import assert from 'node:assert/strict';
-import * as C from '../src/games/chomp.js'; import * as I from '../src/games/invaders.js'; import * as X from '../src/games/crossing.js'; import * as B from '../src/games/breaker.js';
+import * as C from '../src/games/chomp.js'; import * as BK from '../src/games/bark.js'; import * as X from '../src/games/crossing.js'; import * as B from '../src/games/breaker.js';
 import * as M from '../src/core/meta.js'; import * as S from '../src/core/scores.js';
-const F = 1 / 60, G4 = { 'kibble-chomp': C, 'bark-invaders': I, 'pup-crossing': X, 'bone-breaker': B };
+const F = 1 / 60, G4 = { 'kibble-chomp': C, 'bark-invaders': BK, 'pup-crossing': X, 'bone-breaker': B };
 test('classic has no Inu twists', () => {
   const c = C.create(1); c.ready = 0; C.step(c, F, { a: true }); assert.equal(c.stats.barks, 0);
-  const i = I.create(1); i.wave = 3; assert.equal(I.isBossWave(i), false); assert.ok(!B.create(1).bricks.some((b) => b.boss || b.power));
+  const i = BK.create(1); i.wave = 3; assert.equal(BK.isBossWave(i), false); assert.ok(!B.create(1).bricks.some((b) => b.boss || b.power));
   const x = X.create(1); x.pup.row = 10; x.lanes.forEach((l) => (l.objs = [])); X.step(x, F, { a: true }); assert.equal(x.pup.row, 10);
 });
 test('Inu Chomp: bark stuns nearby cats (harmless while stunned); $KIBBLE coin', () => {
-  const s = C.create(1, { inu: true }); s.ready = 0; const c = s.cats[0]; c.x = s.pac.x + 16; c.y = s.pac.y; C.step(s, F, { a: true }); assert.ok(c.stun > 0); c.x = s.pac.x; c.y = s.pac.y; C.step(s, F, {}); assert.equal(s.lives, 3);
-  const k = C.create(1, { inu: true }); k.ready = 0; k.eaten = 99; k.pac.x = 13 * 8 + 4; k.pac.y = 23 * 8 + 4; k.pac.dir = 'left'; for (let i = 0; i < 8; i++) C.step(k, F, { left: true }); assert.ok(k.coin);
+  const s = C.create(1, { inu: true }); s.ready = 0; const c = s.cats[0]; c.x = s.pup.x + 16; c.y = s.pup.y; C.step(s, F, { a: true }); assert.ok(c.stun > 0); c.x = s.pup.x; c.y = s.pup.y; C.step(s, F, {}); assert.equal(s.lives, 3);
+  const k = C.create(1, { inu: true }); k.ready = 0; k.eaten = 99; k.pup.x = 13 * 8 + 4; k.pup.y = 23 * 8 + 4; k.pup.dir = 'left'; for (let i = 0; i < 8; i++) C.step(k, F, { left: true }); assert.ok(k.coin);
 });
-test('Inu Invaders: Mega Woof pierces a column; boss whale on wave 3', () => {
-  const s = I.create(1, { inu: true }); s.ready = 0; s.ufoT = 1e9; const col = s.aliens.filter((a) => a.c === 5); s.player.x = col[0].x + 2;
-  for (let i = 0; i < 60; i++) { s.player.x = col[0].x + 2; I.step(s, F, { a: true }); s.shot = null; } I.step(s, F, {}); assert.ok(col.every((a) => !a.alive)); assert.equal(s.stats.megas, 1);
-  const b = I.create(1, { inu: true }); b.wave = 2; b.aliens.forEach((a) => (a.alive = false)); b.ready = 0; I.step(b, F, {}); assert.equal(b.wave, 3); assert.ok(b.boss);
+test('Bark (Inu Mode): Mega Woof pierces a column; boss whale on wave 3', () => {
+  const s = BK.create(1, { inu: true }); s.ready = 0; s.balloonT = 1e9; const col = s.fleet.filter((a) => a.c === 5); s.player.x = col[0].x + 2;
+  for (let i = 0; i < 60; i++) { s.player.x = col[0].x + 2; BK.step(s, F, { a: true }); s.shot = null; } BK.step(s, F, {}); assert.ok(col.every((a) => !a.alive)); assert.equal(s.stats.megas, 1);
+  const b = BK.create(1, { inu: true }); b.wave = 2; b.fleet.forEach((a) => (a.alive = false)); b.ready = 0; BK.step(b, F, {}); assert.equal(b.wave, 3); assert.ok(b.boss);
 });
 test('Inu Crossing: zoomies leap 2 rows; lost puppy +300', () => {
   const s = X.create(1, { inu: true }); s.lanes.forEach((l) => { if (X.isRoad(l.row)) l.objs = []; }); X.step(s, F, { a: true }); assert.equal(s.pup.row, 12); assert.equal(s.score, 20);

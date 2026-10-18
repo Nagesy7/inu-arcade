@@ -34,7 +34,7 @@ export const BARK = { cd: 8, radius: 3.5, stun: 2 }, COIN = { at: [100, 200], pt
 const DIRS = { up: [0, -1], left: [-1, 0], down: [0, 1], right: [1, 0] }, OPP = { up: 'down', down: 'up', left: 'right', right: 'left' }, ORDER = ['up', 'left', 'down', 'right'];
 export const CAT_COLORS = ['#7a8aa8', '#e8e4dc', '#e07a2a', '#c8a878'] /* grey, white, ginger, tabby coats */, CAT_NAMES = ['BEARISH', 'PANIC', 'DUMPY', 'FUDDY'], CAT_ROLES = ['TRACKER', 'GUARD', 'FLANKER', 'MOODY'];
 export function isWall(tx, ty) { if (ty === 14 && (tx < 0 || tx >= COLS)) return false; if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true; const c = MAZE[ty][tx]; return c === '#' || c === 'H' || c === '-'; }
-const ghostWall = (tx, ty, eyes) => { if (ty >= 0 && ty < ROWS && tx >= 0 && tx < COLS && MAZE[ty][tx] === '-') return !eyes; return isWall(tx, ty); };
+const catWall = (tx, ty, eyes) => { if (ty >= 0 && ty < ROWS && tx >= 0 && tx < COLS && MAZE[ty][tx] === '-') return !eyes; return isWall(tx, ty); };
 const tileOf = (a) => ({ x: Math.floor(a.x / TILE), y: Math.floor(a.y / TILE) });
 const atCenter = (a) => a.x % 8 === 4 && a.y % 8 === 4;
 export const inTunnel = (a) => { const t = tileOf(a); return t.y === 14 && (t.x <= 3 || t.x >= 24); };
@@ -50,7 +50,7 @@ function loadLevel(s) {
 }
 export const dotsLeft = (s) => s.dots.size + s.energizers.size;
 function resetActors(s) {
-  s.pac = { x: 112, y: 188, dir: 'left', want: 'left', acc: 0, stall: 0, anim: 0 };
+  s.pup = { x: 112, y: 188, dir: 'left', want: 'left', acc: 0, stall: 0, anim: 0 };
   s.cats = [0, 1, 2, 3].map((i) => ({ i, color: CAT_COLORS[i], x: [112, 112, 96, 128][i], y: [92, 116, 116, 116][i], dir: i === 0 ? 'left' : i === 1 ? 'down' : 'up', acc: 0, state: i === 0 ? 'out' : 'house', fright: false, eyes: false, stun: 0, leaving: false }));
   s.frightF = 0; s.combo = 0; s.phase = 0; s.phaseF = 0; s.roundF = 0; s.sinceRelease = 0; s.trail = []; s.freeze = 0;
 }
@@ -58,7 +58,7 @@ export function scatterMode(s) { return s.phase % 2 === 0; } // napping
 // ---------- main step: integer frames at 60 Hz ----------
 export function step(s, dt, inp) {
   s.ev.length = 0; if (s.over) return; s.flash = Math.max(0, s.flash - dt); s.shake = Math.max(0, s.shake - dt);
-  for (const d of ORDER) if (inp[d]) s.pac.want = d;
+  for (const d of ORDER) if (inp[d]) s.pup.want = d;
   if (s.inu) { s.barkCd = Math.max(0, s.barkCd - dt); if (inp.a && s.barkCd <= 0 && !s.ready && !s.freeze) bark(s); }
   s.acc += dt * 60; while (s.acc >= 1 && !s.over) { s.acc -= 1; frame(s); }
 }
@@ -69,25 +69,25 @@ function frame(s) {
   // mode timer (paused while frightened)
   if (s.frightF > 0) { s.frightF--; if (s.frightF === 0) { for (const c of s.cats) c.fright = false; } }
   else { const tbl = moodTable(s.level); s.phaseF++; if (s.phase < tbl.length - 1 && s.phaseF >= Math.round(tbl[s.phase] * 60)) { s.phase++; s.phaseF = 0; } } // no reversal on mood change
-  s.roundF++; if (s.frame % 8 === 0) { const t = tileOf(s.pac); const last = s.trail[s.trail.length - 1]; if (!last || last.x !== t.x || last.y !== t.y) { s.trail.push(t); if (s.trail.length > 32) s.trail.shift(); } }
-  movePac(s); if (s.over || s.freeze) return;
+  s.roundF++; if (s.frame % 8 === 0) { const t = tileOf(s.pup); const last = s.trail[s.trail.length - 1]; if (!last || last.x !== t.x || last.y !== t.y) { s.trail.push(t); if (s.trail.length > 32) s.trail.shift(); } }
+  movePup(s); if (s.over || s.freeze) return;
   houseLogic(s);
   for (const c of s.cats) moveCat(s, c);
   collide(s);
-  if (s.bonus) { s.bonus.f--; if (s.bonus.f <= 0) s.bonus = null; else { const t = tileOf(s.pac); if (t.y === 17 && (t.x === 13 || t.x === 14)) { s.score += s.bonus.pts; s.ev.push('coin'); pop(s, 112, 136, '+' + s.bonus.pts, '#f2c14e'); fx(s, 112, 140, '#f2c14e', 14); s.bonus = null; } } }
-  if (s.coin) { s.coin.f--; if (s.coin.f <= 0) s.coin = null; else { const t = tileOf(s.pac); if (t.x === s.coin.tx && t.y === s.coin.ty) { s.score += COIN.pts; s.stats.coins++; pop(s, s.pac.x, s.pac.y - 8, '+500 $KIBBLE', '#f2c14e'); fx(s, s.pac.x, s.pac.y, '#f2c14e', 16); s.ev.push('coin'); s.coin = null; } } }
+  if (s.bonus) { s.bonus.f--; if (s.bonus.f <= 0) s.bonus = null; else { const t = tileOf(s.pup); if (t.y === 17 && (t.x === 13 || t.x === 14)) { s.score += s.bonus.pts; s.ev.push('coin'); pop(s, 112, 136, '+' + s.bonus.pts, '#f2c14e'); fx(s, 112, 140, '#f2c14e', 14); s.bonus = null; } } }
+  if (s.coin) { s.coin.f--; if (s.coin.f <= 0) s.coin = null; else { const t = tileOf(s.pup); if (t.x === s.coin.tx && t.y === s.coin.ty) { s.score += COIN.pts; s.stats.coins++; pop(s, s.pup.x, s.pup.y - 8, '+500 $KIBBLE', '#f2c14e'); fx(s, s.pup.x, s.pup.y, '#f2c14e', 16); s.ev.push('coin'); s.coin = null; } } }
   if (!s.extra && s.score >= PTS.extraLifeAt) { s.extra = true; s.lives++; s.ev.push('pow'); }
 }
-export function pacSpeed(s) { const sp = speeds(s.level); return (s.frightF > 0 ? sp.pupScared : sp.pup) * PX100; }
+export function pupSpeed(s) { const sp = speeds(s.level); return (s.frightF > 0 ? sp.pupScared : sp.pup) * PX100; }
 export function catSpeed(s, c) { const sp = speeds(s.level); if (c.eyes) return 2 * PX100; if (c.state !== 'out') return 0.5 * PX100; if (inTunnel(c)) return sp.hedge * PX100; if (c.fright) return sp.scared * PX100;
   return (sp.cat + (dinnerBell(s) ? sp.rush : 0)) * PX100; }
 function wrapX(a) { if (a.x < -8) a.x += COLS * 8 + 16; else if (a.x > COLS * 8 + 8) a.x -= COLS * 8 + 16; }
-function movePac(s) {
-  const P = s.pac; if (P.stall > 0) { P.stall--; return; }
-  P.acc += pacSpeed(s); while (P.acc >= 1) { P.acc -= 1; pacPixel(s); if (s.freeze || s.over) return; }
+function movePup(s) {
+  const P = s.pup; if (P.stall > 0) { P.stall--; return; }
+  P.acc += pupSpeed(s); while (P.acc >= 1) { P.acc -= 1; pupPixel(s); if (s.freeze || s.over) return; }
 }
-function pacPixel(s) {
-  const P = s.pac, t = tileOf(P), cx = t.x * 8 + 4, cy = t.y * 8 + 4;
+function pupPixel(s) {
+  const P = s.pup, t = tileOf(P), cx = t.x * 8 + 4, cy = t.y * 8 + 4;
   if (P.want && P.want !== P.dir) { if (P.want === OPP[P.dir]) P.dir = P.want; else if (!isWall(t.x + DIRS[P.want][0], t.y + DIRS[P.want][1])) P.dir = P.want; }
   const [dx, dy] = DIRS[P.dir]; const onAxis = dx ? P.x === cx : P.y === cy;
   if (onAxis && isWall(t.x + dx, t.y + dy)) { // blocked: still allow finishing a corner
@@ -129,7 +129,7 @@ function moveCat(s, c) {
   }
 }
 export function catTarget(s, c) {
-  const P = tileOf(s.pac), d = DIRS[s.pac.dir];
+  const P = tileOf(s.pup), d = DIRS[s.pup.dir];
   if (c.eyes) return { x: 13, y: 11 };
   if (scatterMode(s) && !dinnerBell(s)) return BEDS[c.i]; // napping (the dinner bell wakes everyone)
   if (c.i === 0) return s.trail.length > TRAIL_LAG ? s.trail[s.trail.length - 1 - TRAIL_LAG] : P; // Tracker: your scent ~1s ago
@@ -140,41 +140,41 @@ export function catTarget(s, c) {
   return BEDS[(c.i + Math.floor(s.roundF / (MOODY_SWAP * 120))) % 4]; // ...then wanders between beds
 }
 function chooseDir(s, c) {
-  const t = tileOf(c); const opts = ORDER.filter((d) => d !== OPP[c.dir] && !ghostWall(t.x + DIRS[d][0], t.y + DIRS[d][1], c.eyes));
+  const t = tileOf(c); const opts = ORDER.filter((d) => d !== OPP[c.dir] && !catWall(t.x + DIRS[d][0], t.y + DIRS[d][1], c.eyes));
   if (!opts.length) return OPP[c.dir];
-  if (c.fright && !c.eyes) { const P = tileOf(s.pac); const all = ORDER.filter((d) => !ghostWall(t.x + DIRS[d][0], t.y + DIRS[d][1], false)); // flee: maximise distance, small random wobble
+  if (c.fright && !c.eyes) { const P = tileOf(s.pup); const all = ORDER.filter((d) => !catWall(t.x + DIRS[d][0], t.y + DIRS[d][1], false)); // flee: maximise distance, small random wobble
     let best = all[0], bd = -1; for (const d of all) { const dd = (t.x + DIRS[d][0] - P.x) ** 2 + (t.y + DIRS[d][1] - P.y) ** 2 + s.rnd() * 6; if (dd > bd) { bd = dd; best = d; } } return best; }
   const tg = catTarget(s, c); let best = opts[0], bd = Infinity;
   for (const d of opts) { const dd = (t.x + DIRS[d][0] - tg.x) ** 2 + (t.y + DIRS[d][1] - tg.y) ** 2; if (dd < bd) { bd = dd; best = d; } }
   return best;
 }
 function collide(s) {
-  const pt = tileOf(s.pac);
+  const pt = tileOf(s.pup);
   for (const c of s.cats) { if (c.state !== 'out' || c.eyes || c.stun > 0) continue; const ct = tileOf(c); if (ct.x !== pt.x || ct.y !== pt.y) continue;
-    if (c.fright) { const pts = PTS.cats[Math.min(3, s.combo++)]; s.score += pts; c.eyes = true; c.fright = false; s.stats.cats++; s.freeze = 60; s.ev.push('eatGhost'); pop(s, c.x, c.y - 6, '+' + pts); fx(s, c.x, c.y, c.color, 14); s.shake = 0.1; return; }
-    s.lives--; s.ev.push('die'); s.flash = 1; s.shake = 0.35; fx(s, s.pac.x, s.pac.y, '#e0802c', 22); s.dying = true; s.freeze = 90; return; }
+    if (c.fright) { const pts = PTS.cats[Math.min(3, s.combo++)]; s.score += pts; c.eyes = true; c.fright = false; s.stats.cats++; s.freeze = 60; s.ev.push('eatCat'); pop(s, c.x, c.y - 6, '+' + pts); fx(s, c.x, c.y, c.color, 14); s.shake = 0.1; return; }
+    s.lives--; s.ev.push('die'); s.flash = 1; s.shake = 0.35; fx(s, s.pup.x, s.pup.y, '#e0802c', 22); s.dying = true; s.freeze = 90; return; }
 }
 function afterDeath(s) { if (s.lives <= 0) { s.over = true; return; } resetActors(s); s.retry = true; /* after a lost life the house empties 40% quicker */ s.ready = 120; s.bonus = null; }
-function bark(s) { s.barkCd = BARK.cd; s.stats.barks++; s.ev.push('bark'); s.shake = 0.15; s.ring = { x: s.pac.x, y: s.pac.y, t: 0.4 };
-  for (const c of s.cats) if (c.state === 'out' && !c.eyes && Math.hypot(c.x - s.pac.x, c.y - s.pac.y) <= BARK.radius * 8) { c.stun = BARK.stun; fx(s, c.x, c.y, '#7ef0ff', 6); } }
+function bark(s) { s.barkCd = BARK.cd; s.stats.barks++; s.ev.push('bark'); s.shake = 0.15; s.ring = { x: s.pup.x, y: s.pup.y, t: 0.4 };
+  for (const c of s.cats) if (c.state === 'out' && !c.eyes && Math.hypot(c.x - s.pup.x, c.y - s.pup.y) <= BARK.radius * 8) { c.stun = BARK.stun; fx(s, c.x, c.y, '#7ef0ff', 6); } }
 // ---------- bot (attract mode / tests) ----------
 export function bot(s) {
-  const P = tileOf(s.pac); const bad = (x, y) => s.cats.some((c) => c.state === 'out' && !c.eyes && !c.fright && Math.abs(Math.floor(c.x / 8) - x) + Math.abs(Math.floor(c.y / 8) - y) <= 3);
+  const P = tileOf(s.pup); const bad = (x, y) => s.cats.some((c) => c.state === 'out' && !c.eyes && !c.fright && Math.abs(Math.floor(c.x / 8) - x) + Math.abs(Math.floor(c.y / 8) - y) <= 3);
   const q = [[P.x, P.y, null]], seen = new Set([P.x + ',' + P.y]);
   while (q.length) { const [x, y, first] = q.shift(); const k = x + ',' + y;
     if (first && (s.dots.has(k) || s.energizers.has(k) || s.cats.some((c) => c.fright && !c.eyes && Math.floor(c.x / 8) === x && Math.floor(c.y / 8) === y))) return { [first]: true };
     for (const d of ORDER) { let nx = x + DIRS[d][0]; const ny = y + DIRS[d][1]; if (ny === 14) nx = (nx + COLS) % COLS; const nk = nx + ',' + ny; if (isWall(nx, ny) || seen.has(nk) || bad(nx, ny)) continue; seen.add(nk); q.push([nx, ny, first || d]); } }
-  return { [s.pac.dir]: true };
+  return { [s.pup.dir]: true };
 }
-export const ghostPos = (s) => ({ x: s.pac.x, y: s.pac.y + OY });
+export const ghostPos = (s) => ({ x: s.pup.x, y: s.pup.y + OY });
 // ---------- render (224x288) ----------
-const SPR_PAC = { // 13x13 sharp side-profile Shiba head (faces right; flipped for left)
+const SPR_PUP = { // 13x13 sharp side-profile Shiba head (faces right; flipped for left)
   side: ['....oo.......', '...ooo...oo..', '...odoo.ooo..', '..ooooooooo..', '.oooooooweoo.', 'ooooooooooonn', 'oooooooowwww.', 'oooooooww....', 'ooooooowwww..', '.oooooowwwww.', '.oooooooww...', '..ooooooo....', '...ooooo.....'],
   side2: ['....oo.......', '...ooo...oo..', '...odoo.ooo..', '..ooooooooo..', '.oooooooweoo.', 'ooooooooooonn', 'oooooooowww..', 'ooooooow.....', 'ooooooo......', 'ooooooow.....', '.oooooowwww..', '..ooooooo....', '...ooooo.....'],
   down: ['.oo.......oo.', '.odo.....odo.', '.ooooooooooo.', 'ooooooooooooo', 'oowweooewwoo', 'owwwwwwwwwwwo', 'owwwwnnnwwwwo', 'owwwwwnwwwwwo', '.owwwwwwwwwo.', '.owww...wwwo.', '..owwwwwwwo..', '...ooooooo...', '.............'],
   up: ['.oo.......oo.', '.odo.....odo.', '.ooooooooooo.', 'ooooooooooooo', 'ooooooooooooo', 'oooooddoooooo', 'ooooddddooooo', 'oooooddoooooo', '.ooooooooooo.', '.ooooooooooo.', '..ooooooooo..', '...ooooooo...', '.............'],
 };
-const PAC_PAL = { o: '#e8892e', d: '#a8521a', w: '#f6ead6', e: '#14101c', n: '#14101c' };
+const PUP_PAL = { o: '#e8892e', d: '#a8521a', w: '#f6ead6', e: '#14101c', n: '#14101c' };
 const CAT = { body: ['...c......c...', '..ccc....ccc..', '..cccccccccc..', '.cccccccccccc.', '.cwwccccccwwc.', '.cwpccccccwpc.', '.cccccccccccc.', '.cccckkkkcccc.', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', '.cccccccccccc.', '.cc..cccc..cc.'],
   scared: ['...c......c...', '..ccc....ccc..', '..cccccccccccc', '.cccccccccccc.', '.ccyyccccyycc.', '.ccyyccccyycc.', '.cccccccccccc.', '.cycycycycycc.', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', 'cccccccccccccc', '.cccccccccccc.', '.cc..cccc..cc.'] };
 export function draw(ctx, s, now, P) {
@@ -199,8 +199,8 @@ export function draw(ctx, s, now, P) {
     P.blit(ctx, P.sprite('cat2' + c.color, CAT.body, { c: c.color, w: '#ffffff', p: '#14101c', k: '#14101c' }, { outline: false }), X, Y);
     const [dx, dy] = DIRS[c.dir]; ctx.fillStyle = '#14101c'; ctx.fillRect(X + 2 + Math.max(0, dx), Y + 4 + Math.max(0, dy), 1, 1); ctx.fillRect(X + 10 + Math.max(0, dx), Y + 4 + Math.max(0, dy), 1, 1);
     if (c.stun > 0) { ctx.fillStyle = '#7ef0ff'; ctx.fillRect(X, Y - 3, 14, 1); } }
-  if (!s.dying || Math.floor(s.freeze / 8) % 2) { const p = s.pac, open = Math.floor(p.anim / 4) % 2; let spr;
-    if (p.dir === 'left' || p.dir === 'right') spr = P.sprite('pacS' + open + p.dir, open ? SPR_PAC.side2 : SPR_PAC.side, PAC_PAL, { outline: false, flip: p.dir === 'left' }); else spr = P.sprite('pac' + p.dir, SPR_PAC[p.dir], PAC_PAL, { outline: false });
+  if (!s.dying || Math.floor(s.freeze / 8) % 2) { const p = s.pup, open = Math.floor(p.anim / 4) % 2; let spr;
+    if (p.dir === 'left' || p.dir === 'right') spr = P.sprite('pupS' + open + p.dir, open ? SPR_PUP.side2 : SPR_PUP.side, PUP_PAL, { outline: false, flip: p.dir === 'left' }); else spr = P.sprite('pup' + p.dir, SPR_PUP[p.dir], PUP_PAL, { outline: false });
     P.blit(ctx, spr, p.x - 6, p.y - 6 + OY); }
   if (s.ring) { s.ring.t -= 1 / 60; if (s.ring.t <= 0) s.ring = null; else { ctx.strokeStyle = `rgba(126,240,255,${s.ring.t * 2})`; ctx.beginPath(); ctx.arc(s.ring.x, s.ring.y + OY, (0.4 - s.ring.t) / 0.4 * BARK.radius * 8, 0, 7); ctx.stroke(); } }
   if (s.ready > 0) { ctx.font = '8px "Press Start 2P", monospace'; ctx.fillStyle = '#f2c14e'; ctx.textAlign = 'center'; ctx.fillText('READY!', 112, OY + 17 * 8 + 7); ctx.textAlign = 'left'; }

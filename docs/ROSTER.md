@@ -120,6 +120,7 @@ Fully original Inu arcade fighter — no Capcom or Street Fighter names, charact
 
 ## Pending originality fixes (from Oct 18 audit)
 
-- **Internal Pac / ghost / blinky / Elroy / waka identifiers and strings** in `src/games/chomp.js`, `src/core/audio.js` (`eatGhost`), tests (`tests/rules.test.mjs`, `tests/polish.test.mjs`, `tests/modern.test.mjs`), `README.md` and `scripts/e2e.mjs` — to be renamed to Inu terms after the joystick ship.
-- **`invaders.js` / `aliens` / squid-crab-octo identifiers** (file name, import alias, `s.aliens`, sprite comments) — to be renamed.
-- **OPEN QUESTION for Zachary:** should the player-facing title **Bark Invaders** be renamed? It shares the word "Invaders" with a classic fixed-shooter title.
+- **DONE (Oct 18):** internal maze-chase source-game identifiers and strings renamed to Inu terms: `chomp.js` player state/sprites are now `pup` / `pupSpeed` / `pupPixel` / `movePup` / `SPR_PUP` / `PUP_PAL`, the cat wall helper is `catWall`, the cat-eaten sound is `eatCat` (`chomp.js` + `audio.js`); tests, `README.md` (retired v1 rules section removed) and `scripts/e2e.mjs` cleaned. The ghost-replay feature is unchanged.
+- **DONE (Oct 18):** fixed-shooter identifiers renamed: `src/games/invaders.js` is now `src/games/bark.js` (import alias `Bark` / `BK`), `s.aliens` is now `s.fleet`, the three row types are `drone` / `rug` / `bear`, and the bonus ship is `balloon` (`BALLOON_FRAMES`). The public route `/bark-invaders`, game id `bark-invaders`, achievement ids and all storage keys are unchanged.
+- **Guard:** `tests/originality.test.mjs` fails if any of these identifiers come back in source, tests, README or e2e.
+- **OPEN QUESTION for Zachary:** should the player-facing title **Bark Invaders** be renamed? It shares the word "Invaders" with a classic fixed-shooter title. (Not renamed; still pending.)

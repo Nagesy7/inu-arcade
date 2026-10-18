@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Invaders from './games/invaders.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Invaders, 'pup-crossing': Crossing, 'bone-breaker': Breaker };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -46,8 +46,15 @@ export function save() { scoreStore.save(A.db); LS.setItem(PURSE_KEY, JSON.strin
 window.__arcade = A; A.audioState = audioState;
 
 // ---------- layout ----------
-function fit() { const top = isTouch ? 0 : 34, b = fitBox(innerWidth, innerHeight - top, cv.width, cv.height, isTouch);
+function fit() { const top = isTouch ? 0 : 40, b = fitBox(innerWidth, innerHeight - top, cv.width, cv.height, isTouch);
   cv.style.width = b.w + 'px'; cv.style.height = b.h + 'px'; $('#stage').style.top = top + 'px'; $('#stage').style.paddingLeft = b.off * 2 + 'px'; }
+// Keep the toolbar clear of kibble-pay's fixed Connect Wallet pill + 🏠 (top-right): under it on phones, left of it on desktop.
+function placeBar() { const host = document.getElementById('inu-wallet') || document.getElementById('inu-home'), bar = $('#bar');
+  const q = host?.offsetWidth ? host.getBoundingClientRect() : null;
+  if (!q || q.left < innerWidth / 2) { bar.style.top = ''; bar.style.right = ''; return; } // nothing docked top-right (e.g. ?demo=1: 🏠 alone sits top-left)
+  if (isTouch) { bar.style.right = ''; bar.style.top = Math.ceil(q.top + Math.min(q.height, 44) + 4) + 'px'; } else { bar.style.top = ''; bar.style.right = Math.ceil(innerWidth - q.left + 8) + 'px'; } }
+{ let ro = null, seen = null; const watch = () => { const host = document.getElementById('inu-wallet') || document.getElementById('inu-home'); if (host !== seen) { seen = host; ro?.disconnect(); if (host && 'ResizeObserver' in window) { ro = new ResizeObserver(placeBar); ro.observe(host); } } placeBar(); };
+  new MutationObserver(watch).observe(document.body, { childList: true }); addEventListener('resize', placeBar); watch(); }
 addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 120)); fit();
 
 // ---------- text helpers ----------
@@ -70,7 +77,7 @@ addEventListener('popstate', () => go(routeId(), false));
 export const CABS = [
   { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 22 },
   { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 82 },
-  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Invaders.META.color, x: 142 },
+  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 142 },
   { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 202 },
   { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 262 },
 ];

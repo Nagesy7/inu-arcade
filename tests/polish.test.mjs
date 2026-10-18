@@ -13,8 +13,8 @@ test('audio mute persists and works before unlock', async () => {
 });
 
 import { readFileSync } from 'node:fs';
-test('IP: invader sprites are not the classic arcade alien bitmaps; no blue frightened cats; no waka two-tone', () => {
-  const inv = readFileSync(new URL('../src/games/invaders.js', import.meta.url), 'utf8');
+test('IP: Bark fleet sprites are not the classic arcade bitmaps; no blue scared cats; no two-tone chomp loop', () => {
+  const inv = readFileSync(new URL('../src/games/bark.js', import.meta.url), 'utf8');
   for (const row of ["'...11...', '..1111..', '.111111.', '11.11.11'", "'..1.....1..', '...1...1...', '..1111111..'", "'....1111....', '.1111111111.', '111111111111', '111..11..111'", "'.....111111.....'"]) assert.ok(!inv.includes(row), row);
   const chomp = readFileSync(new URL('../src/games/chomp.js', import.meta.url), 'utf8'); assert.ok(!chomp.includes("'#2430b8'") && !chomp.includes("'#3b57e8'"));
   const au = readFileSync(new URL('../src/core/audio.js', import.meta.url), 'utf8'); assert.ok(!au.includes('[98, 87, 78, 73]') && !au.includes("k ? 300 : 420"));

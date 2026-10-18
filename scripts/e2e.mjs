@@ -6,7 +6,7 @@ const tag = process.env.TAG || 'local';
 // ---------------- desktop keyboard ----------------
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-  const st = () => p.evaluate(() => { const A = window.__arcade, C = A.cab; return { scene: A.scene, L: A.lobby && { x: A.lobby.x, y: A.lobby.y }, id: C?.id, mode: C?.mode, score: C?.s.score, s: C && JSON.parse(JSON.stringify({ p: C.s.player || C.s.pac || C.s.pup || C.s.paddle, balls: C.s.balls?.length, stuck: C.s.balls?.[0]?.stuck, shots: C.s.shots, row: C.s.pup?.row })), path: location.pathname, panel: !document.querySelector('#panel').hidden }; });
+  const st = () => p.evaluate(() => { const A = window.__arcade, C = A.cab; return { scene: A.scene, L: A.lobby && { x: A.lobby.x, y: A.lobby.y }, id: C?.id, mode: C?.mode, score: C?.s.score, s: C && JSON.parse(JSON.stringify({ p: C.s.player || C.s.pup || C.s.paddle, balls: C.s.balls?.length, stuck: C.s.balls?.[0]?.stuck, shots: C.s.shots, row: C.s.pup?.row })), path: location.pathname, panel: !document.querySelector('#panel').hidden }; });
   await p.goto(URL + '/'); await p.waitForTimeout(800); await p.mouse.click(5, 5);
   let a = await st(); ok(a.scene === 'lobby', 'desktop: lobby loads');
   await p.keyboard.down('ArrowRight'); await p.waitForTimeout(500); await p.keyboard.up('ArrowRight'); let b = await st(); ok(b.L.x > a.L.x + 20, `desktop: arrow walks Shiba ${a.L.x | 0}->${b.L.x | 0}`);
@@ -67,7 +67,7 @@ const tag = process.env.TAG || 'local';
   ok(pr.owned.includes('arcade-cap') && pr.t === tk - 4 && pr.hat === 'arcade-cap', `prize counter swaps 4 tickets for Arcade Cap (${tk}->${pr.t})`);
   await p.waitForFunction(() => !!document.getElementById('inu-legal'), null, { timeout: 20000 }).catch(() => {}); ok(/Terms.*Prize Rules/.test(await p.evaluate(() => document.getElementById('inu-legal')?.textContent || '')), 'footer: Terms + Prize Rules links');
   await p.click('#pclose'); await p.click('#b-prizes'); await p.waitForTimeout(200);
-  await p.click('[data-gold="bone-breaker"]'); await p.waitForTimeout(500); ok(!(await p.evaluate(() => window.__arcade.purse.skins['bone-breaker'] || [])).includes('gold') && /launching soon/i.test(await p.evaluate(() => document.getElementById('pbody').textContent)), 'real mode: gold burn shows KIBBLE launching soon, nothing burned or faked');
+  await p.click('[data-gold="bone-breaker"]'); await p.waitForTimeout(500); ok(!(await p.evaluate(() => window.__arcade.purse.skins['bone-breaker'] || [])).includes('gold') && /Sign in with Phantom|unreachable|wallet/i.test(await p.evaluate(() => document.getElementById('pbody').textContent)), 'real mode, signed out: gold burn asks for a wallet sign-in (or says the wallet service is unreachable), nothing burned or faked');
   await p.evaluate(() => { const el = document.getElementById('srvboard'); return el && el.textContent; }); await p.click('#pclose'); await p.click('#b-scores'); await p.waitForFunction(() => !/Loading/.test(document.getElementById('srvboard')?.textContent || 'Loading'), null, { timeout: 15000 }).catch(() => {});
   ok(/pool/i.test(await p.evaluate(() => document.getElementById('srvboard')?.textContent || '')), 'scores panel shows the real kibble-pay prize board + pool'); await p.screenshot({ path: `proof/${tag}-desktop-server-board.png` });
   { const d = await ctx.newPage(); await d.goto(URL + '/?demo=1'); await d.waitForTimeout(800); await d.evaluate(() => { window.__arcade.purse.tickets = 99; }); await d.click('#b-prizes'); await d.waitForTimeout(200); await d.click('[data-gold="bone-breaker"]'); await d.waitForTimeout(300);
@@ -84,7 +84,7 @@ const tag = process.env.TAG || 'local';
   const c = async (k) => { const b = await p.locator(`#pad [data-k="${k}"]`).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
   const tap = async (q) => { await touch('touchStart', [q]); await p.waitForTimeout(60); await touch('touchEnd', []); };
   const hold = async (k, ms) => { const q = await c(k); await touch('touchStart', [q]); await p.waitForTimeout(ms); await touch('touchEnd', []); };
-  const st = () => p.evaluate(() => { const A = window.__arcade, C = A.cab; return { scene: A.scene, L: A.lobby && { x: A.lobby.x }, id: C?.id, mode: C?.mode, score: C?.s.score, p: C && (C.s.player || C.s.pac || C.s.pup || C.s.paddle), row: C?.s.pup?.row, shots: C?.s.shots, stuck: C?.s.balls?.[0]?.stuck }; });
+  const st = () => p.evaluate(() => { const A = window.__arcade, C = A.cab; return { scene: A.scene, L: A.lobby && { x: A.lobby.x }, id: C?.id, mode: C?.mode, score: C?.s.score, p: C && (C.s.player || C.s.pup || C.s.paddle), row: C?.s.pup?.row, shots: C?.s.shots, stuck: C?.s.balls?.[0]?.stuck }; });
   await p.goto(URL + '/'); await p.waitForTimeout(900); const vp = p.viewportSize(); const cv = await p.locator('#screen').boundingBox();
   ok(cv.x >= 0 && cv.y >= 0 && cv.x + cv.width <= vp.width + 1 && cv.y + cv.height <= vp.height + 1, `iphone: canvas fits ${cv.width | 0}x${cv.height | 0} in ${vp.width}x${vp.height}`);
   for (const k of ['left', 'right', 'up', 'down', 'a', 'start', 'back']) { const q = await c(k); ok(q.x > 0 && q.y > 0 && q.x < vp.width && q.y < vp.height, `iphone: ${k} button on screen`); }

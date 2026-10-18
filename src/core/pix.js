@@ -21,7 +21,7 @@ export const shibaHead = (coat = '#e0802c', dark = '#b65a1c') => sprite('shibaHe
 export const shibaHeadOpen = (coat = '#e0802c', dark = '#b65a1c') => sprite('shibaHeadOpen' + coat, [
   '.o.....o.', 'oo.....oo', 'odo...odo', 'ooooooooo', 'oweoooewo', 'owwwnwwwo', 'ow.....wo', '.ow...wo.', '..ooooo..',
 ], { ...SHIBA, o: coat, d: dark });
-// side-view Shiba body (for crossing / invaders turret)
+// side-view Shiba body (for crossing / Bark turret)
 export const shibaBody = (coat = '#e0802c') => sprite('shibaBody' + coat, [
   '.o.o.....', '.oooo...o', 'oeooo..oo', 'wwnoooooo', 'wwooooooo', '.wwwwooo.', '.o.o.o.o.',
 ], { ...SHIBA, o: coat });

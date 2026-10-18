@@ -5,7 +5,7 @@
 import { rng, clamp } from '../core/rng.js';
 export const META = { id: 'bark-invaders', title: 'BARK INVADERS', color: '#ff5d73', blurb: 'A rug-pull arrowhead fleet steps down, faster as it thins, while wing-tip divers swoop at you. One bark on screen at a time.', controls: 'Left/Right to move, Space / A to bark', inuMove: 'MEGA WOOF: hold A ~1s, release for a piercing blast (6s cooldown). Every 3rd wave a rug-pull whale boss joins the fleet.', classicNote: 'Original Inu rules at classic difficulty.' };
 export const W = 224, H = 256, COLS = 11, ROWS = 5, PY = 216, SHIELD_Y = 192, GROUND = 239;
-export const ROW_TYPE = ['squid', 'crab', 'crab', 'octo', 'octo'], TYPE_PTS = { squid: 40, crab: 25, octo: 15 }, TYPE_W = { squid: 8, crab: 11, octo: 12 };
+export const ROW_TYPE = ['drone', 'rug', 'rug', 'bear', 'bear'], TYPE_PTS = { drone: 40, rug: 25, bear: 15 }, TYPE_W = { drone: 8, rug: 11, bear: 12 };
 export const ROW_WIDTH = [5, 7, 9, 11, 11]; // arrowhead formation, centred on column 5
 export const FLEET = ROW_WIDTH.reduce((a, b) => a + b, 0); // 43
 export const waveY = (wave) => 128 + 12 * ((wave - 1) % 6); // bottom-row start height: lower each wave, resets every 6
@@ -19,7 +19,7 @@ export const BOMB_SPEED = 1.5, BOMB_SPEED_FAST = 2; // fast once 6 or fewer rema
 export const DIVE = { every: 12 * 60, first: 8 * 60, vy: 1.1, sway: 22, pts: 2 }; // a wing-tip diver swoops every 12s (double points if shot)
 export const BALLOON = { every: 20 * 60, hi: 300, lo: 100 }; // balloon value melts from 300 to 100 as it crosses
 export const balloonScore = (progress) => 50 * Math.round((BALLOON.hi - (BALLOON.hi - BALLOON.lo) * Math.min(1, Math.max(0, progress))) / 50);
-export const MYSTERY_FRAMES = BALLOON.every, SHOT_SPEED = 4, PLAYER_SPEED = 1, EXTRA_LIFE = 2000;
+export const BALLOON_FRAMES = BALLOON.every, SHOT_SPEED = 4, PLAYER_SPEED = 1, EXTRA_LIFE = 2000;
 export const MEGA = { charge: 0.9, cd: 6, w: 20, bossDmg: 8 };
 export const isBossWave = (s) => s.inu && s.wave % 3 === 0;
 const fx = (s, x, y, c, n = 8) => s.fx.push({ x, y, c, n }), pop = (s, x, y, text, c = '#7ef0ff') => s.pops.push({ x, y, text, c, t: 1 });
@@ -32,13 +32,13 @@ export function makeShield() { const b = new Uint8Array(22 * 16); for (let y = 0
   const dx = Math.abs(x - 10.5); if (y < 7 && dx > 3 + y * 1.25) on = false; /* kennel: peaked roof */ if (y >= 10 && dx <= 3.5) on = false; if (y === 9 && dx <= 2.5) on = false; b[y * 22 + x] = on ? 1 : 0; } return b; }
 export const SHIELD_X = [32, 77, 122, 167];
 function newWave(s) {
-  const by = waveY(s.wave); s.aliens = []; // arrowhead: narrow tip on top, full width at the bottom
-  for (let r = ROWS - 1; r >= 0; r--) { const w = ROW_WIDTH[r], c0 = (COLS - w) / 2; for (let k = 0; k < w; k++) { const c = c0 + k; s.aliens.push({ r, c, type: ROW_TYPE[r], x: 24 + c * 16, y: by - (ROWS - 1 - r) * 16, alive: true }); } }
-  s.total = s.aliens.length; s.stepT = 0; s.dir = 1; s.anim = 0; s.shot = null; s.bombs = {}; s.sinceBomb = 0; s.volley = 0; s.sweepCol = 0; s.sweepDir = 1;
-  s.diver = null; s.diveT = s.wave === 1 ? DIVE.first * 2 : DIVE.first; s.ufo = null; s.ufoT = MYSTERY_FRAMES; s.shields = SHIELD_X.map(makeShield); s.player.dead = 0; s.player.x = 104; s.ready = 60;
+  const by = waveY(s.wave); s.fleet = []; // arrowhead: narrow tip on top, full width at the bottom
+  for (let r = ROWS - 1; r >= 0; r--) { const w = ROW_WIDTH[r], c0 = (COLS - w) / 2; for (let k = 0; k < w; k++) { const c = c0 + k; s.fleet.push({ r, c, type: ROW_TYPE[r], x: 24 + c * 16, y: by - (ROWS - 1 - r) * 16, alive: true }); } }
+  s.total = s.fleet.length; s.stepT = 0; s.dir = 1; s.anim = 0; s.shot = null; s.bombs = {}; s.sinceBomb = 0; s.volley = 0; s.sweepCol = 0; s.sweepDir = 1;
+  s.diver = null; s.diveT = s.wave === 1 ? DIVE.first * 2 : DIVE.first; s.balloon = null; s.balloonT = BALLOON_FRAMES; s.shields = SHIELD_X.map(makeShield); s.player.dead = 0; s.player.x = 104; s.ready = 60;
   s.boss = isBossWave(s) ? { x: 80, y: 44, w: 48, h: 16, hp: 30 + s.wave * 3, max: 30 + s.wave * 3, vx: 0.6, fireT: 60 } : null;
 }
-export const alive = (s) => s.aliens.filter((a) => a.alive);
+export const alive = (s) => s.fleet.filter((a) => a.alive);
 const box = (a) => ({ x: a.x + (16 - TYPE_W[a.type]) / 2, y: a.y, w: TYPE_W[a.type], h: 8 });
 const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 export function step(s, dt, inp) {
@@ -58,20 +58,20 @@ function frame(s) {
   marchOne(s); if (s.over) return;
   // player shot
   if (s.shot) { s.shot.y -= SHOT_SPEED; const sh = s.shot; let done = false;
-    const a = s.aliens.find((a) => a.alive && hit(sh, box(a)));
+    const a = s.fleet.find((a) => a.alive && hit(sh, box(a)));
     const dv = s.diver && hit(sh, { x: s.diver.x, y: s.diver.y, w: 12, h: 8 });
     if (dv) { const a = s.diver.a; a.alive = false; const pts = TYPE_PTS[a.type] * DIVE.pts; s.score += pts; pop(s, s.diver.x, s.diver.y, '+' + pts, '#f2c14e'); fx(s, s.diver.x + 6, s.diver.y + 4, '#f2c14e', 12); s.diver = null; s.ev.push('hit'); done = true; streak(s, a); }
-    else if (a) { a.alive = false; s.score += TYPE_PTS[a.type]; s.ev.push('hit'); s.pop = { x: a.x, y: a.y, f: 16 }; fx(s, a.x + 8, a.y + 4, a.type === 'squid' ? '#ff5dc8' : a.type === 'crab' ? '#fbf1e0' : '#5fd37a', 9); done = true; streak(s, a); }
-    else if (s.ufo && hit(sh, s.ufo)) { const pts = balloonScore(s.ufo.vx > 0 ? (s.ufo.x + 16) / (W + 16) : (W - s.ufo.x) / (W + 16)); s.score += pts; s.ufoPop = { x: s.ufo.x, pts, f: 90 }; fx(s, s.ufo.x + 8, s.ufo.y + 4, '#3ad0e0', 18); s.ufo = null; s.ev.push('boom'); done = true; }
+    else if (a) { a.alive = false; s.score += TYPE_PTS[a.type]; s.ev.push('hit'); s.pop = { x: a.x, y: a.y, f: 16 }; fx(s, a.x + 8, a.y + 4, a.type === 'drone' ? '#ff5dc8' : a.type === 'rug' ? '#fbf1e0' : '#5fd37a', 9); done = true; streak(s, a); }
+    else if (s.balloon && hit(sh, s.balloon)) { const pts = balloonScore(s.balloon.vx > 0 ? (s.balloon.x + 16) / (W + 16) : (W - s.balloon.x) / (W + 16)); s.score += pts; s.balloonPop = { x: s.balloon.x, pts, f: 90 }; fx(s, s.balloon.x + 8, s.balloon.y + 4, '#3ad0e0', 18); s.balloon = null; s.ev.push('boom'); done = true; }
     else if (s.boss && hit(sh, s.boss)) { hurtBoss(s, 1); done = true; }
     else if (erode(s, sh, SHOT_MASK)) { done = true; s.stats.streak = 0; }
     else if (Object.values(s.bombs).some((b) => b && hit(sh, b))) { for (const k in s.bombs) if (s.bombs[k] && hit(sh, s.bombs[k])) delete s.bombs[k]; done = true; }
     else if (sh.y < 32) { done = true; s.stats.streak = 0; }
     if (done) s.shot = null; }
-  bombs(s); diver(s); ufo(s); boss(s);
-  for (const a of s.aliens) if (a.alive && a.y + 8 >= SHIELD_Y) erodeRect(s, box(a));
+  bombs(s); diver(s); moveBalloon(s); boss(s);
+  for (const a of s.fleet) if (a.alive && a.y + 8 >= SHIELD_Y) erodeRect(s, box(a));
   if (!s.extra && s.score >= EXTRA_LIFE) { s.extra = true; s.lives++; s.ev.push('pow'); }
-  if (s.pop && --s.pop.f <= 0) s.pop = null; if (s.ufoPop && --s.ufoPop.f <= 0) s.ufoPop = null;
+  if (s.pop && --s.pop.f <= 0) s.pop = null; if (s.balloonPop && --s.balloonPop.f <= 0) s.balloonPop = null;
   if (!alive(s).length && !s.boss) { s.wave++; s.level = s.wave; s.ev.push('level'); newWave(s); }
 }
 function streak(s, a) { s.stats.streak++; s.stats.best = Math.max(s.stats.best, s.stats.streak); if (s.inu && s.stats.streak % 10 === 0) { s.score += 100; pop(s, a.x, a.y, `STREAK x${s.stats.streak} +100`, '#f2c14e'); } }
@@ -84,7 +84,7 @@ export function marchOne(s) { // one frame of the march clock
   else for (const a of al) a.x += s.dir * STEP_X;
   if (al.some((a) => a.y + 8 >= PY)) { s.lives = 0; s.over = true; s.ev.push('die'); }
 }
-const colBottom = (s, col) => s.aliens.filter((a) => a.alive && !a.diving && a.c === col).sort((p, q) => q.y - p.y)[0];
+const colBottom = (s, col) => s.fleet.filter((a) => a.alive && !a.diving && a.c === col).sort((p, q) => q.y - p.y)[0];
 function bombs(s) {
   const al = alive(s).filter((a) => !a.diving); s.sinceBomb++; const sp = al.length <= 6 ? BOMB_SPEED_FAST : BOMB_SPEED;
   for (const k of Object.keys(s.bombs)) { const b = s.bombs[k]; if (!b) continue; b.y += b.kind === 'boss' ? 4 / 3 : sp; b.anim++; if (b.kind === 'zigzag') b.x += Math.floor(b.anim / 6) % 2 ? 0.25 : -0.25;
@@ -101,7 +101,7 @@ function bombs(s) {
     s.sweepCol += s.sweepDir; if (s.sweepCol >= cols.length - 1 || s.sweepCol <= 0) { s.sweepCol = Math.max(0, Math.min(cols.length - 1, s.sweepCol)); s.sweepDir *= -1; } src = colBottom(s, cols[Math.min(cols.length - 1, s.sweepCol)]); }
   if (!src) return; s.bombs['v' + s.frame] = { x: src.x + 7, y: src.y + 8, w: 3, h: 7, kind, c: src.c, anim: 0 }; s.sinceBomb = 0;
 }
-// Divers: every DIVE.every frames a wing-tip alien (end of the lowest row) peels off and swoops toward the player.
+// Divers: every DIVE.every frames a wing-tip dog (end of the lowest row) peels off and swoops toward the player.
 function diver(s) {
   const D = s.diver;
   if (!D) { if (--s.diveT > 0 || s.player.dead) return; s.diveT = DIVE.every; const al = alive(s).filter((a) => !a.diving); if (al.length < 4) return;
@@ -112,15 +112,15 @@ function diver(s) {
   if (D.y > GROUND) { D.a.alive = false; s.diver = null; } // missed: it flies off-screen (no points)
 }
 function playerHit(s) { s.lives--; s.player.dead = 60; s.flash = 1; s.shake = 0.45; s.ev.push('boom'); fx(s, s.player.x + 6, PY + 4, '#e0802c', 24); s.shot = null; }
-function ufo(s) {
-  if (!s.ufo) { if (--s.ufoT <= 0) { s.ufoT = MYSTERY_FRAMES; if (alive(s).length >= 8) { const right = s.rnd() < 0.5; s.ufo = { x: right ? 208 : 0, y: 40, w: 16, h: 7, vx: right ? -1 : 1 }; s.ev.push('honk'); } } return; }
-  s.ufo.x += s.ufo.vx; if (s.ufo.x < -16 || s.ufo.x > W) s.ufo = null;
+function moveBalloon(s) {
+  if (!s.balloon) { if (--s.balloonT <= 0) { s.balloonT = BALLOON_FRAMES; if (alive(s).length >= 8) { const right = s.rnd() < 0.5; s.balloon = { x: right ? 208 : 0, y: 40, w: 16, h: 7, vx: right ? -1 : 1 }; s.ev.push('honk'); } } return; }
+  s.balloon.x += s.balloon.vx; if (s.balloon.x < -16 || s.balloon.x > W) s.balloon = null;
 }
 function boss(s) { const B = s.boss; if (!B) return; B.x += B.vx; if (B.x < 8 || B.x + B.w > W - 8) B.vx *= -1; if (--B.fireT <= 0) { B.fireT = 70; if (!s.bombs.boss) s.bombs.boss = { x: B.x + B.w / 2, y: B.y + B.h, w: 3, h: 7, kind: 'boss', anim: 0 }; } }
 function hurtBoss(s, d) { const B = s.boss; B.hp -= d; s.ev.push('hit'); fx(s, B.x + B.w / 2, B.y + B.h, '#3a6ed8', 6);
   if (B.hp <= 0) { s.score += 2000; s.stats.bosses++; fx(s, B.x + B.w / 2, B.y + 8, '#f2c14e', 40); pop(s, B.x + 24, B.y, 'WHALE REKT +2000', '#f2c14e'); s.shake = 0.6; s.boss = null; s.ev.push('boom'); } }
 function megaWoof(s) { const x = s.player.x + 6; s.megaCd = MEGA.cd; s.stats.megas++; s.beam = { x: x - MEGA.w / 2, t: 0.3 }; s.ev.push('mega'); s.shake = 0.3; const bx = { x: x - MEGA.w / 2, y: 0, w: MEGA.w, h: PY };
-  let n = 0; for (const a of s.aliens) if (a.alive && hit(box(a), bx)) { a.alive = false; s.score += TYPE_PTS[a.type]; n++; fx(s, a.x + 8, a.y + 4, '#7ef0ff', 8); }
+  let n = 0; for (const a of s.fleet) if (a.alive && hit(box(a), bx)) { a.alive = false; s.score += TYPE_PTS[a.type]; n++; fx(s, a.x + 8, a.y + 4, '#7ef0ff', 8); }
   if (n > 1) { s.score += n * 20; pop(s, x, 120, `MEGA WOOF x${n}`, '#7ef0ff'); } erodeRect(s, bx); if (s.boss && hit(s.boss, bx)) hurtBoss(s, MEGA.bossDmg); }
 // ---- shields: per-pixel bitmaps eroded by explosion masks ----
 const SHOT_MASK = ['1..1...1', '..1...1.', '.111111.', '11111111', '11111111', '.111111.', '..1..1..', '1..1...1'];
@@ -143,20 +143,20 @@ export function bot(s) {
 }
 export const ghostPos = (s) => ({ x: s.player.x + 6, y: PY + 4 });
 // ---------- render ----------
-// Original "rug-pull fleet" sprites (not the arcade alien shapes): squid -> FUD drone, crab -> flying rug, octo -> grumpy bear head.
-const SPR = { squid: [['..1..1..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '..1111..', '.1....1.', '1......1'], ['..1..1..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '..1111..', '..1..1..', '..1..1..']],
-  crab: [['1.1.1.1.1.1', '11111111111', '1.........1', '1.111.111.1', '1.........1', '11111111111', '1.1.1.1.1.1', '...........'], ['...........', '1.1.1.1.1.1', '11111111111', '1.........1', '1.111.111.1', '1.........1', '11111111111', '.1.1.1.1.1.']],
-  octo: [['11........11', '111......111', '.1111111111.', '11.111111.11', '111..11..111', '111111111111', '.11.1111.11.', '..11111111..'], ['11........11', '111......111', '.1111111111.', '11.111111.11', '111..11..111', '111111111111', '.111.11.111.', '..1......1..']] };
-const TYPE_COL = { squid: '#ff5dc8', crab: '#fbf1e0', octo: '#7ee08a' };
+// Original "rug-pull fleet" sprites: drone = FUD drone, rug = flying rug, bear = grumpy bear head.
+const SPR = { drone: [['..1..1..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '..1111..', '.1....1.', '1......1'], ['..1..1..', '.111111.', '11.11.11', '11111111', '.1.11.1.', '..1111..', '..1..1..', '..1..1..']],
+  rug: [['1.1.1.1.1.1', '11111111111', '1.........1', '1.111.111.1', '1.........1', '11111111111', '1.1.1.1.1.1', '...........'], ['...........', '1.1.1.1.1.1', '11111111111', '1.........1', '1.111.111.1', '1.........1', '11111111111', '.1.1.1.1.1.']],
+  bear: [['11........11', '111......111', '.1111111111.', '11.111111.11', '111..11..111', '111111111111', '.11.1111.11.', '..11111111..'], ['11........11', '111......111', '.1111111111.', '11.111111.11', '111..11..111', '111111111111', '.111.11.111.', '..1......1..']] };
+const TYPE_COL = { drone: '#ff5dc8', rug: '#fbf1e0', bear: '#7ee08a' };
 const PLAYER = ['.1.......1...', '.11.....11...', '.111111111...', '11111111111..', '1111211121111', '1111111111111', '1111111111111', '1111111111111'];
 export function draw(ctx, s, now, P) {
   ctx.fillStyle = '#05040d'; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 30; i++) { ctx.fillStyle = i % 3 ? '#1a1838' : '#3a3666'; ctx.fillRect((i * 97 + 13) % W, 30 + ((i * 53) % 200), 1, 1); }
-  for (const a of s.aliens) if (a.alive && !a.diving) P.blit(ctx, P.sprite('inv' + a.type + s.anim, SPR[a.type][s.anim], { 1: TYPE_COL[a.type] }, { outline: false }), box(a).x, a.y);
+  for (const a of s.fleet) if (a.alive && !a.diving) P.blit(ctx, P.sprite('inv' + a.type + s.anim, SPR[a.type][s.anim], { 1: TYPE_COL[a.type] }, { outline: false }), box(a).x, a.y);
   if (s.diver) { const a = s.diver.a; P.blit(ctx, P.sprite('inv' + a.type + s.anim, SPR[a.type][s.anim], { 1: '#f2c14e' }, { outline: false }), s.diver.x, s.diver.y); }
   if (s.pop) { ctx.fillStyle = '#fff'; for (let i = 0; i < 6; i++) ctx.fillRect(s.pop.x + 3 + ((i * 5) % 11), s.pop.y + ((i * 3) % 8), 1, 1); }
-  if (s.ufo) P.blit(ctx, P.sprite('ufo', ['......1111......', '....11111111....', '...1111111111...', '...1.1.1.1.1.1..', '....11111111....', '......1..1......', '......1111......'], { 1: '#3ad0e0' }, { outline: false }), s.ufo.x, s.ufo.y);
-  if (s.ufoPop) { ctx.font = '8px "Press Start 2P", monospace'; ctx.fillStyle = '#3ad0e0'; ctx.fillText(s.ufoPop.pts, s.ufoPop.x, 47); }
+  if (s.balloon) P.blit(ctx, P.sprite('balloon', ['......1111......', '....11111111....', '...1111111111...', '...1.1.1.1.1.1..', '....11111111....', '......1..1......', '......1111......'], { 1: '#3ad0e0' }, { outline: false }), s.balloon.x, s.balloon.y);
+  if (s.balloonPop) { ctx.font = '8px "Press Start 2P", monospace'; ctx.fillStyle = '#3ad0e0'; ctx.fillText(s.balloonPop.pts, s.balloonPop.x, 47); }
   if (s.boss) { const B = s.boss; ctx.fillStyle = '#2a4fa8'; ctx.fillRect(B.x + 4, B.y, B.w - 8, B.h); ctx.fillRect(B.x, B.y + 4, B.w, B.h - 8); ctx.fillStyle = '#ff3040'; ctx.fillRect(B.x + 10, B.y + 5, 3, 2); ctx.fillStyle = '#c8d8ff'; ctx.fillRect(B.x + 4, B.y + 11, B.w - 12, 2);
     ctx.fillStyle = '#300'; ctx.fillRect(40, 30, 144, 3); ctx.fillStyle = '#ff5d73'; ctx.fillRect(40, 30, 144 * Math.max(0, B.hp / B.max), 3); }
   ctx.fillStyle = '#e8892e'; for (let i = 0; i < 4; i++) for (let y = 0; y < 16; y++) for (let x = 0; x < 22; x++) if (s.shields[i][y * 22 + x]) ctx.fillRect(SHIELD_X[i] + x, SHIELD_Y + y, 1, 1);
