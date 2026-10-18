@@ -68,7 +68,7 @@ export function draw(ctx, s, now, P) {
   ctx.save(); ctx.translate(0, AY);
   // kennels
   const hb = P.sprite('sc-house-b', SPR.house, { ...PAL, r: '#3a7bd5' }), hr = P.sprite('sc-house-r', SPR.house, { ...PAL, r: '#d6302f' }); ctx.drawImage(hb, 1, BONE.y - 22); ctx.drawImage(hr, W - hr.width - 1, BONE.y - 22);
-  for (const k of s.crates) if (k.hp > 0) { const c = P.sprite('sc-crate', SPR.crate, PAL, { outline: false }); ctx.drawImage(c, k.c * T + 1 + (k.hit > 0 ? (k.hit-- % 2 ? 1 : -1) : 0), k.r * T + 1); }
+  for (const k of s.crates) if (k.hp > 0) { const c = P.sprite('sc-crate', SPR.crate, PAL, { outline: false }); ctx.drawImage(c, k.c * T + 1 + (k.hit > 0 ? (k.hit % 2 ? 1 : -1) : 0), k.r * T + 1); }
   for (const it of s.items) { if (it.t < 120 && Math.floor(now * 8) % 2) continue; const spr = P.sprite('sc-' + it.kind, SPR[it.kind], PAL); ctx.drawImage(spr, Math.round(it.x - spr.width / 2), Math.round(it.y - spr.height / 2 + Math.sin(now * 5 + it.x) * 1.5)); }
   for (const z of s.zones) { if (z.kind === 'ring') { ctx.strokeStyle = z.heal ? '#ff9ad0' : '#fbf1e0'; ctx.globalAlpha = z.t / 16; ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1.1 - z.t / 32), 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
     else { const c = picnic(); ctx.globalAlpha = Math.min(1, z.t / 30); ctx.drawImage(c, Math.round(z.x - c.width / 2), Math.round(z.y - c.height / 2)); ctx.globalAlpha = 1; } }
@@ -100,7 +100,7 @@ function hud(ctx, s, now) { const y = OY; ctx.fillStyle = '#0c0820'; ctx.fillRec
   txt(ctx, `M${s.match} ${rankOf(s.match)}`, 20, y + 9, '#c8bce8');
   const secs = Math.max(0, Math.ceil(s.timer / 60)), low = secs <= 10 && s.phase === 'fight'; txt(ctx, `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, 106, y + 9, low && Math.floor(now * 4) % 2 ? '#ff5d73' : '#f2c14e', 8, 'center');
   const p = player(s); if (p) { const full = p.sup >= SUPER.full; ctx.fillStyle = '#2a2448'; ctx.fillRect(142, y + 3, 56, 5); ctx.fillStyle = full ? (Math.floor(now * 8) % 2 ? '#f2c14e' : '#fff6c0') : '#c88a3c'; ctx.fillRect(142, y + 3, Math.round((56 * p.sup) / SUPER.full), 5);
-    txt(ctx, full ? 'SUPER!' : 'SUPER', 170, y + 9, full ? '#1a1424' : '#fbf1e0', 8, 'center'); txt(ctx, 'ROLL', 252, y + 9, p.rollCd > 0 ? '#4a3a7a' : '#7ef0ff', 8, 'right'); } }
+    if (full) { ctx.font = '8px Silkscreen, monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#1a1424'; ctx.fillText('SUPER!', 170, y + 9); ctx.textAlign = 'left'; } else txt(ctx, 'SUPER', 170, y + 9, '#fbf1e0', 8, 'center'); txt(ctx, 'ROLL', 252, y + 9, p.rollCd > 0 ? '#4a3a7a' : '#7ef0ff', 8, 'right'); } }
 function banners(ctx, s, now, P) { const X = W / 2;
   const box = (y, h) => { ctx.fillStyle = '#000c'; ctx.fillRect(16, y, W - 32, h); ctx.strokeStyle = '#3a2a6a'; ctx.strokeRect(16.5, y + 0.5, W - 33, h - 1); };
   if (s.phase === 'ready') { box(AY + 70, 52); txt(ctx, `MATCH ${s.match} · ${ARENAS[s.arena].name}`, X, AY + 84, '#7ef0ff', 6, 'center'); txt(ctx, `ROUND ${s.round}`, X, AY + 100, '#fbf1e0', 8, 'center', 'P');

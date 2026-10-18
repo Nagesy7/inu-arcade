@@ -87,6 +87,7 @@ export function step(s, dt, inp = {}) {
   const sk = skill(s.match);
   for (const f of s.fighters) { if (f.ctl === 'bot') brain(s, f, sk); }
   for (const f of s.fighters) fighterFrame(s, f, f.ctl === 'p1' ? k1 : f.ctl === 'p2' ? (k2 || edge(keys({}), {})) : null, sk);
+  for (const k of s.crates) if (k.hit > 0) k.hit--;
   shotsFrame(s); zonesFrame(s); hazardFrame(s); itemsFrame(s); boneFrame(s);
   if (s.inu && !s.coinDrop && s.timer < 30 * 60) { s.coinDrop = true; s.items.push({ kind: 'coin', x: 128, y: 40 + 144 * (s.round % 2), t: 900 }); }
   if (--s.timer <= 0) { const d = s.bone.x - BONE.x0; endRound(s, Math.abs(d) < 4 ? (s.roundKos[0] === s.roundKos[1] ? -1 : s.roundKos[0] > s.roundKos[1] ? 0 : 1) : d < 0 ? 0 : 1, false); }
@@ -101,7 +102,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const isP = (f) => f && (f.ctl === 'p1' || f.ctl === 'p2');
 export const alive = (s, team) => s.fighters.filter((f) => !f.dead && (team === undefined || f.team === team));
 // hidden in a bush unless a rival is close (or the hider is flashing from a hit / mid-attack)
-export const seen = (s, f, by) => !inBush(s, f.x, f.y) || f.flash > 0 || !!f.act || s.fighters.some((o) => o.team !== f.team && !o.dead && dist(o, f) < 30) || (by && dist(by, f) < 30);
+export const seen = (s, f, by) => !inBush(s, f.x, f.y) || f.flash > 0 || !!f.act || s.fighters.some((o) => o.team !== f.team && !o.dead && dist(o, f) < 30) || (!!by && dist(by, f) < 30);
 export function los(s, a, b) { const d = dist(a, b), n = Math.ceil(d / 6); for (let i = 1; i < n; i++) { const t = i / n; if (solidAt(s, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)) return false; } return true; }
 function moveF(s, f, dx, dy) { let hit = false; if (dx) { if (!boxHits(s, f.x + dx, f.y)) f.x += dx; else hit = true; } if (dy) { if (!boxHits(s, f.x, f.y + dy)) f.y += dy; else hit = true; } return hit; }
 const puddle = (s, f) => tileAt(s, Math.floor(f.x / T), Math.floor(f.y / T)) === '~';
@@ -204,11 +205,12 @@ export function bonePull(s) { let b = 0, r = 0; for (const f of s.fighters) if (
 function boneFrame(s) { const { b, r } = bonePull(s), x0 = s.bone.x; s.bone.v = BONE.v * Math.max(-3, Math.min(3, r - b)); s.bone.x += s.bone.v; s.bone.push = r - b;
   const dx = s.bone.x - x0; if (dx < 0) for (const f of s.fighters) if (isP(f) && !f.dead && dist(f, s.bone) < BONE.r) { s.acc.bone += -dx * PTS.bonePx; s.stats.bonePx += -dx; } }
 // ---------- rounds / matches ----------
+const mult = (s) => Math.min(s.match, RANKS.length); // round/match points scale with rank, capped at LEGEND (keeps long runs linear)
 function endRound(s, winner, early) { if (s.phase !== 'fight') return; s.phase = 'roundEnd'; s.phaseT = 150; s.roundsThisMatch++; s.lastRound = { winner, early };
-  if (winner === 0) { s.wins[0]++; s.stats.roundsWon++; const pts = PTS.round * s.match + (early ? Math.floor(s.timer / 60) * PTS.timeBonus : 0); s.score += pts; s.lastRound.pts = pts; s.ev.push('roundwin'); }
+  if (winner === 0) { s.wins[0]++; s.stats.roundsWon++; const pts = PTS.round * mult(s) + (early ? Math.floor(s.timer / 60) * PTS.timeBonus : 0); s.score += pts; s.lastRound.pts = pts; s.ev.push('roundwin'); }
   else if (winner === 1) { s.wins[1]++; s.stats.roundsLost++; s.lives--; s.ev.push('roundlose'); } else s.ev.push('blip');
   if (s.lives > 0 && (s.wins[0] >= 2 || s.wins[1] >= 2 || s.roundsThisMatch >= 5)) { s.phase = 'matchEnd'; s.phaseT = 210; const won = s.wins[0] > s.wins[1]; s.lastMatch = { won, flawless: won && s.wins[1] === 0 };
-    if (won) { const pts = PTS.match * s.match + (s.lastMatch.flawless ? PTS.flawless : 0); s.score += pts; s.lastMatch.pts = pts; s.stats.matches++; if (s.lastMatch.flawless) s.stats.flawless++; s.lives = Math.min(MAX_LIVES, s.lives + 1); s.ev.push('matchwin'); } } }
+    if (won) { const pts = PTS.match * mult(s) + (s.lastMatch.flawless ? PTS.flawless : 0); s.score += pts; s.lastMatch.pts = pts; s.stats.matches++; if (s.lastMatch.flawless) s.stats.flawless++; s.lives = Math.min(MAX_LIVES, s.lives + 1); s.ev.push('matchwin'); } } }
 function afterRound(s) { if (s.lives <= 0) { s.over = true; s.phase = 'over'; return; }
   if (s.phase === 'matchEnd') { if (s.lastMatch.won) s.match++; s.round = 1; startMatch(s); return; } s.round++; startRound(s); }
 // ---------- bots (also the attract-mode / human-sim brain for the player) ----------
