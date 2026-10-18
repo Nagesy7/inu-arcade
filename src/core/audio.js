@@ -63,7 +63,6 @@ function tick() {
   if (!mus.bus) { mus.bus = ac.createGain(); mus.bus.connect(master); } route = mus.bus;
   if (mus.track === 'pip') return pipTick();
   if (mus.track === 'scuffle') return scuffleTick();
-  if (mus.track === 'fud') return fudTick();
   while (mus.next < ac.currentTime + 0.12) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, I = mus.intensity;
     tone(mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), sp * 0.8, 'triangle', 0.07, d);
     if (I >= 1 && i % 2 === 0) { const ch = ARP[bar]; tone(mtof(ch[(i / 2) % 3] + 12), mtof(ch[(i / 2) % 3] + 12), sp * 0.5, 'square', 0.025, d); }
@@ -126,19 +125,3 @@ SFX.rally = () => { seq([392, 523, 659, 784], 0.06, 'square', 0.05); tone(300, 6
 SFX.fight = () => { tone(260, 520, 0.12, 'square', 0.08); tone(520, 520, 0.2, 'square', 0.07, 0.12); noise(0.1, 0.05, 0.12, 2000); };
 SFX.roundwin = () => seq([659, 784, 988, 1319], 0.08, 'triangle', 0.08); SFX.roundlose = () => seq([392, 349, 294, 262], 0.1, 'triangle', 0.07);
 SFX.matchwin = () => seq([523, 659, 784, 1047, 784, 1047, 1319], 0.08, 'square', 0.06);
-
-// FUD Swarm: original driving D-dorian survival loop (pulsing 8th bass, hat ticks, a rising arp that thickens with intensity)
-SFX.swarm = () => { seq([294, 0, 311, 0, 330], 0.07, 'sawtooth', 0.05); noise(0.25, 0.04, 0.05, 600); }; SFX.ring = () => tone(1200, 900, 0.05, 'triangle', 0.035);
-SFX.toss = () => tone(500, 800, 0.05, 'triangle', 0.04); SFX.zap = () => { tone(1600, 400, 0.12, 'sawtooth', 0.04); }; SFX.whip = () => noise(0.06, 0.05, 0, 2600);
-SFX.bossdown = () => { noise(0.4, 0.1, 0, 200); seq([523, 659, 784, 1047, 1319], 0.07, 'square', 0.07); }; SFX.revive = () => seq([392, 523, 659, 784, 1047], 0.06, 'triangle', 0.09);
-SFX.levelup = () => seq([659, 784, 988, 1319], 0.06, 'square', 0.07); SFX.spam = () => tone(900, 700, 0.03, 'square', 0.02);
-Object.assign(CD, { kib: 0.05, toss: 0.12, zap: 0.15, whip: 0.15, ring: 0.2, spam: 0.2, swarm: 1, levelup: 0.3, bossdown: 0.5, revive: 0.5 });
-const FS_BASS = [38, 38, 50, 38, 41, 41, 53, 41, 43, 43, 55, 43, 36, 36, 48, 45], FS_ARP = [[62, 65, 69, 72], [65, 69, 72, 76], [67, 71, 74, 77], [60, 64, 67, 71]];
-function fudTick() { const bpm = 128 + mus.intensity * 10, sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
-  while (mus.next < ac.currentTime + 0.12) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, I = mus.intensity, b = FS_BASS[(i >> 2) + bar * 4] - 12;
-    tone(mtof(b), mtof(b), sp * 0.5, 'triangle', 0.05, d); if (i % 4 === 0) tone(130, 50, 0.08, 'sine', 0.09, d); if (i % 2 === 1) noise(0.02, 0.025, d, 6000);
-    if (I >= 1) { const n = FS_ARP[bar][i % 4] + (i >= 8 ? 12 : 0); tone(mtof(n), mtof(n), sp * 0.4, 'square', 0.015, d); }
-    if (I >= 2 && (i === 4 || i === 12)) noise(0.06, 0.05, d, 1200);
-    if (I >= 3 && i % 8 === 6) tone(mtof(b + 36), mtof(b + 31), sp * 0.8, 'sawtooth', 0.015, d);
-    mus.step++; mus.next += sp; }
-  route = null; }

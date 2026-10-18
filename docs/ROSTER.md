@@ -71,16 +71,6 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Kibble Pay:** registered (`shiba-scuffle`, max 1,900,000 = ~10× best human-sim run 189,899, 600/s, min 5 s, version 2; arcade-run quest; Inu Score v7, 14 games, max 18,000).
 - **Inu Verse:** district `arena`, spawn `door-shiba-scuffle` (verse-districts.md v2).
 
-### FUD Swarm *(working name — pending Zachary's approval)*
-
-- **Status:** BUILT, awaiting the batched deploy (Oct 19; Vercel daily deploy limit). Route `/fud-swarm`. Name lives in one constant (`NAME` in `src/games/fud.js`; art in `src/games/fud-art.js`). Batch #2 of five.
-- **Design (original):** top-down auto-attack survival. Your Shiba holds a fenced meadow against an endless, scaling swarm of FUD bots: Doubt Drones, Rug Rollers (straight-line rushers), Paper Hands (tanky), Shill Spammers (keep distance and spit spam pellets), elite Bear Bots. Tricks fire on their own (Bark Ring, Bone Toss, Kibble Orbit, Laser Gaze, Paw Mines, Tail Whip); perks (Fluffy Coat, Zoomies, Big Nose, Sharp Teeth, Quick Paws, Good Pup). Kibble crumbs = XP; each level offers 3 cards (max 4 tricks + 4 perks, 5 levels each). Zoom Dash, a full-meter Big Bark, a FUD Swarm ring every 75 s, a boss every 3 minutes (FUD Whale spawns drones, The Great Dump charges, King FUD fires spam rings), boss chests (level-up + heal), one SECOND WIND revive.
-- **Rules:** free entry, skill and rank only; no per-run $KIBBLE payouts, no wagering. `$KIBBLE` buys cosmetics only (bandana colours via the cabinet's neon/gold skins). Bones and tickets only through the normal end-of-run grant (no new currency, no per-win bonus). Inu Mode coins are score points only.
-- **Multiplayer:** single player; no co-op or netcode.
-- **Genre inspiration (internal only):** auto-attack survival / horde games as loose genre only. No source-game names, characters, weapons, sprites, sounds, maps or layouts.
-- **Kibble Pay:** registered (`fud-swarm`, max 5,700,000 = ~10× best human-sim run 571,719, 1,500/s, min 5 s, version 2; arcade-run quest; Inu Score v8, 15 games, max 19,000).
-- **Inu Verse:** district `fud-field`, spawn `door-fud-swarm`.
-
 ## Build order
 
 1. Joystick toggle (in progress)
@@ -89,7 +79,6 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 4. Bone Digger (LIVE, working name pending approval)
 5. Pip's Big Bark (LIVE)
 6. Shiba Scuffle (LIVE, working name pending approval; new batch #1 of 5)
-7. FUD Swarm (built, awaiting deploy; working name pending approval; batch #2 of 5)
 
 Mask Pup and the Inu fighter are logged only for now, not scheduled.
 

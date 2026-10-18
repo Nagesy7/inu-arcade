@@ -12,7 +12,7 @@ const stick=async(k)=>{const q=await p.locator('#joy').boundingBox();const cx=q.
 await nav(U+'/'); await p.waitForTimeout(900); await p.screenshot({path:D+T+'-hub.png'});
 const info=await p.evaluate(()=>{const r=document.querySelector('#screen').getBoundingClientRect();const pad=[...document.querySelectorAll('#pad b')].map(e=>{const q=e.getBoundingClientRect();return [e.dataset.k,q.x|0,q.y|0,q.width|0,q.height|0]});const bar=document.querySelector('#bar').getBoundingClientRect();return {cv:[r.x|0,r.y|0,r.width|0,r.height|0],pad,bar:[bar.x|0,bar.y|0,bar.width|0,bar.height|0]}});
 console.log(JSON.stringify(info));
-for (const g of ['kibble-chomp','bark-invaders','pup-crossing','bone-breaker','street-sniffer','paw-fu-tower','bone-digger','pips-big-bark','shiba-scuffle','fud-swarm']) for (const m of ['classic','inu']) {
+for (const g of ['kibble-chomp','bark-invaders','pup-crossing','bone-breaker','street-sniffer','paw-fu-tower','bone-digger','pips-big-bark','shiba-scuffle']) for (const m of ['classic','inu']) {
   await nav(U+'/'+g); await p.waitForTimeout(600);
   if (m==='inu') await p.evaluate(()=>window.__arcade.cab.gmode='inu');
   const a=await p.locator('[data-k=start]').first(); await a.tap(); await p.waitForTimeout(400);

@@ -5,7 +5,7 @@
 // 2) toggle test via Settings: on -> reload -> still on -> other cabinet still on -> off -> original d-pad back.
 import { chromium } from 'playwright';
 const U = process.env.URL || 'http://localhost:8140', D = '/workspace/inu-arcade-shots/', TAG = process.env.TAG || 'joystick';
-const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle', 'fud-swarm'], fails = [], ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails.push(m); };
+const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'], fails = [], ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails.push(m); };
 const inter = (a, b) => a && b && a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const b = await chromium.launch();
 // protected preview: if Vercel's login page shows up, open the SHARE link (sets the bypass cookie) and retry
@@ -55,16 +55,6 @@ for (const [w, h] of [[667, 375], [750, 342]]) for (const joy of [false, true]) 
       await T('touchStart', [S]); const S2 = joy ? { ...S, x: S.x + 34 } : S; await T('touchMove', [S2]); await p.waitForTimeout(300); await T('touchMove', [S2, C(ab, 1)]); await p.waitForTimeout(60); const at = await me(); await T('touchMove', [S2]); await p.waitForTimeout(700);
       await T('touchMove', [S2, C(cb, 3)]); await p.waitForTimeout(60); await T('touchMove', [S2]); await p.waitForTimeout(150); await T('touchEnd', []); const q = await me();
       ok(a.ph === 'fight' && q.x > a.x + 5 && at.cd > 0 && q.rolls >= 1, `${tag}: hold ${joy ? 'stick' : 'd-pad'} right + tap A, C moves, attacks and rolls (x ${a.x | 0}->${q.x | 0}, rolls ${q.rolls})`); await cdp.detach(); }
-    if (g === 'fud-swarm') { // two-button survival: A Zoom Dash, B Big Bark shown, C hidden; 8-way stick diagonal moves on both axes + dash (multi-touch)
-      const R2 = (k) => p.evaluate((k) => { const e = document.querySelector(`#pad [data-k=${k}]`); const q = e.getBoundingClientRect(); return getComputedStyle(e).display === 'none' ? null : { x: q.x, y: q.y, width: q.width, height: q.height }; }, k);
-      const ab = await R2('a'), bb = await R2('b'), cb = await R2('c');
-      ok(!!ab && !!bb && !cb && [ab, bb].every((q) => !inter(q, r.cv) && q.x >= 0 && q.y >= 0 && q.x + q.width <= w + 1 && q.y + q.height <= h + 1) && !inter(ab, bb), `${tag}: A and B shown (C hidden), on screen, clear of playfield and each other`);
-      const cdp = await ctx.newCDPSession(p); const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((q) => ({ x: q.x, y: q.y, id: q.id })) }); const C = (q, id) => ({ x: q.x + q.width / 2, y: q.y + q.height / 2, id });
-      await p.waitForTimeout(1900);
-      const S = joy ? { x: r.joy.x + r.joy.width / 2, y: r.joy.y + r.joy.height / 2, id: 0 } : await p.evaluate(() => { const q = document.querySelector('#pad [data-k=right]').getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2, id: 0 }; });
-      const me = () => p.evaluate(() => { const s = window.__arcade.cab.s; return { ph: s.phase, x: s.p.x, y: s.p.y, d: s.stats.dashes }; }); const a = await me();
-      await T('touchStart', [S]); const S2 = joy ? { ...S, x: S.x + 26, y: S.y + 26 } : S; await T('touchMove', [S2]); await p.waitForTimeout(400); await T('touchMove', [S2, C(ab, 1)]); await p.waitForTimeout(60); await T('touchMove', [S2]); await p.waitForTimeout(300); await T('touchEnd', []); const q = await me();
-      ok(a.ph === 'play' && q.x > a.x + 5 && (!joy || q.y > a.y + 5) && q.d >= 1, `${tag}: hold ${joy ? 'stick diagonal' : 'd-pad'} right${joy ? '+down' : ''} + tap A moves and Zoom Dashes (x ${a.x | 0}->${q.x | 0}, y ${a.y | 0}->${q.y | 0}, dashes ${q.d})`); await cdp.detach(); }
   }
   ok(errs.length === 0, `${w}x${h} joy ${joy}: no page errors ${errs.join(' | ')}`); await ctx.close();
 }

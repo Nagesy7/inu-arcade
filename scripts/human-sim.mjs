@@ -8,7 +8,7 @@ const STALE = {
   'bone-breaker': (s, d) => { const v = Object.create(s); v.balls = s.balls.map((b) => (b.stuck ? b : { ...b, x: b.x - b.vx * d, y: b.y - b.vy * d })); return v; },
   'bark-invaders': (s, d) => { const v = Object.create(s); v.bombs = Object.fromEntries(Object.entries(s.bombs).map(([k, b]) => [k, b && { ...b, y: b.y - 1.5 * d }])); return v; } };
 // Prints per-game median time alive, levels reached and score over N seeds, for Classic and Inu.
-import * as C from '../src/games/chomp.js'; import * as BK from '../src/games/bark.js'; import * as X from '../src/games/crossing.js'; import * as B from '../src/games/breaker.js'; import * as SN from '../src/games/street.js'; import * as PF from '../src/games/pawfu.js'; import * as DG from '../src/games/digger.js'; import * as PP from '../src/games/pip.js'; import * as SC from '../src/games/shiba.js'; import * as FS from '../src/games/fud.js';
+import * as C from '../src/games/chomp.js'; import * as BK from '../src/games/bark.js'; import * as X from '../src/games/crossing.js'; import * as B from '../src/games/breaker.js'; import * as SN from '../src/games/street.js'; import * as PF from '../src/games/pawfu.js'; import * as DG from '../src/games/digger.js'; import * as PP from '../src/games/pip.js'; import * as SC from '../src/games/shiba.js';
 import { rng } from '../src/core/rng.js';
 export const HUMAN = { delayF: 15, tap: false, wrong: 0.06, drop: 0.04, zoneEveryF: 1200, zoneF: 30 };
 const KEYS = ['left', 'right', 'up', 'down', 'a', 'b', 'c'];
@@ -26,7 +26,7 @@ export function humanRun(G, seed, { inu = false, maxF = 60 * 300, h = HUMAN } = 
 }
 const med = (a) => { const b = [...a].sort((p, q) => p - q); return b[Math.floor(b.length / 2)]; };
 export function report(N = 15) { const out = {};
-  for (const [id, G] of Object.entries({ 'kibble-chomp': C, 'bark-invaders': BK, 'pup-crossing': X, 'bone-breaker': B, 'street-sniffer': SN, 'paw-fu-tower': PF, 'bone-digger': DG, 'pips-big-bark': PP, 'shiba-scuffle': SC, 'fud-swarm': FS })) for (const inu of [false, true]) {
+  for (const [id, G] of Object.entries({ 'kibble-chomp': C, 'bark-invaders': BK, 'pup-crossing': X, 'bone-breaker': B, 'street-sniffer': SN, 'paw-fu-tower': PF, 'bone-digger': DG, 'pips-big-bark': PP, 'shiba-scuffle': SC })) for (const inu of [false, true]) {
     const rs = Array.from({ length: N }, (_, i) => humanRun(G, i + 1, { inu }));
     out[id + (inu ? '@inu' : '')] = { aliveS: med(rs.map((r) => r.secs)), firstLifeS: med(rs.map((r) => r.firstLife)), level: med(rs.map((r) => r.level)), score: med(rs.map((r) => r.score)), cleared1: rs.filter((r) => r.level >= 2).length + '/' + N }; }
   return out; }

@@ -1,5 +1,5 @@
 // Generates per-game entry pages (/kibble-chomp/index.html, ...) with their own og/twitter share-card tags.
-import fs from 'node:fs'; import * as Street from '../src/games/street.js'; import * as Pawfu from '../src/games/pawfu.js'; import * as Digger from '../src/games/digger.js'; import * as Pip from '../src/games/pip.js'; import * as Scuffle from '../src/games/shiba.js'; import * as Fud from '../src/games/fud.js';
+import fs from 'node:fs'; import * as Street from '../src/games/street.js'; import * as Pawfu from '../src/games/pawfu.js'; import * as Digger from '../src/games/digger.js'; import * as Pip from '../src/games/pip.js'; import * as Scuffle from '../src/games/shiba.js';
 const SITE = process.env.SITE || 'https://inu-arcade.vercel.app';
 const html = fs.readFileSync('index.html', 'utf8');
 const GAMES = {
@@ -11,7 +11,6 @@ const GAMES = {
   'bone-digger': [Digger.NAME, 'Dig through loam, clay, shale and crystal for buried bones. Bark-pump moles, snakes and beetles until they pop, and drop boulders on them. Free-to-play Shiba digging game at Inu Arcade.'],
   'pips-big-bark': [Pip.NAME, 'Run, tail-wag double jump and scarf-glide Pip the Shiba across six lands: bark the Grey Cat Syndicate silly, throw the Bone-erang, sniff out secrets, hit the Zoomies and rescue the pack. Free-to-play Shiba platformer at Inu Arcade.'],
   'shiba-scuffle': [Scuffle.NAME, 'Pick a Shiba (Bruiser, Barker, Snacker or Zoomer) and tug the Big Bone home in 3v3 pack brawls against bot packs: yards with sprinklers, rooftops with rug bots and boardwalk surges. Free, skill-and-rank Shiba team brawler at Inu Arcade.'],
-  'fud-swarm': [Fud.NAME, 'Hold the meadow against an endless swarm of FUD bots. Your Shiba tricks fire on their own: steer, scoop kibble crumbs, level up and pick new tricks, then outlast a boss bot every three minutes. Free-to-play Shiba survival game at Inu Arcade.'],
   'bone-breaker': ['Bone Breaker', 'Bat the tennis ball into the crate wall and catch treats for power-ups. Free-to-play Shiba brick breaker at Inu Arcade.'],
 };
 for (const [id, [t, d]] of Object.entries(GAMES)) {
