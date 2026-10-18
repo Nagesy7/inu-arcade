@@ -36,7 +36,7 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Player-facing name (pending):** Street Sniffer
 - **Twist:** A Shiba sniffs kibble through an original city-block map while the cat gang (Kibble Chomp's shared personality module) hunts. Plays differently: avenues of traffic that dog and cats both dodge, one-way alleys both must obey, bins to hide in (cats lose track), and power-ups that never make cats edible (squeaky-toy lure, fire-hydrant splash, delivery-scooter dash). Inu Mode pockets power-ups (A) and adds $KIBBLE coins.
 - **Genre inspiration (internal only):** urban maze-chase / street-run genre. No source-game names, characters, sprites, sounds or layouts.
-- **Kibble Pay:** game id `street-sniffer` needs a `scoreGames` entry in kibble-pay before prize scores / Inu Score count (see the Oct 18 report).
+- **Kibble Pay:** registered (`street-sniffer`, max 50,000, Inu Score v3, kibble-pay 3c19839).
 
 ### Paw-Fu Tower *(working name — pending Zachary's approval)*
 
@@ -44,7 +44,7 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Player-facing name (pending):** Paw-Fu Tower
 - **Twist:** A Shiba martial artist (white gi, red headband) climbs four original five-floor tower stages: ladders, ledge steps and drop gaps, with each floor's way up roped off until its KO quota is met. Original Inu moves only: Paw Jab, Hind Kick, Low Paw, Low Sweep, Sky Wag (Inu Mode: Zen Bark). Enemies: alley cats (wind-up, then pounce), rug bots (roll, rev, charge; low, so sweep them), pigeons (coo, then dive; crouch), ninja rats (wall cling, hop, glint, dash). Roof bosses: Major Whiskers, Ruglord Rollo, Duchess Coocoo, Shogun Squeaks. Two buttons (A/B), 8-way stick.
 - **Genre inspiration (internal only):** climbing martial-arts platformers as loose genre only. No source-game names, characters, moves, sprites, sounds or layouts.
-- **Kibble Pay:** game id `paw-fu-tower` needs a `scoreGames` entry in kibble-pay before prize scores / Inu Score count (see the Oct 18 Paw-Fu report).
+- **Kibble Pay:** registered (`paw-fu-tower`, max 100,000, 400/s, min 5 s, version 2; arcade-run quest; Inu Score v4, 11 games, max 15,000; kibble-pay da71c8c).
 
 ## Build order
 
