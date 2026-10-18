@@ -61,6 +61,16 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Genre inspiration (internal only):** kid-hero side-scrolling platformers as loose genre only. No source-game names, characters, moves, sprites, sounds or layouts.
 - **Kibble Pay:** registered (`pips-big-bark`, max 380,000 = ~10× best human-sim run 37,740, 400/s, min 5 s, version 2; arcade-run quest; Inu Score v6, 13 games, max 17,000; kibble-pay 2241351).
 
+### Shiba Scuffle *(working name — pending Zachary's approval)*
+
+- **Status:** LIVE at `/shiba-scuffle` (Oct 19). Name lives in one constant (`NAME` in `src/games/shiba.js`; art in `src/games/shiba-art.js`). Batch #1 of five.
+- **Design (original):** top-down 3v3 Shiba team brawler against bot packs. Objective is the Big Bone tug: the pack with more Shibas next to the bone drags it toward its own kennel; get it home (or have it on your side at the 60 s bell) to win the round; first to 2 rounds wins the match. Roles: BRUNO the Bruiser (Shoulder Shove / Belly Flop), KIKO the Barker (Yap Volley / Echo Howl), DANGO the Snacker (Treat Lob that heals packmates / Picnic Blanket), ZIP the Zoomer (Nip Dash / Tail Tornado); everyone has a dodge roll. Arenas (mirrored for fairness): Sakura Yard (sprinklers), Rooftop Plaza (roaming rug bot), Boardwalk (surge waves); crates (treats, Inu-Mode coins), bushes to hide in, puddles. Ranks PUPPY → SCRAPPER → BRAWLER → TOP DOG → ALPHA → LEGEND as the bots react faster, aim better and hit harder.
+- **Rules:** free entry, skill and rank only; no per-match $KIBBLE payouts, no wagering. `$KIBBLE` buys cosmetics only (bandana colours via the cabinet's neon/gold skins). Winners earn the arcade's existing Bones and tickets through the normal end-of-run grant (no new currency, no per-win bonus).
+- **Multiplayer:** 3v3 with bot teammates and opponents everywhere; desktop keyboard local co-op (P2 joins with `,`; arrows + `, . /`), unranked. No netcode.
+- **Genre inspiration (internal only):** top-down team arena brawlers as loose genre only. No source-game names, characters, moves, sprites, sounds, maps or layouts.
+- **Kibble Pay:** registered (`shiba-scuffle`, max 1,900,000 = ~10× best human-sim run 189,899, 600/s, min 5 s, version 2; arcade-run quest; Inu Score v7, 14 games, max 18,000).
+- **Inu Verse:** district `arena`, spawn `door-shiba-scuffle` (verse-districts.md v2).
+
 ## Build order
 
 1. Joystick toggle (in progress)
@@ -68,6 +78,7 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 3. Paw-Fu Tower (LIVE, working name pending approval)
 4. Bone Digger (LIVE, working name pending approval)
 5. Pip's Big Bark (LIVE)
+6. Shiba Scuffle (LIVE, working name pending approval; new batch #1 of 5)
 
 Mask Pup and the Inu fighter are logged only for now, not scheduled.
 
