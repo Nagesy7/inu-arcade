@@ -32,7 +32,7 @@ export const WEAPONS = {
   paw: { name: 'PAW MINES', desc: 'Drops paw-print mines', max: 5 },
   tail: { name: 'TAIL WHIP', desc: 'Swipes in front of you', max: 5 } };
 export const PASSIVES = {
-  coat: { name: 'THICK COAT', desc: '+20 max HP, heal 20', max: 5 },
+  coat: { name: 'FLUFFY COAT', desc: '+20 max HP, heal 20', max: 5 },
   zoom: { name: 'ZOOMIES', desc: '+8% move speed', max: 5 },
   nose: { name: 'BIG NOSE', desc: '+35% pickup range', max: 5 },
   teeth: { name: 'SHARP TEETH', desc: '+12% damage', max: 5 },

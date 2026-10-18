@@ -23,6 +23,7 @@ const SPR = { crumb1: ['kk', 'kk'], crumb3: ['.k.', 'kKk', '.k.'], crumb10: ['.k
   mine: ['p.p.p', '.....', '.ppp.', 'ppppp', '.ppp.'], spam: ['rr', 'rr'] };
 const PAL = { k: '#7ef0ff', K: '#fbf1e0', w: '#fbf1e0', p: '#ff9ad0', Y: '#f2c14e', O: '#b8860b', g: '#8a90a8', r: '#ff3d5a' };
 const CPAL = { 1: { k: '#7ef0ff', K: '#ffffff' }, 3: { k: '#5fd37a', K: '#d8ffd8' }, 10: { k: '#f2c14e', K: '#fff6c0' } };
+const CRUMB_TIERS = [[0, 3, '#7ef0ff', 2], [3, 10, '#5fd37a', 3], [10, 1e9, '#f2c14e', 4]];
 let field = null;
 function fieldCanvas() { if (field) return field; field = mk(FW, FH); const g = field.getContext('2d');
   for (let y = 0; y < FH; y += 32) for (let x = 0; x < FW; x += 32) { g.fillStyle = ((x + y) / 32) % 2 ? '#3e7a46' : '#43824a'; g.fillRect(x, y, 32, 32); }
@@ -36,7 +37,7 @@ function fieldCanvas() { if (field) return field; field = mk(FW, FH); const g = 
     for (const [dx, dy, rr, c] of [[0, -8, 12, '#2f6a34'], [-6, -10, 7, '#3a8a40'], [5, -12, 7, '#3a8a40'], [-2, -15, 5, '#5fbf5a'], [3, -6, 4, '#ffb8d8']]) { g.fillStyle = c; g.beginPath(); g.arc(t.x + dx, t.y + dy, rr, 0, 7); g.fill(); } }
   return field; }
 const hero = (P, view, fr, band, flip) => P.sprite(`fs-hero-${view}-${fr}-${band}`, HERO[view][fr], { o: '#e0802c', d: '#b65a1c', w: '#fbf1e0', e: '#1a1424', n: '#3a2430', b: band }, { flip });
-const bot = (P, type, fl) => P.sprite(`fs-${type}-${fl ? 'f' : ''}`, BOT[type], fl ? FLASH : BPAL);
+const BC = {}; const bot = (P, type, fl) => { const k = fl ? type + 'F' : type; return BC[k] || (BC[k] = P.sprite(`fs-${k}`, BOT[type], fl ? FLASH : BPAL)); }; // local cache: no key strings per bot per frame
 function txt(ctx, t, x, y, c, align = 'left', size = 8, font = 'Silkscreen') { ctx.font = `${size}px ${font === 'P' ? '"Press Start 2P"' : 'Silkscreen'}, monospace`; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#000'; ctx.fillText(t, x + 1, y + 1); ctx.fillStyle = c; ctx.fillText(t, x, y); ctx.textAlign = 'left'; }
 export function draw(ctx, s, now, P) {
   const cx = Math.round(s.cam.x), cy = Math.round(s.cam.y), sh = s.shake > 0 ? Math.round((Math.sin(now * 90) * s.shake) * 6) : 0, X = (x) => Math.round(x) - cx + sh, Y = (y) => Math.round(y) - cy + AY;
@@ -44,7 +45,8 @@ export function draw(ctx, s, now, P) {
   ctx.drawImage(fieldCanvas(), cx, cy, W, VH, sh, AY, W, VH);
   ctx.save(); ctx.beginPath(); ctx.rect(0, AY, W, VH); ctx.clip();
   // pickups
-  for (let i = 0; i < s.X.n; i++) { const c = s.X.a[i]; if (!vis(c.x, c.y, 4)) continue; const t = c.v >= 10 ? 10 : c.v >= 3 ? 3 : 1, sp = P.sprite('fs-crumb' + t, SPR['crumb' + t], CPAL[t], { outline: false }); ctx.drawImage(sp, X(c.x) - (sp.width >> 1), Y(c.y) - (sp.height >> 1)); }
+  // crumbs: one fillStyle per tier and plain rects (up to 220 of them, so no per-crumb drawImage)
+  for (const [lo, hi, c, sz] of CRUMB_TIERS) { ctx.fillStyle = c; for (let i = 0; i < s.X.n; i++) { const q = s.X.a[i]; if (q.v < lo || q.v >= hi || !vis(q.x, q.y, 4)) continue; ctx.fillRect(X(q.x) - (sz >> 1), Y(q.y) - (sz >> 1), sz, sz); } }
   for (let i = 0; i < s.I.n; i++) { const it = s.I.a[i]; if (!vis(it.x, it.y) || (it.t < 180 && Math.floor(now * 8) % 2)) continue; const sp = P.sprite('fs-' + it.kind, SPR[it.kind], PAL); ctx.drawImage(sp, X(it.x) - (sp.width >> 1), Y(it.y) - (sp.height >> 1) + Math.round(Math.sin(now * 5 + it.x) * 1.5)); }
   for (let i = 0; i < s.M.n; i++) { const m = s.M.a[i]; if (!vis(m.x, m.y)) continue; const sp = P.sprite('fs-mine', SPR.mine, PAL); ctx.globalAlpha = m.life < 60 && Math.floor(now * 10) % 2 ? 0.4 : 1; ctx.drawImage(sp, X(m.x) - 3, Y(m.y) - 3); ctx.globalAlpha = 1; }
   // zones under the swarm
