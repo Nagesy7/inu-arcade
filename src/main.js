@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js'; import * as V from './core/verse.js'; import * as Scuffle from './games/shiba.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip, 'shiba-scuffle': Scuffle };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -30,7 +30,7 @@ setWallet(DEMO ? simWallet(LS) : pendingWallet()); A.wallet = wallet; A.mode = D
 import('https://kibble-pay.vercel.app/inu-games.js').then(async (g) => { A.glue = g;
   const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
   const pj = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
-  g.mountHome?.(); // 🏠 Back to Inu Verse (title/pause/results; confirms + saves via globalThis.__inuHome)
+  g.mountHome?.({ url: () => V.returnUrl(verseIn()), onLeave: (url) => V.post('inu-arcade:exit', { cabinetId: A.cab?.id || 'arcade', reason: 'home', url }) }); // 🏠 Back to Inu Verse → allowlisted return= (verse.js); confirms + saves via globalThis.__inuHome
   if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v', JOY.SETTINGS_KEY], position: 'top-right',
     progress: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return (p.plays || 0) * 10 + (p.bones || 0) + (p.tickets || 0) * 5; },
     label: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return `${p.plays || 0} plays · ${p.bones || 0} bones · ${p.tickets || 0} tickets`; },
@@ -59,11 +59,13 @@ addEventListener('resize', fit); addEventListener('orientationchange', () => set
 
 // ---------- text helpers ----------
 const F = (px) => `${px}px "Press Start 2P", monospace`;
-export function text(str, x, y, col = '#fbf1e0', px = 8, align = 'left', shadow = true) { ctx.font = F(px); ctx.textAlign = align; ctx.textBaseline = 'top'; if (shadow) { ctx.fillStyle = '#000'; ctx.fillText(str, x + 1, y + 1); } ctx.fillStyle = col; ctx.fillText(str, x, y); ctx.textAlign = 'left'; }
+export function text(str, x, y, col = '#fbf1e0', px = 8, align = 'left', shadow = true, maxW = undefined) { ctx.font = F(px); ctx.textAlign = align; ctx.textBaseline = 'top'; if (shadow) { ctx.fillStyle = '#000'; if (maxW) ctx.fillText(str, x + 1, y + 1, maxW); else ctx.fillText(str, x + 1, y + 1); } ctx.fillStyle = col; if (maxW) ctx.fillText(str, x, y, maxW); else ctx.fillText(str, x, y); ctx.textAlign = 'left'; }
 function wrap(str, max) { const out = []; let line = ''; for (const w of str.split(' ')) { if ((line + ' ' + w).trim().length > max) { out.push(line.trim()); line = w; } else line += ' ' + w; } out.push(line.trim()); return out; }
 
 // ---------- router ----------
 const PATHS = [...Object.keys(GAMES), 'inu-rescue'];
+// Inu Verse entry (?from=verse|inu-verse&district&spawn&return): read once; cabinet META.verse supplies the default district/spawn.
+let VIN = null; export function verseIn() { return VIN || (VIN = V.readVerse(location.search, { origin: location.origin, referrer: document.referrer, defaults: GAMES[routeId()]?.META?.verse || (routeId() ? { district: 'arcade-row', spawn: 'door-' + routeId() } : { spawn: 'arcade' }) })); }
 function routeId() { const p = location.pathname.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '').split('/')[0]; const h = location.hash.replace(/^#\/?/, ''); return PATHS.includes(p) ? p : PATHS.includes(h) ? h : null; }
 export function go(id, push = true) {
   closePanel(); input.clear(); setMusic(false);
@@ -84,8 +86,9 @@ export const CABS = [
   { id: 'paw-fu-tower', title: Pawfu.META.title, short: Pawfu.META.short, color: Pawfu.META.color, x: 208 },
   { id: 'bone-digger', title: Digger.META.title, short: Digger.META.short, color: Digger.META.color, x: 242 },
   { id: 'pips-big-bark', title: Pip.META.title, short: Pip.META.short, color: Pip.META.color, x: 276 },
-];
-const CW = 32, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
+  { id: 'shiba-scuffle', title: Scuffle.META.title, short: Scuffle.META.short, color: Scuffle.META.color, x: 310 },
+].map((c, i) => ({ ...c, x: 4 + i * 31 })); // ten cabinets across the back wall
+const CW = 28, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
 function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn', 'threebtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
@@ -133,7 +136,7 @@ function drawCabinet(c, now, skin) {
   const { x } = c, y = CY, body = skin === 'gold' ? '#c9a24a' : skin === 'neon' ? '#141428' : '#2b2150', edge = skin === 'gold' ? '#f2d070' : c.color;
   ctx.fillStyle = '#00000066'; ctx.fillRect(x + 2, y + CH, CW, 5);
   ctx.fillStyle = body; ctx.fillRect(x, y, CW, CH); ctx.fillStyle = edge; ctx.fillRect(x, y, 3, CH); ctx.fillRect(x + CW - 3, y, 3, CH);
-  ctx.fillStyle = c.color; ctx.fillRect(x + 2, y + 2, CW - 4, 10); text(c.short, x + CW / 2, y + 4, '#1a1424', 5, 'center', false);
+  ctx.fillStyle = c.color; ctx.fillRect(x + 2, y + 2, CW - 4, 10); text(c.short, x + CW / 2, y + 4, '#1a1424', 5, 'center', false, CW - 6); // ten cabinets: squeeze long labels to the marquee
   const flick = 0.75 + 0.25 * Math.sin(now * 9 + x); ctx.globalAlpha = flick; ctx.fillStyle = '#05030f'; ctx.fillRect(x + 5, y + 15, CW - 10, 22);
   // mini attract art per cabinet (clipped to the little screen)
   const sx = x + 5, sy = y + 15, t = now + x; ctx.save(); ctx.beginPath(); ctx.rect(x + 5, y + 15, CW - 10, 22); ctx.clip();
@@ -145,9 +148,10 @@ function drawCabinet(c, now, skin) {
   else if (c.id === 'street-sniffer') { ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 8, 30, 6); ctx.fillStyle = '#fbf1e0'; for (let i = 0; i < 5; i++) ctx.fillRect(sx + 2 + i * 6, sy + 11, 3, 1); ctx.fillStyle = '#f2c14e'; ctx.fillRect(sx + ((t * 12) % 40) - 8, sy + 9, 7, 4); ctx.fillStyle = '#c88a3c'; for (let i = 0; i < 4; i++) ctx.fillRect(sx + 3 + i * 7, sy + 18, 2, 2); ctx.fillStyle = '#3b8a5a'; ctx.fillRect(sx + 25, sy + 1, 4, 6); PIX.blit(ctx, PIX.shibaHead(), sx + 2 + ((t * 5) % 16), sy + 15, 1); }
   else if (c.id === 'bone-digger') { ctx.fillStyle = '#8a5a32'; ctx.fillRect(sx, sy + 5, 30, 17); ctx.fillStyle = '#5fb8f0'; ctx.fillRect(sx, sy, 30, 5); ctx.fillStyle = '#2a160c'; const d = (t * 6) % 14; ctx.fillRect(sx + 4, sy + 5, 4, 6 + d); ctx.fillRect(sx + 4, sy + 9 + d, 16, 4); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 19, sy + 16, 5, 1); ctx.fillRect(sx + 19, sy + 15, 1, 3); ctx.fillRect(sx + 23, sy + 15, 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4, sy + 5 + d, 4, 4); ctx.fillStyle = '#8a8494'; ctx.fillRect(sx + 12, sy + 6, 5, 4); }
   else if (c.id === 'pips-big-bark') { ctx.fillStyle = '#ff8a5c'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#5a2a6a'; ctx.fillRect(sx, sy + 8, 6, 14); ctx.fillRect(sx + 14, sy + 5, 7, 17); ctx.fillStyle = '#d0603a'; ctx.fillRect(sx, sy + 18, 30, 4); const px = sx + ((t * 9) % 30) - 4, hop = Math.round(Math.abs(Math.sin(t * 4)) * 4); ctx.fillStyle = '#e8892e'; ctx.fillRect(px, sy + 13 - hop, 6, 5); ctx.fillStyle = '#e33b3b'; ctx.fillRect(px - 3, sy + 14 - hop + Math.round(Math.sin(t * 12)), 4, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(px + 7, sy + 14 - hop, 1, 1); ctx.fillRect(px + 9, sy + 13 - hop, 1, 3); ctx.fillStyle = '#8a94b0'; ctx.fillRect(sx + 24 - ((t * 3) % 6), sy + 14, 5, 4); }
+  else if (c.id === 'shiba-scuffle') { ctx.fillStyle = '#4f9a4a'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 6 + Math.round(Math.sin(t * 2) * 3), sy + 10, 8, 2); const k = Math.floor(t * 4) % 2; ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 1 + k, sy + 8, 4, 4); ctx.fillStyle = '#3a7bd5'; ctx.fillRect(sx + 1 + k, sy + 11, 4, 1); ctx.fillStyle = '#c86a2a'; ctx.fillRect(sx + 13 - k, sy + 8, 4, 4); ctx.fillStyle = '#d6302f'; ctx.fillRect(sx + 13 - k, sy + 11, 4, 1); if (k) { ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 8, sy + 6, 2, 2); } }
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
   ctx.restore();
-  ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 8, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 20, y + 43, 3, 3); ctx.fillRect(x + 25, y + 43, 3, 3);
+  ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 8, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + CW - 11, y + 43, 3, 3); ctx.fillRect(x + CW - 7, y + 43, 3, 3);
   ctx.fillStyle = '#1a1424'; ctx.fillRect(x + CW / 2 - 4, y + 53, 8, 3); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + CW / 2 - 1, y + 53, 2, 2);
   if (skin === 'neon') { ctx.strokeStyle = c.color; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(now * 4); ctx.strokeRect(x - 0.5, y - 0.5, CW + 1, CH + 1); ctx.globalAlpha = 1; }
   if (c.id === 'inu-rescue') text('LIVE', x + CW / 2, y + CH - 8, '#5fd37a', 5, 'center');
@@ -173,16 +177,17 @@ function stepFx(C, dt) { const s = C.s;
   for (const p of s.pops) { p.t -= dt * 0.8; p.y -= 14 * dt; } s.pops = s.pops.filter((p) => p.t > 0); s.shake = Math.max(0, (s.shake || 0) - dt); }
 function updateCab(dt, inp) {
   const C = A.cab, G = C.G; C.t += dt; const P = inp.pressed;
-  if (P.has('back') && C.mode !== 'initials') return go(null);
+  if (P.has('back') && C.mode !== 'initials') { input.setP2(false); return go(null); }
   if (C.mode === 'title') { if (P.has('left') || P.has('right') || P.has('up') || P.has('down')) { const i = MET.MODE_IDS.indexOf(C.gmode), d = P.has('left') || P.has('up') ? -1 : 1; C.gmode = MET.MODE_IDS[(i + d + 3) % 3]; LS.setItem('inuarcade.mode', C.gmode); sfx('blip'); C.t = 0; }
     if (P.has('a') || P.has('start')) return startPlay(); if (C.t > 8) startAttract(C); return; }
   if (C.mode === 'attract') { const D = C.demo; const m = D.ms ? D.ms[D.i++] : null; G.step(C.s, dt * (D.mod?.speed || 1), D.ms ? MET.fromMask(m ?? 0) : G.bot(C.s)); C.s.fx.length = 0; C.s.pops.length = 0;
     if (P.has('a') || P.has('start')) return startPlay(); if (C.s.over || C.t > 25 || (D.ms && D.i >= D.ms.length)) { C.mode = 'title'; C.t = 0; } return; }
   if (C.mode === 'play') { if (P.has('start')) { C.paused = !C.paused; sfx('blip'); } if (C.paused) { setMusic(false); return; }
-    const m = MET.toMask(inp); C.masks.push(m); G.step(C.s, dt * (C.mod?.speed || 1), MET.fromMask(m)); for (const e of C.s.ev) sfx(e); stepFx(C, dt);
+    const m = MET.toMask(inp); C.masks.push(m); const gi = MET.fromMask(m); if (G.META.coop2p) gi.p2 = inp.p2; G.step(C.s, dt * (C.mod?.speed || 1), gi); if (G.META.coop2p) input.setP2(!!C.s.unranked); for (const e of C.s.ev) sfx(e); stepFx(C, dt);
     if (C.ghost && !C.ghost.s.over && C.ghost.i < C.ghost.ms.length) { const gs = C.ghost.s; G.step(gs, dt * (C.ghost.g.mod?.speed || 1), MET.fromMask(C.ghost.ms[C.ghost.i++])); gs.fx.length = 0; gs.pops.length = 0; gs.ev.length = 0; }
     setMusic(true, Math.min(3, (C.s.level - 1) + (C.s.lives <= 1 ? 1 : 0) + (C.gmode !== 'classic' ? 1 : 0)), C.G.META.music || 'arcade');
-    if (C.s.over) { C.mode = 'over'; C.t = 0; setMusic(false); C.final = MET.finalScore(C.s.score, C.mod); } return; }
+    if (C.s.over) { C.mode = 'over'; C.t = 0; setMusic(false); input.setP2(false); C.final = C.s.unranked ? 0 : MET.finalScore(C.s.score, C.mod); // co-op 2P runs are unranked: no initials, ghost, tickets or prize submit
+      V.post('inu-arcade:score', { cabinetId: C.id, score: C.final, mode: C.gmode, durationMs: Date.now() - (C.runStart || Date.now()) }); } return; } // UX-only toast for a framing Inu Verse
   stepFx(C, dt);
   if (C.mode === 'over') { if (C.t > 2.2) { if (C.final > 0) { C.mode = 'initials'; C.ini = [...A.initials]; C.cur = 0; } else { C.mode = 'title'; } C.t = 0; } return; }
   if (C.mode === 'initials') {
@@ -243,7 +248,7 @@ function drawCab(now) {
   if (C.mode === 'attract') { centerBox(W, H / 2 - 18, 34); text(C.demo.label.replace('REPLAY: ', ''), X, H / 2 - 12, M.color, 5, 'center'); if (Math.floor(now * 2) % 2) text(isTouch ? 'PRESS START' : 'PRESS SPACE', X, H / 2 + 2, '#fbf1e0', 8, 'center'); }
   if (C.mode === 'play' && C.paused) { centerBox(W, H / 2 - 12, 22); text('PAUSED', X, H / 2 - 5, '#f2c14e', 8, 'center'); }
   if (C.mode === 'play' && C.s.flash > 0.6) { ctx.fillStyle = `rgba(255,60,60,${(C.s.flash - 0.6) * 0.4})`; ctx.fillRect(0, 0, W, H); }
-  if (C.mode === 'over') { centerBox(W, H / 2 - 24, 48); text('GAME OVER', X, H / 2 - 16, '#ff5d73', 8, 'center'); text('SCORE ' + C.final, X, H / 2, '#fbf1e0', 8, 'center'); if (C.mod) sText(`${C.s.score} x${C.mod.mult} weekly`, X, H / 2 + 12, '#f2c14e'); }
+  if (C.mode === 'over') { centerBox(W, H / 2 - 24, 48); text('GAME OVER', X, H / 2 - 16, '#ff5d73', 8, 'center'); text(C.s.unranked ? 'CO-OP ' + C.s.score + ' UNRANKED' : 'SCORE ' + C.final, X, H / 2, '#fbf1e0', 8, 'center'); if (C.mod) sText(`${C.s.score} x${C.mod.mult} weekly`, X, H / 2 + 12, '#f2c14e'); }
   if (C.mode === 'initials') { centerBox(W, H / 2 - 56, 112); text('NEW SCORE', X, H / 2 - 48, '#f2c14e', 8, 'center'); text(String(C.final), X, H / 2 - 36, '#fbf1e0', 8, 'center'); text('YOUR INITIALS', X, H / 2 - 22, '#fbf1e0', 8, 'center');
     C.ini.forEach((ch, i) => { const x = X - 30 + i * 24; if (i === C.cur && Math.floor(now * 4) % 2) { ctx.fillStyle = M.color; ctx.fillRect(x - 2, H / 2 + 12, 20, 2); } text(ch, x, H / 2 - 6, i === C.cur ? M.color : '#fbf1e0', 16); });
     sText('UP/DOWN letter · A next', X, H / 2 + 20, '#8a7ac4'); sText(`${MET.MODES[C.gmode].name} boards`, X, H / 2 + 30, '#8a7ac4'); }
@@ -298,7 +303,7 @@ addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.target.closest?
 for (const b of document.querySelectorAll('#bar button')) b.addEventListener('click', (e) => e.currentTarget.blur());
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 export { startPlay, toLobby };
-(async () => { try { await document.fonts.load(F(8)); await document.fonts.load('8px Silkscreen'); } catch {} refreshPurse(); go(routeId(), false); requestAnimationFrame(frame); })();
+(async () => { try { await document.fonts.load(F(8)); await document.fonts.load('8px Silkscreen'); } catch {} refreshPurse(); go(routeId(), false); requestAnimationFrame(frame); V.post('inu-arcade:ready', { cabinetId: routeId() || 'arcade', embed: true }); })();
 
 // ?wallet=<solana address> (e.g. from the Inu Verse arcade building): load that wallet's shared Shiba profile.
 (async () => { try {

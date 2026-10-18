@@ -30,7 +30,7 @@ export const SFX = {
   start: () => seq([392, 523, 659, 784, 0, 659, 784], 0.07), ticket: () => seq([1175, 1568, 2093], 0.05, 'triangle', 0.08),
 };
 // one-shot limiter: per-SFX cooldown + max concurrent voices (chomp/march/bounce can fire every frame and used to stack into noise)
-const CD = { pump: 0.06, pop: 0.08, bone: 0.08, wobble: 0.25, thud: 0.15, hurry: 1, jab: 0.05, kick: 0.06, ko: 0.08, ouch: 0.15, tell: 0.12, open: 0.3, boss: 0.5, squeak: 0.1, dash: 0.15, hide: 0.1, honk: 0.12, splash: 0.15, chomp: 0.06, march: 0.08, bounce: 0.04, brick: 0.035, hit: 0.05, blip: 0.03, yip: 0.06, bigbark: 0.2, howl: 0.5, whirr: 0.1, catch: 0.08, sniff: 0.4, ping: 0.12, zoom: 0.4, wag: 0.06, boing: 0.06, kib: 0.045, rescue: 0.3, bell: 0.3, cart: 0.3, swim: 0.1, gust: 0.4, spit: 0.08, tink: 0.06, stomp: 0.05, warnbark: 0.4, rumble: 0.25 }, lastAt = {}; let ends = [];
+const CD = { pump: 0.06, pop: 0.08, bone: 0.08, wobble: 0.25, thud: 0.15, hurry: 1, jab: 0.05, kick: 0.06, ko: 0.08, ouch: 0.15, tell: 0.12, open: 0.3, boss: 0.5, squeak: 0.1, dash: 0.15, hide: 0.1, honk: 0.12, splash: 0.15, chomp: 0.06, march: 0.08, bounce: 0.04, brick: 0.035, hit: 0.05, blip: 0.03, yip: 0.06, bigbark: 0.2, howl: 0.5, whirr: 0.1, catch: 0.08, sniff: 0.4, ping: 0.12, zoom: 0.4, wag: 0.06, boing: 0.06, kib: 0.045, rescue: 0.3, bell: 0.3, cart: 0.3, swim: 0.1, gust: 0.4, spit: 0.08, tink: 0.06, stomp: 0.05, warnbark: 0.4, rumble: 0.25, shove: 0.06, yap: 0.07, lob: 0.08, splat: 0.08, nip: 0.06, spin: 0.3, flopup: 0.2, flop: 0.2, roll: 0.08, bump: 0.12, crate: 0.08, drip: 0.5, spray: 0.4, surge: 0.5, picnic: 0.4, rally: 0.5, treat: 0.08, fight: 0.5, roundwin: 0.5, roundlose: 0.5, matchwin: 0.8 }, lastAt = {}; let ends = [];
 export const MAX_VOICES = 10;
 export function gate(name, now, cd = CD[name] ?? 0.04, dur = 0.25) { ends = ends.filter((t) => t > now); if (ends.length >= MAX_VOICES || now - (lastAt[name] ?? -1e9) < cd) return false; lastAt[name] = now; ends.push(now + dur); return true; }
 export function sfx(name) { try { if (ac && !muted && gate(name, ac.currentTime)) SFX[name]?.(); } catch {} }
@@ -62,6 +62,7 @@ function tick() {
   if (!ac || muted || !mus) return; const bpm = 118 + mus.intensity * 12, sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
   if (!mus.bus) { mus.bus = ac.createGain(); mus.bus.connect(master); } route = mus.bus;
   if (mus.track === 'pip') return pipTick();
+  if (mus.track === 'scuffle') return scuffleTick();
   while (mus.next < ac.currentTime + 0.12) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, I = mus.intensity;
     tone(mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), sp * 0.8, 'triangle', 0.07, d);
     if (I >= 1 && i % 2 === 0) { const ch = ARP[bar]; tone(mtof(ch[(i / 2) % 3] + 12), mtof(ch[(i / 2) % 3] + 12), sp * 0.5, 'square', 0.025, d); }
@@ -96,3 +97,31 @@ SFX.cart = () => { tone(150, 260, 0.2, 'sawtooth', 0.05); noise(0.15, 0.04, 0, 9
 SFX.gust = () => noise(0.5, 0.05, 0, 500); SFX.spit = () => tone(700, 300, 0.07, 'square', 0.05); SFX.tink = () => tone(2400, 2300, 0.04, 'square', 0.04);
 SFX.stomp = (() => { let k = 0; return () => { k = Math.min(5, k + 1); setTimeout(() => (k = 0), 900); tone(300 + k * 120, 600 + k * 160, 0.07, 'square', 0.07); }; })();
 SFX.warnbark = () => { tone(700, 400, 0.06, 'square', 0.06); tone(700, 400, 0.06, 'square', 0.06, 0.1); }; SFX.rumble = () => { noise(0.25, 0.06, 0, 120); tone(70, 50, 0.25, 'sine', 0.08); };
+
+// Shiba Scuffle: original stompy E-minor brawl groove (four-on-the-floor kick, offbeat stabs, call-and-response lead at higher intensity)
+const SC_BASS = [40, 40, 52, 40, 43, 43, 55, 43, 36, 36, 48, 36, 38, 38, 50, 47];
+const SC_LEAD = [[76, 0, 79, 0, 83, 81, 79, 0, 76, 0, 74, 76, 0, 0, 71, 0], [76, 0, 79, 0, 83, 86, 83, 0, 81, 79, 76, 0, 79, 0, 0, 0], [72, 0, 76, 0, 79, 77, 76, 0, 72, 0, 71, 72, 0, 0, 67, 0], [74, 0, 78, 0, 81, 0, 79, 78, 76, 0, 74, 0, 71, 0, 74, 0]];
+function scuffleTick() { const bpm = 140 + mus.intensity * 8, sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
+  while (mus.next < ac.currentTime + 0.12) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, I = mus.intensity, b = SC_BASS[(i >> 2) + bar * 4] - 12;
+    if (i % 4 === 0) { tone(150, 45, 0.09, 'sine', 0.11, d); } if (i % 2 === 1) tone(mtof(b), mtof(b), sp * 0.6, 'sawtooth', 0.035, d);
+    if (i % 4 === 2) noise(0.03, 0.03, d, 5000);
+    if (I >= 1 && (i === 4 || i === 12)) noise(0.06, 0.05, d, 1400);
+    const n = SC_LEAD[bar][i]; if (I >= 2 && n) tone(mtof(n), mtof(n), sp * 0.6, 'square', 0.02, d);
+    if (I >= 3 && i % 4 === 3) tone(mtof(b + 31), mtof(b + 31), sp * 0.3, 'square', 0.012, d);
+    mus.step++; mus.next += sp; }
+  route = null; }
+SFX.shove = () => { tone(180, 90, 0.08, 'square', 0.08); noise(0.06, 0.05, 0, 600); };
+SFX.yap = (() => { let k = 0; return () => { k = (k + 1) % 3; tone(1000 + k * 60, 700, 0.045, 'square', 0.05); }; })();
+SFX.lob = () => tone(400, 800, 0.12, 'triangle', 0.06); SFX.splat = () => { noise(0.12, 0.07, 0, 900); tone(220, 120, 0.1, 'triangle', 0.05); };
+SFX.nip = () => { tone(1300, 900, 0.03, 'square', 0.05); tone(1300, 900, 0.03, 'square', 0.04, 0.05); };
+SFX.spin = () => { for (let i = 0; i < 4; i++) tone(500 + i * 120, 900 + i * 120, 0.07, 'triangle', 0.05, i * 0.07); noise(0.3, 0.03, 0, 2500); };
+SFX.flopup = () => tone(200, 700, 0.22, 'triangle', 0.08); SFX.flop = () => { tone(140, 40, 0.25, 'sine', 0.13); noise(0.2, 0.08, 0, 300); };
+SFX.roll = () => noise(0.09, 0.04, 0, 2200); SFX.bump = () => { tone(110, 70, 0.12, 'square', 0.07); noise(0.1, 0.05, 0, 400); };
+SFX.crate = () => { noise(0.12, 0.08, 0, 1100); tone(260, 140, 0.08, 'square', 0.05); };
+SFX.drip = () => { tone(1800, 1200, 0.05, 'sine', 0.05); tone(1800, 1200, 0.05, 'sine', 0.04, 0.12); };
+SFX.spray = () => noise(0.45, 0.06, 0, 4500); SFX.surge = () => { noise(0.7, 0.07, 0, 700); tone(90, 60, 0.6, 'sine', 0.06); };
+SFX.picnic = () => seq([523, 659, 784], 0.07, 'triangle', 0.06); SFX.treat = () => seq([880, 1175], 0.05, 'triangle', 0.06);
+SFX.rally = () => { seq([392, 523, 659, 784], 0.06, 'square', 0.05); tone(300, 600, 0.3, 'triangle', 0.06, 0.25); };
+SFX.fight = () => { tone(260, 520, 0.12, 'square', 0.08); tone(520, 520, 0.2, 'square', 0.07, 0.12); noise(0.1, 0.05, 0.12, 2000); };
+SFX.roundwin = () => seq([659, 784, 988, 1319], 0.08, 'triangle', 0.08); SFX.roundlose = () => seq([392, 349, 294, 262], 0.1, 'triangle', 0.07);
+SFX.matchwin = () => seq([523, 659, 784, 1047, 784, 1047, 1319], 0.08, 'square', 0.06);

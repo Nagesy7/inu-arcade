@@ -1,6 +1,6 @@
 // Real-input E2E: desktop keyboard + iPhone 13 landscape touch (CDP touch events). Saves proof/ screenshots.
 import { chromium, devices } from 'playwright';
-const URL = (process.env.URL || 'http://localhost:8140').replace(/\/$/, ''); const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark'];
+const URL = (process.env.URL || 'http://localhost:8140').replace(/\/$/, ''); const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'];
 const browser = await chromium.launch(); let fail = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fail++; };
 const tag = process.env.TAG || 'local';
 // ---------------- desktop keyboard ----------------
