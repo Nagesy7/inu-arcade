@@ -1,5 +1,5 @@
 // Generates per-game entry pages (/kibble-chomp/index.html, ...) with their own og/twitter share-card tags.
-import fs from 'node:fs'; import * as Street from '../src/games/street.js';
+import fs from 'node:fs'; import * as Street from '../src/games/street.js'; import * as Pawfu from '../src/games/pawfu.js';
 const SITE = process.env.SITE || 'https://inu-arcade.vercel.app';
 const html = fs.readFileSync('index.html', 'utf8');
 const GAMES = {
@@ -7,6 +7,7 @@ const GAMES = {
   'bark-invaders': ['Bark Invaders', 'Bark the descending rug-pull fleet out of the sky before it reaches your kennel. Free-to-play Shiba shooter at Inu Arcade.'],
   'pup-crossing': ['Pup Crossing', 'Hop a pup across Kibble Highway and Bonewater Creek into the kennels. Free-to-play at Inu Arcade.'],
   'street-sniffer': [Street.NAME, 'Sniff out every kibble on the city streets: dodge avenue traffic, obey the one-way alleys and duck behind bins to lose the cat gang. Free-to-play Shiba street chase at Inu Arcade.'],
+  'paw-fu-tower': [Pawfu.NAME, 'Climb a five-floor tower of alley cats, rug bots, pigeons and ninja rats with Paw Jabs, Hind Kicks and Low Sweeps, then beat each floor boss. Free-to-play Shiba kung-fu climber at Inu Arcade.'],
   'bone-breaker': ['Bone Breaker', 'Bat the tennis ball into the crate wall and catch treats for power-ups. Free-to-play Shiba brick breaker at Inu Arcade.'],
 };
 for (const [id, [t, d]] of Object.entries(GAMES)) {

@@ -5,7 +5,7 @@
 // 2) toggle test via Settings: on -> reload -> still on -> other cabinet still on -> off -> original d-pad back.
 import { chromium } from 'playwright';
 const U = process.env.URL || 'http://localhost:8140', D = '/workspace/inu-arcade-shots/', TAG = process.env.TAG || 'joystick';
-const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer'], fails = [], ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails.push(m); };
+const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower'], fails = [], ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fails.push(m); };
 const inter = (a, b) => a && b && a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const b = await chromium.launch();
 // protected preview: if Vercel's login page shows up, open the SHARE link (sets the bypass cookie) and retry
@@ -25,6 +25,14 @@ for (const [w, h] of [[667, 375], [750, 342]]) for (const joy of [false, true]) 
     else ok(!r.joy && r.dpad.length === 4 && !r.dpad.some((d) => inter(d, r.cv)), `${tag}: original d-pad, clear of playfield`);
     ok(!r.btns.some((d) => inter(d, r.cv)), `${tag}: A/START/BACK clear of playfield (${r.mode})`);
     await p.screenshot({ path: `${D}${TAG}-${g}-${joy ? 'on' : 'off'}-${w}x${h}.png` });
+    if (g === 'paw-fu-tower') { // two-button cabinet: B shown and clear; move (stick or d-pad) + tap B at the same time
+      const bb = await p.evaluate(() => { const e = document.querySelector('#pad [data-k=b]'); const q = e.getBoundingClientRect(); return getComputedStyle(e).display === 'none' ? null : { x: q.x, y: q.y, width: q.width, height: q.height }; });
+      ok(!!bb && !inter(bb, r.cv) && !r.btns.some((d) => !(Math.abs(d.x - bb.x) < 1 && Math.abs(d.y - bb.y) < 1) && inter(d, bb)), `${tag}: B button shown, clear of playfield and other buttons`);
+      await p.waitForTimeout(1700); const cdp = await ctx.newCDPSession(p); const T = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((q) => ({ x: q.x, y: q.y, id: q.id })) });
+      const S = joy ? { x: r.joy.x + r.joy.width / 2, y: r.joy.y + r.joy.height / 2, id: 0 } : await p.evaluate(() => { const q = document.querySelector('#pad [data-k=right]').getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2, id: 0 }; });
+      const B = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2, id: 1 }, x0 = await p.evaluate(() => window.__arcade.cab.s.p.x);
+      await T('touchStart', [S]); const S2 = joy ? { ...S, x: S.x + 34 } : S; await T('touchMove', [S2]); await p.waitForTimeout(350); await T('touchMove', [S2, B]); await p.waitForTimeout(80); await T('touchMove', [S2]); await p.waitForTimeout(300); await T('touchEnd', []);
+      const q = await p.evaluate(() => ({ x: window.__arcade.cab.s.p.x, k: window.__arcade.cab.s.stats.kicks })); ok(q.x > x0 + 5 && q.k >= 1, `${tag}: hold ${joy ? 'stick' : 'd-pad'} right + tap B walks and kicks (x ${x0}->${q.x}, kicks ${q.k})`); await cdp.detach(); }
   }
   ok(errs.length === 0, `${w}x${h} joy ${joy}: no page errors ${errs.join(' | ')}`); await ctx.close();
 }

@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -75,17 +75,18 @@ addEventListener('popstate', () => go(routeId(), false));
 
 // ---------- lobby ----------
 export const CABS = [
-  { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 14 },
-  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 62 },
-  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 110 },
-  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 158 },
-  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 206 },
-  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 254 },
+  { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 10 },
+  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 52 },
+  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 94 },
+  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 136 },
+  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 178 },
+  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 220 },
+  { id: 'paw-fu-tower', title: Pawfu.META.title, short: Pawfu.META.short, color: Pawfu.META.color, x: 262 },
 ];
 const CW = 40, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
-function toLobby(push = true) { setRes(384, 216); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
+function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
 function lobbyTargets() { return [...CABS.map((c) => ({ kind: 'cab', id: c.id, x: c.x + CW / 2, y: FLOOR_Y + 8, label: c.title })), { kind: 'prizes', x: COUNTER.x + COUNTER.w / 2, y: COUNTER.y - 10, label: 'PRIZE COUNTER' }, { kind: 'scores', x: BOARD.x + BOARD.w / 2, y: FLOOR_Y + 8, label: 'HI-SCORE BOARD' }]; }
 function nearTarget(L) { return lobbyTargets().find((t) => Math.abs(t.x - L.x) < 18 && Math.abs(t.y - L.y) < 16); }
 function activate(t) { if (!t) return; sfx('select'); if (t.kind === 'cab') go(t.id); else if (t.kind === 'prizes') showPrizes(); else if (t.kind === 'scores') showScores(); }
@@ -138,6 +139,7 @@ function drawCabinet(c, now, skin) {
   else if (c.id === 'bark-invaders') { for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#9b59d6' : '#e0303a'; ctx.fillRect(sx + 3 + i * 7 + Math.sin(t) * 2, sy + 3, 4, 3); } ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 15, sy + 16 - ((t * 20) % 12), 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 13, sy + 18, 5, 3); }
   else if (c.id === 'pup-crossing') { ctx.fillStyle = '#1d4fa0'; ctx.fillRect(sx, sy + 2, 30, 7); ctx.fillStyle = '#7a4a22'; ctx.fillRect(sx + ((t * 10) % 30) - 6, sy + 4, 12, 3); ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 12, 30, 8); ctx.fillStyle = '#e0303a'; ctx.fillRect(sx + 30 - ((t * 14) % 36), sy + 14, 6, 4); }
   else if (c.id === 'bone-breaker') { for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) { ctx.fillStyle = ['#ff5d73', '#f2c14e', '#5fd37a'][r]; ctx.fillRect(sx + 1 + i * 6, sy + 2 + r * 3, 5, 2); } ctx.fillStyle = '#c8f04e'; ctx.fillRect(sx + 15 + Math.sin(t * 2) * 12, sy + 14 - Math.abs(Math.sin(t * 3)) * 4, 2, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 10 + Math.sin(t * 2) * 10, sy + 19, 10, 2); }
+  else if (c.id === 'paw-fu-tower') { ctx.fillStyle = '#7a4a22'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 6 : 0), sy + 6 + i * 7, 24, 1); ctx.fillStyle = '#5f9a3a'; ctx.fillRect(sx + 24, sy + 7, 1, 6); ctx.fillRect(sx + 27, sy + 7, 1, 6); const k = Math.floor(t * 3) % 2; PIX.blit(ctx, PIX.shibaHead(), sx + 6, sy + 10, 1); ctx.fillStyle = '#f4f2ff'; ctx.fillRect(sx + 8, sy + 19, 5, 2); if (k) { ctx.fillRect(sx + 13, sy + 18, 5, 1); ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 18, sy + 17, 2, 2); } ctx.fillStyle = '#9b59d6'; ctx.fillRect(sx + 21 - k, sy + 17, 6, 3); }
   else if (c.id === 'street-sniffer') { ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 8, 30, 6); ctx.fillStyle = '#fbf1e0'; for (let i = 0; i < 5; i++) ctx.fillRect(sx + 2 + i * 6, sy + 11, 3, 1); ctx.fillStyle = '#f2c14e'; ctx.fillRect(sx + ((t * 12) % 40) - 8, sy + 9, 7, 4); ctx.fillStyle = '#c88a3c'; for (let i = 0; i < 4; i++) ctx.fillRect(sx + 3 + i * 7, sy + 18, 2, 2); ctx.fillStyle = '#3b8a5a'; ctx.fillRect(sx + 25, sy + 1, 4, 6); PIX.blit(ctx, PIX.shibaHead(), sx + 2 + ((t * 5) % 16), sy + 15, 1); }
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
   ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 10, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 22, y + 43, 3, 3); ctx.fillRect(x + 27, y + 43, 3, 3);
@@ -150,7 +152,7 @@ function drawCabinet(c, now, skin) {
 const modeKey = (C) => MET.boardKey(C.id, C.gmode);
 const ghostKey = (C) => 'inuarcade.ghost.v2.' + modeKey(C); // v2: old replays would desync on the remixed rules
 function openCab(id) {
-  const G = GAMES[id]; setRes(G.W, G.H); A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
+  const G = GAMES[id]; setRes(G.W, G.H); document.body.classList.toggle('twobtn', G.META.buttons === 2); A.scene = 'cab'; A.cab = { id, G, mode: 'title', t: 0, gmode: LS.getItem('inuarcade.mode') || 'classic', s: G.create(1), ini: [...A.initials], cur: 0, parts: [] };
   if (!MET.MODE_IDS.includes(A.cab.gmode)) A.cab.gmode = 'classic';
   document.title = `${G.META.title.replace(/\b\w+/g, (w) => w[0] + w.slice(1).toLowerCase())} · Inu Arcade`;
 }
@@ -263,9 +265,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) unlo
 // vsync snap: rAF timestamps wobble +-1-2ms, so a raw 1/60 accumulator ran 0 or 2 sim steps on many frames (visible stutter).
 export function snapDt(dt) { const k = Math.round(dt * 60); return k >= 1 && Math.abs(dt - k / 60) < 0.002 ? k / 60 : dt; }
 let last = performance.now(), acc = 0;
+// B (second action) only exists in two-button cabinets while playing; everywhere else it acts as A, so X keeps working as before.
+function twoBtn(inp) { if (!(A.scene === 'cab' && A.cab?.mode === 'play' && A.cab.G.META.buttons === 2)) { if (inp.b) inp.a = true; if (inp.pressed.has('b')) inp.pressed.add('a'); } return inp; }
 function frame(t) {
   const dt = snapDt(Math.min(0.1, (t - last) / 1000)); last = t; acc += dt; const now = t / 1000; let nSteps = 0;
-  while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++; const inp = input.snapshot(); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
+  while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++; const inp = twoBtn(input.snapshot()); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
   (window.__stepHist ||= {})[nSteps] = (window.__stepHist[nSteps] || 0) + 1; // jitter probe
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
   if (A.scene === 'lobby') drawLobby(now); else if (A.scene === 'cab') drawCab(now);

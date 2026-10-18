@@ -19,6 +19,9 @@ body.touch #pad{display:block}
 .btns{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:14px;width:150px;height:150px}
 .abtn{right:0;bottom:16px;width:78px;height:78px;border-radius:50% !important;font-size:22px !important;background:#ff5d7355 !important}
 .abtn.on{background:#ff5d73cc !important}
+.bbtn{right:84px;bottom:2px;width:60px;height:60px;border-radius:50% !important;font-size:18px !important;background:#4fc3e855 !important}
+.bbtn.on{background:#4fc3e8cc !important}
+body:not(.twobtn) #pad .bbtn{display:none}
 .sbtn{right:0;top:0;width:70px;height:30px;font-size:10px !important;font-family:Silkscreen,monospace !important}
 .sbtn.bk{right:76px}
 #panel{position:fixed;inset:0;background:#05031099;display:flex;align-items:center;justify-content:center;z-index:10;touch-action:auto}
