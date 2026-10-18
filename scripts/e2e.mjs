@@ -1,6 +1,6 @@
 // Real-input E2E: desktop keyboard + iPhone 13 landscape touch (CDP touch events). Saves proof/ screenshots.
 import { chromium, devices } from 'playwright';
-const URL = (process.env.URL || 'http://localhost:8140').replace(/\/$/, ''); const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower'];
+const URL = (process.env.URL || 'http://localhost:8140').replace(/\/$/, ''); const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger'];
 const browser = await chromium.launch(); let fail = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) fail++; };
 const tag = process.env.TAG || 'local';
 // ---------------- desktop keyboard ----------------
@@ -13,7 +13,7 @@ const tag = process.env.TAG || 'local';
   await p.keyboard.down('ArrowUp'); await p.waitForTimeout(900); await p.keyboard.up('ArrowUp'); await p.screenshot({ path: `proof/${tag}-desktop-lobby.png` });
   // walk to Kibble Chomp cabinet by clicking it
   const box = await p.locator('#screen').boundingBox(); const sc = box.width / 384;
-  await p.mouse.click(box.x + (52 + 20) * sc, box.y + 60 * sc); for (let i = 0; i < 40 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
+  await p.mouse.click(box.x + (42 + 18) * sc, box.y + 60 * sc); for (let i = 0; i < 40 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
   b = await st(); ok(b.scene === 'cab' && b.id === 'kibble-chomp' && b.path === '/kibble-chomp', `desktop: clicking cabinet walks over and opens it (${b.path})`);
   await p.keyboard.press('Escape'); await p.waitForTimeout(200); ok((await st()).scene === 'lobby', 'desktop: Esc returns to the hall');
   for (const g of GAMES) {
@@ -28,6 +28,7 @@ const tag = process.env.TAG || 'local';
     if (g === 'bone-breaker') { a = await st(); await p.keyboard.down('ArrowLeft'); await p.waitForTimeout(300); await p.keyboard.up('ArrowLeft'); await p.keyboard.press('Space'); await p.waitForTimeout(80); b = await st(); ok(b.s.p.x < a.s.p.x - 20 && b.s.stuck === false, `${g}: paddle moves, Space serves`); }
     if (g === 'street-sniffer') { await p.waitForTimeout(2200); a = await st(); await p.keyboard.down('ArrowLeft'); await p.waitForTimeout(700); await p.keyboard.up('ArrowLeft'); b = await st(); ok(b.s.p.x < a.s.p.x - 1 && b.score > 0, `${g}: ArrowLeft moves the Shiba and sniffs kibble (x ${a.s.p.x}->${b.s.p.x}, score ${b.score})`); }
     if (g === 'paw-fu-tower') { await p.waitForTimeout(2000); a = await st(); await p.keyboard.down('ArrowRight'); await p.waitForTimeout(600); await p.keyboard.up('ArrowRight'); b = await st(); await p.keyboard.press('Space'); await p.waitForTimeout(500); await p.keyboard.press('KeyX'); await p.waitForTimeout(80); const q = await p.evaluate(() => window.__arcade.cab.s.stats); ok(b.s.p.x > a.s.p.x + 10 && q.jabs === 1 && q.kicks === 1, `${g}: arrows walk, Space = Paw Jab, X = Hind Kick (x ${a.s.p.x}->${b.s.p.x}, jabs ${q.jabs}, kicks ${q.kicks})`); }
+    if (g === 'bone-digger') { await p.waitForTimeout(1900); a = await st(); await p.keyboard.down('ArrowDown'); await p.waitForTimeout(700); await p.keyboard.up('ArrowDown'); b = await st(); await p.keyboard.press('Space'); await p.waitForTimeout(80); const q = await p.evaluate(() => window.__arcade.cab.s.stats); ok(b.s.p.y > a.s.p.y + 10 && b.score > 0 && q.pumps === 1, `${g}: ArrowDown digs, Space = Bark Pump (y ${a.s.p.y}->${b.s.p.y}, score ${b.score}, pumps ${q.pumps})`); }
     await p.waitForTimeout(1200); await p.screenshot({ path: `proof/${tag}-desktop-${g}-play.png` });
     await p.evaluate(() => { const s = window.__arcade.cab.s; s.score += 1234; s.over = true; s.lives = 0; }); await p.waitForTimeout(300); ok((await st()).mode === 'over', `${g}: game over screen`); await p.screenshot({ path: `proof/${tag}-desktop-${g}-gameover.png` });
     await p.waitForTimeout(2300); ok((await st()).mode === 'initials', `${g}: initials entry`);
@@ -50,6 +51,7 @@ const tag = process.env.TAG || 'local';
     if (g === 'bone-breaker') { await p.keyboard.press('Space'); await p.waitForTimeout(500); await p.keyboard.press('Space'); await p.waitForTimeout(60); ok((await p.evaluate(() => window.__arcade.cab.s.stats.smashes)) === 1, `${g}: Space = bone smash, boss brick present ${await p.evaluate(() => window.__arcade.cab.s.bricks.some((b) => b.boss))}`); }
     if (g === 'street-sniffer') { await p.waitForTimeout(2300); await p.evaluate(() => { window.__arcade.cab.s.pocket = 'toy'; }); await p.keyboard.press('Space'); await p.waitForTimeout(60); const q = await p.evaluate(() => { const s = window.__arcade.cab.s; return { n: s.stats.pockets, lure: !!s.lure }; }); ok(q.n === 1 && q.lure, `${g}: Space = use pocketed squeaky toy (lure ${q.lure})`); }
     if (g === 'paw-fu-tower') { await p.waitForTimeout(2000); await p.keyboard.down('Space'); await p.waitForTimeout(900); await p.keyboard.up('Space'); await p.waitForTimeout(80); ok((await p.evaluate(() => window.__arcade.cab.s.stats.barks)) === 1, `${g}: hold+release Space = Zen Bark`); }
+    if (g === 'bone-digger') { await p.waitForTimeout(1900); await p.keyboard.down('Space'); await p.waitForTimeout(700); await p.keyboard.up('Space'); await p.waitForTimeout(80); ok((await p.evaluate(() => window.__arcade.cab.s.stats.booms)) === 1, `${g}: hold+release Space = Bone Boomerang`); }
     await p.waitForTimeout(700); await p.screenshot({ path: `proof/${tag}-desktop-${g}-inu-play.png` });
     await p.evaluate(() => { const s = window.__arcade.cab.s; s.score += 777; s.over = true; }); await p.waitForTimeout(2600); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
     const k = await p.evaluate((g) => ({ inu: (window.__arcade.db[g + '@inu'] || []).length, ghost: !!localStorage.getItem('inuarcade.ghost.v2.' + g + '@inu'), ach: Object.keys(window.__arcade.purse.ach || {}).length }), g);
@@ -94,7 +96,7 @@ const tag = process.env.TAG || 'local';
   for (const k of ['left', 'right', 'up', 'down', 'a', 'start', 'back']) { const q = await c(k); ok(q.x > 0 && q.y > 0 && q.x < vp.width && q.y < vp.height, `iphone: ${k} button on screen`); }
   let a = await st(); await hold('right', 500); let b = await st(); ok(b.L.x > a.L.x + 15, `iphone: d-pad walks Shiba ${a.L.x | 0}->${b.L.x | 0}`);
   await p.screenshot({ path: `proof/${tag}-iphone-lobby.png` });
-  const sc = cv.width / 384; await tap({ x: cv.x + (178 + 20) * sc, y: cv.y + 60 * sc }); for (let i = 0; i < 50 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
+  const sc = cv.width / 384; await tap({ x: cv.x + (156 + 18) * sc, y: cv.y + 60 * sc }); for (let i = 0; i < 50 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
   b = await st(); ok(b.id === 'bone-breaker', `iphone: tapping a cabinet opens it (${b.id})`); await tap(await c('back')); await p.waitForTimeout(200); ok((await st()).scene === 'lobby', 'iphone: BACK returns to hall');
   for (const g of GAMES) {
     await p.goto(URL + '/' + g); await p.waitForTimeout(700); await tap(await c('start')); await p.waitForTimeout(120); ok((await st()).mode === 'play', `iphone ${g}: START begins play`);
@@ -105,6 +107,7 @@ const tag = process.env.TAG || 'local';
     if (g === 'street-sniffer') { await p.waitForTimeout(2200); a = await st(); await hold('left', 600); b = await st(); ok(b.p.x < a.p.x - 1, `iphone ${g}: d-pad steers (${a.p.x}->${b.p.x})`); }
     if (g === 'bone-breaker') { a = await st(); const L = await c('left'), R = await c('right'); await touch('touchStart', [L]); await p.waitForTimeout(250); await touch('touchMove', [R]); await p.waitForTimeout(400); const m = await st(); await touch('touchEnd', []); await tap(await c('a')); await p.waitForTimeout(80); b = await st(); ok(m.p.x > a.p.x - 10 && b.stuck === false, `iphone ${g}: slide left->right retargets, A serves`); }
     if (g === 'paw-fu-tower') { await p.waitForTimeout(2000); a = await st(); const R = await c('right'), B_ = await c('b'); ok(B_.x > 0 && B_.x < vp.width && B_.y < vp.height, 'iphone paw-fu-tower: B button on screen'); await touch('touchStart', [R]); await p.waitForTimeout(400); await touch('touchMove', [R, { ...B_, id: 1 }]); await p.waitForTimeout(80); await touch('touchMove', [R]); await p.waitForTimeout(300); await touch('touchEnd', []); b = await st(); const k = await p.evaluate(() => window.__arcade.cab.s.stats.kicks); ok(b.p.x > a.p.x + 5 && k >= 1, `iphone ${g}: hold right + tap B (multi-touch) walks and kicks (x ${a.p.x}->${b.p.x}, kicks ${k})`); }
+    if (g === 'bone-digger') { await p.waitForTimeout(1900); a = await st(); const D = await c('down'), A_ = await c('a'); await touch('touchStart', [D]); await p.waitForTimeout(500); await touch('touchMove', [D, { ...A_, id: 1 }]); await p.waitForTimeout(80); await touch('touchMove', [D]); await p.waitForTimeout(300); await touch('touchEnd', []); b = await st(); const k = await p.evaluate(() => window.__arcade.cab.s.stats.pumps); ok(b.p.y > a.p.y + 5 && k >= 1, `iphone ${g}: hold down + tap A (multi-touch) digs and barks (y ${a.p.y}->${b.p.y}, pumps ${k})`); }
     await p.waitForTimeout(900); await p.screenshot({ path: `proof/${tag}-iphone-${g}.png` });
     await p.evaluate(() => { const s = window.__arcade.cab.s; s.score += 500; s.over = true; }); await p.waitForTimeout(2600); ok((await st()).mode === 'initials', `iphone ${g}: initials after game over`);
     await tap(await c('up')); await tap(await c('a')); await tap(await c('a')); await tap(await c('a')); await p.waitForTimeout(300); b = await st(); ok(b.mode === 'results', `iphone ${g}: initials entered by touch`);

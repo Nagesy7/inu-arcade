@@ -46,12 +46,20 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Genre inspiration (internal only):** climbing martial-arts platformers as loose genre only. No source-game names, characters, moves, sprites, sounds or layouts.
 - **Kibble Pay:** registered (`paw-fu-tower`, max 100,000, 400/s, min 5 s, version 2; arcade-run quest; Inu Score v4, 11 games, max 15,000; kibble-pay da71c8c).
 
+### Bone Digger *(working name — pending Zachary's approval)*
+
+- **Status:** LIVE at `/bone-digger` (Oct 18). Name lives in one constant (`NAME` in `src/games/digger.js`) for an easy rename.
+- **Player-facing name (pending):** Bone Digger
+- **Twist:** A Shiba digs down from the backyard lawn through four soil layers (loam, clay, shale, crystal; deeper is slower and pays more) for buried bones. Pests: moles that tunnel through dirt, snakes that only slither along tunnels and hiss before a straight strike, beetles that shimmer then phase through soil. Original attack: the Bark Pump, a sound wave down the tunnel that fluffs a pest up with static until it pops (no hose, harpoon or inflating look). Boulders wobble then drop (crush bonuses), golden bones, a treat, yard timer then HURRY. Inu Mode: Bone Boomerang plus $KIBBLE coins.
+- **Genre inspiration (internal only):** digging / tunnel cabinets as loose genre only. No source-game names, characters, sprites, sounds or layouts.
+- **Kibble Pay:** registered (`bone-digger`, max 180,000 = ~10× best human-sim run 18,062, 400/s, min 5 s, version 2; arcade-run quest; Inu Score v5, 12 games, max 16,000; kibble-pay c077ae5).
+
 ## Build order
 
 1. Joystick toggle (in progress)
 2. Street Sniffer (LIVE, working name pending approval)
 3. Paw-Fu Tower (LIVE, working name pending approval)
-4. Bone Digger (queued #3)
+4. Bone Digger (LIVE, working name pending approval)
 5. Pip's Big Bark (queued #4)
 
 Mask Pup and the Inu fighter are logged only for now, not scheduled.
@@ -70,7 +78,7 @@ Mask Pup and the Inu fighter are logged only for now, not scheduled.
 - **Twist:** Inu martial-artist climber/fighter — multi-level platforms with ladders and ledges, kicks and punches, patterned enemy types, a boss per stage, stage timers. Fully original Inu moves and enemy designs.
 - **Genre inspiration (internal only):** climbing martial-arts platformers (e.g. Kung-Fu Master / Donkey Kong–style stage structure as loose genre only). No source-game names, characters, moves, sprites, sounds or layouts.
 
-### 3. Bone Digger *(working name — pending Zachary's approval)*
+### 3. Bone Digger *(working name — pending Zachary's approval)* — ✅ LIVE (see Live cabinets)
 
 - **Player-facing name (pending):** Bone Digger
 - **Twist:** Tunnel for buried kibble and bones; burrowing enemies (moles, snakes) handled with an original mechanic (bark-pump or bone throw); falling rocks, depth layers, bonus bones.

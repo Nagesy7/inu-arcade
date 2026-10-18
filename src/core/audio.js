@@ -30,7 +30,7 @@ export const SFX = {
   start: () => seq([392, 523, 659, 784, 0, 659, 784], 0.07), ticket: () => seq([1175, 1568, 2093], 0.05, 'triangle', 0.08),
 };
 // one-shot limiter: per-SFX cooldown + max concurrent voices (chomp/march/bounce can fire every frame and used to stack into noise)
-const CD = { jab: 0.05, kick: 0.06, ko: 0.08, ouch: 0.15, tell: 0.12, open: 0.3, boss: 0.5, squeak: 0.1, dash: 0.15, hide: 0.1, honk: 0.12, splash: 0.15, chomp: 0.06, march: 0.08, bounce: 0.04, brick: 0.035, hit: 0.05, blip: 0.03 }, lastAt = {}; let ends = [];
+const CD = { pump: 0.06, pop: 0.08, bone: 0.08, wobble: 0.25, thud: 0.15, hurry: 1, jab: 0.05, kick: 0.06, ko: 0.08, ouch: 0.15, tell: 0.12, open: 0.3, boss: 0.5, squeak: 0.1, dash: 0.15, hide: 0.1, honk: 0.12, splash: 0.15, chomp: 0.06, march: 0.08, bounce: 0.04, brick: 0.035, hit: 0.05, blip: 0.03 }, lastAt = {}; let ends = [];
 export const MAX_VOICES = 10;
 export function gate(name, now, cd = CD[name] ?? 0.04, dur = 0.25) { ends = ends.filter((t) => t > now); if (ends.length >= MAX_VOICES || now - (lastAt[name] ?? -1e9) < cd) return false; lastAt[name] = now; ends.push(now + dur); return true; }
 export function sfx(name) { try { if (ac && !muted && gate(name, ac.currentTime)) SFX[name]?.(); } catch {} }
@@ -43,6 +43,10 @@ SFX.kick = () => { noise(0.06, 0.06, 0, 1600); tone(300, 140, 0.07, 'triangle', 
 SFX.ko = () => seq([660, 880, 1320], 0.05, 'square', 0.05); SFX.ouch = () => { tone(500, 200, 0.12, 'sawtooth', 0.06); noise(0.06, 0.05, 0, 900); };
 SFX.tell = () => tone(1800, 1800, 0.03, 'square', 0.035); /* enemy wind-up tick */ SFX.open = () => seq([392, 523, 784], 0.06, 'triangle', 0.08);
 SFX.boss = () => { seq([196, 0, 196, 233, 262], 0.09, 'sawtooth', 0.06); noise(0.2, 0.05, 0.1, 300); };
+SFX.pump = (() => { let k = 0; return () => { k = (k + 1) % 4; tone(330 + k * 110, 520 + k * 140, 0.06, 'triangle', 0.06); }; })(); /* bark-pump fluff, rising per hit */
+SFX.pop = () => { noise(0.08, 0.07, 0, 2200); seq([1047, 1568, 2093], 0.04, 'square', 0.05); }; SFX.bone = () => seq([784, 988, 1175], 0.05, 'triangle', 0.07);
+SFX.wobble = () => { tone(140, 120, 0.05, 'square', 0.05); tone(170, 150, 0.05, 'square', 0.04); }; SFX.thud = () => { noise(0.18, 0.09, 0, 400); tone(90, 50, 0.16, 'sine', 0.1); };
+SFX.hurry = () => seq([880, 0, 880, 0, 880], 0.06, 'square', 0.05);
 SFX.mega = () => { tone(110, 880, 0.35, 'sawtooth', 0.09); noise(0.3, 0.1, 0.05, 300); };
 // ---- dynamic chiptune: original 4-bar loop in A minor; intensity 0..3 adds layers and tempo ----
 const BASS = [45, 45, 52, 45, 48, 48, 55, 48, 43, 43, 50, 43, 40, 40, 47, 52], ARP = [[57, 60, 64], [60, 64, 67], [55, 59, 62], [52, 56, 59]];

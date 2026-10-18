@@ -11,7 +11,7 @@ for (const [name, w, h, touch] of VPS) for (const joy of touch ? [false, true] :
   const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch, deviceScaleFactor: touch ? 2 : 1 });
   await ctx.addInitScript((j) => localStorage.setItem('inuarcade.settings.v1', JSON.stringify({ joystick: j })), joy);
   const p = await ctx.newPage();
-  for (const g of ['hub', 'kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower']) {
+  for (const g of ['hub', 'kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger']) {
     await p.goto(U + (g === 'hub' ? '/' : '/' + g)); await p.waitForSelector('#inu-wallet-btn', { timeout: 15000 }).catch(() => {}); await p.waitForTimeout(500);
     const r = await p.evaluate(() => { const R = (e) => { const q = e.getBoundingClientRect(); return { x: q.x, y: q.y, w: q.width, h: q.height }; };
       const items = [...document.querySelectorAll('#bar .tb')].map((e) => ['bar:' + e.id, e]).concat([['wallet', document.querySelector('#inu-wallet-btn')], ['home', document.querySelector('#inu-home')]]).filter(([, e]) => e && e.offsetWidth);

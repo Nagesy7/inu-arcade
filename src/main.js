@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -75,15 +75,16 @@ addEventListener('popstate', () => go(routeId(), false));
 
 // ---------- lobby ----------
 export const CABS = [
-  { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 10 },
-  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 52 },
-  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 94 },
-  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 136 },
-  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 178 },
-  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 220 },
-  { id: 'paw-fu-tower', title: Pawfu.META.title, short: Pawfu.META.short, color: Pawfu.META.color, x: 262 },
+  { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 4 },
+  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 42 },
+  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 80 },
+  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 118 },
+  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 156 },
+  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 194 },
+  { id: 'paw-fu-tower', title: Pawfu.META.title, short: Pawfu.META.short, color: Pawfu.META.color, x: 232 },
+  { id: 'bone-digger', title: Digger.META.title, short: Digger.META.short, color: Digger.META.color, x: 270 },
 ];
-const CW = 40, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
+const CW = 36, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
 function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
@@ -133,17 +134,19 @@ function drawCabinet(c, now, skin) {
   ctx.fillStyle = body; ctx.fillRect(x, y, CW, CH); ctx.fillStyle = edge; ctx.fillRect(x, y, 3, CH); ctx.fillRect(x + CW - 3, y, 3, CH);
   ctx.fillStyle = c.color; ctx.fillRect(x + 2, y + 2, CW - 4, 10); text(c.short, x + CW / 2, y + 4, '#1a1424', 5, 'center', false);
   const flick = 0.75 + 0.25 * Math.sin(now * 9 + x); ctx.globalAlpha = flick; ctx.fillStyle = '#05030f'; ctx.fillRect(x + 5, y + 15, CW - 10, 22);
-  // mini attract art per cabinet
-  const sx = x + 5, sy = y + 15, t = now + x;
+  // mini attract art per cabinet (clipped to the little screen)
+  const sx = x + 5, sy = y + 15, t = now + x; ctx.save(); ctx.beginPath(); ctx.rect(x + 5, y + 15, CW - 10, 22); ctx.clip();
   if (c.id === 'kibble-chomp') { for (let i = 0; i < 5; i++) { ctx.fillStyle = '#c88a3c'; ctx.fillRect(sx + 4 + i * 6, sy + 11, 2, 2); } PIX.blit(ctx, PIX.shibaHead(), sx + 1 + ((t * 8) % 22), sy + 6, 1); PIX.blit(ctx, PIX.cat('#d6302f'), sx + 18, sy + 1); }
   else if (c.id === 'bark-invaders') { for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#9b59d6' : '#e0303a'; ctx.fillRect(sx + 3 + i * 7 + Math.sin(t) * 2, sy + 3, 4, 3); } ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 15, sy + 16 - ((t * 20) % 12), 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 13, sy + 18, 5, 3); }
   else if (c.id === 'pup-crossing') { ctx.fillStyle = '#1d4fa0'; ctx.fillRect(sx, sy + 2, 30, 7); ctx.fillStyle = '#7a4a22'; ctx.fillRect(sx + ((t * 10) % 30) - 6, sy + 4, 12, 3); ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 12, 30, 8); ctx.fillStyle = '#e0303a'; ctx.fillRect(sx + 30 - ((t * 14) % 36), sy + 14, 6, 4); }
   else if (c.id === 'bone-breaker') { for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) { ctx.fillStyle = ['#ff5d73', '#f2c14e', '#5fd37a'][r]; ctx.fillRect(sx + 1 + i * 6, sy + 2 + r * 3, 5, 2); } ctx.fillStyle = '#c8f04e'; ctx.fillRect(sx + 15 + Math.sin(t * 2) * 12, sy + 14 - Math.abs(Math.sin(t * 3)) * 4, 2, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 10 + Math.sin(t * 2) * 10, sy + 19, 10, 2); }
   else if (c.id === 'paw-fu-tower') { ctx.fillStyle = '#7a4a22'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 6 : 0), sy + 6 + i * 7, 24, 1); ctx.fillStyle = '#5f9a3a'; ctx.fillRect(sx + 24, sy + 7, 1, 6); ctx.fillRect(sx + 27, sy + 7, 1, 6); const k = Math.floor(t * 3) % 2; PIX.blit(ctx, PIX.shibaHead(), sx + 6, sy + 10, 1); ctx.fillStyle = '#f4f2ff'; ctx.fillRect(sx + 8, sy + 19, 5, 2); if (k) { ctx.fillRect(sx + 13, sy + 18, 5, 1); ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 18, sy + 17, 2, 2); } ctx.fillStyle = '#9b59d6'; ctx.fillRect(sx + 21 - k, sy + 17, 6, 3); }
   else if (c.id === 'street-sniffer') { ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 8, 30, 6); ctx.fillStyle = '#fbf1e0'; for (let i = 0; i < 5; i++) ctx.fillRect(sx + 2 + i * 6, sy + 11, 3, 1); ctx.fillStyle = '#f2c14e'; ctx.fillRect(sx + ((t * 12) % 40) - 8, sy + 9, 7, 4); ctx.fillStyle = '#c88a3c'; for (let i = 0; i < 4; i++) ctx.fillRect(sx + 3 + i * 7, sy + 18, 2, 2); ctx.fillStyle = '#3b8a5a'; ctx.fillRect(sx + 25, sy + 1, 4, 6); PIX.blit(ctx, PIX.shibaHead(), sx + 2 + ((t * 5) % 16), sy + 15, 1); }
+  else if (c.id === 'bone-digger') { ctx.fillStyle = '#8a5a32'; ctx.fillRect(sx, sy + 5, 30, 17); ctx.fillStyle = '#5fb8f0'; ctx.fillRect(sx, sy, 30, 5); ctx.fillStyle = '#2a160c'; const d = (t * 6) % 14; ctx.fillRect(sx + 4, sy + 5, 4, 6 + d); ctx.fillRect(sx + 4, sy + 9 + d, 16, 4); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 19, sy + 16, 5, 1); ctx.fillRect(sx + 19, sy + 15, 1, 3); ctx.fillRect(sx + 23, sy + 15, 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4, sy + 5 + d, 4, 4); ctx.fillStyle = '#8a8494'; ctx.fillRect(sx + 12, sy + 6, 5, 4); }
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
-  ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 10, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 22, y + 43, 3, 3); ctx.fillRect(x + 27, y + 43, 3, 3);
-  ctx.fillStyle = '#1a1424'; ctx.fillRect(x + 16, y + 53, 8, 3); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 19, y + 53, 2, 2);
+  ctx.restore();
+  ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 8, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 20, y + 43, 3, 3); ctx.fillRect(x + 25, y + 43, 3, 3);
+  ctx.fillStyle = '#1a1424'; ctx.fillRect(x + CW / 2 - 4, y + 53, 8, 3); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + CW / 2 - 1, y + 53, 2, 2);
   if (skin === 'neon') { ctx.strokeStyle = c.color; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(now * 4); ctx.strokeRect(x - 0.5, y - 0.5, CW + 1, CH + 1); ctx.globalAlpha = 1; }
   if (c.id === 'inu-rescue') text('LIVE', x + CW / 2, y + CH - 8, '#5fd37a', 5, 'center');
 }

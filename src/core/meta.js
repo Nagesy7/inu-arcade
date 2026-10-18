@@ -50,6 +50,9 @@ export const ACHIEVEMENTS = [
   { id: 'pf-floor', name: 'First Dan', desc: 'Paw-Fu Tower: beat the first floor boss', tickets: 5, test: (r) => r.game === 'paw-fu-tower' && r.stats.bosses >= 1 },
   { id: 'pf-combo', name: 'Flurry Paws', desc: 'Paw-Fu Tower: land a 4-hit combo', tickets: 4, test: (r) => r.game === 'paw-fu-tower' && r.stats.maxCombo >= 4 },
   { id: 'pf-zen', name: 'Inner Howl', desc: 'Paw-Fu Tower (Inu): stun foes with 3 Zen Barks in one run', tickets: 4, test: (r) => r.game === 'paw-fu-tower' && r.stats.barks >= 3 },
+  { id: 'bd-crush', name: 'Rock Bottom', desc: 'Bone Digger: crush a pest with a boulder', tickets: 4, test: (r) => r.game === 'bone-digger' && r.stats.crushes >= 1 },
+  { id: 'bd-deep', name: 'Crystal Paws', desc: 'Bone Digger: clear 3 yards in one run', tickets: 5, test: (r) => r.game === 'bone-digger' && r.stats.yards >= 3 },
+  { id: 'bd-boom', name: 'Boomerang Bone', desc: 'Bone Digger (Inu): throw 3 Bone Boomerangs in one run', tickets: 4, test: (r) => r.game === 'bone-digger' && r.stats.booms >= 3 },
   { id: 'daily', name: 'Daily Grind', desc: 'Finish a Daily Challenge', tickets: 3, test: (r) => r.mode === 'daily' },
   { id: 'all-four', name: 'Arcade Rat', desc: 'Play all four cabinets', tickets: 5, test: (r, p) => ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'].every((g) => p.played?.[g]) },
 ];
