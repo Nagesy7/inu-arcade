@@ -8,7 +8,7 @@ export const BASE = 112; // stick base diameter in CSS px (sits inside the 172 p
 // Direction mapping per cabinet while playing: 4-way for maze/grid games, horizontal for paddle/shooter, 8-way for the
 // platform fighter (up-left / up-right = jump while walking).
 // Menus (title, initials, results...) always use 4-way so up/down still pick modes and letters.
-export const JOY_MODES = { 'kibble-chomp': '4way', 'pup-crossing': '4way', 'bark-invaders': 'h', 'bone-breaker': 'h', 'street-sniffer': '4way', 'paw-fu-tower': '8way', 'bone-digger': '4way', 'pips-big-bark': '8way', 'shiba-scuffle': '8way', lobby: '8way' };
+export const JOY_MODES = { 'kibble-chomp': '4way', 'pup-crossing': '4way', 'bark-invaders': 'h', 'bone-breaker': 'h', 'street-sniffer': '4way', 'paw-fu-tower': '8way', 'bone-digger': '4way', 'pips-big-bark': '8way', 'shiba-scuffle': '8way', 'fud-swarm': '8way', lobby: '8way' };
 export const joyMode = (cabId, playing) => (cabId ? (playing ? JOY_MODES[cabId] || '4way' : '4way') : JOY_MODES.lobby);
 
 export function loadSettings(storage) { try { const v = JSON.parse(storage?.getItem(SETTINGS_KEY) || 'null'); return { joystick: v?.joystick === true }; } catch { return { joystick: false }; } }

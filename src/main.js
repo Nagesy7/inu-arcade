@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js'; import * as V from './core/verse.js'; import * as Scuffle from './games/shiba.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js'; import * as V from './core/verse.js'; import * as Scuffle from './games/shiba.js'; import * as Fud from './games/fud.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip, 'shiba-scuffle': Scuffle };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip, 'shiba-scuffle': Scuffle, 'fud-swarm': Fud };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -87,8 +87,9 @@ export const CABS = [
   { id: 'bone-digger', title: Digger.META.title, short: Digger.META.short, color: Digger.META.color, x: 242 },
   { id: 'pips-big-bark', title: Pip.META.title, short: Pip.META.short, color: Pip.META.color, x: 276 },
   { id: 'shiba-scuffle', title: Scuffle.META.title, short: Scuffle.META.short, color: Scuffle.META.color, x: 310 },
-].map((c, i) => ({ ...c, x: 4 + i * 31 })); // ten cabinets across the back wall
-const CW = 28, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
+  { id: 'fud-swarm', title: Fud.META.title, short: Fud.META.short, color: Fud.META.color, x: 0 },
+].map((c, i) => ({ ...c, x: 4 + i * 28 })); // eleven cabinets across the back wall (last ends at 310, clear of the board at 314)
+const CW = 26, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
 function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn', 'threebtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
@@ -149,6 +150,7 @@ function drawCabinet(c, now, skin) {
   else if (c.id === 'bone-digger') { ctx.fillStyle = '#8a5a32'; ctx.fillRect(sx, sy + 5, 30, 17); ctx.fillStyle = '#5fb8f0'; ctx.fillRect(sx, sy, 30, 5); ctx.fillStyle = '#2a160c'; const d = (t * 6) % 14; ctx.fillRect(sx + 4, sy + 5, 4, 6 + d); ctx.fillRect(sx + 4, sy + 9 + d, 16, 4); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 19, sy + 16, 5, 1); ctx.fillRect(sx + 19, sy + 15, 1, 3); ctx.fillRect(sx + 23, sy + 15, 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4, sy + 5 + d, 4, 4); ctx.fillStyle = '#8a8494'; ctx.fillRect(sx + 12, sy + 6, 5, 4); }
   else if (c.id === 'pips-big-bark') { ctx.fillStyle = '#ff8a5c'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#5a2a6a'; ctx.fillRect(sx, sy + 8, 6, 14); ctx.fillRect(sx + 14, sy + 5, 7, 17); ctx.fillStyle = '#d0603a'; ctx.fillRect(sx, sy + 18, 30, 4); const px = sx + ((t * 9) % 30) - 4, hop = Math.round(Math.abs(Math.sin(t * 4)) * 4); ctx.fillStyle = '#e8892e'; ctx.fillRect(px, sy + 13 - hop, 6, 5); ctx.fillStyle = '#e33b3b'; ctx.fillRect(px - 3, sy + 14 - hop + Math.round(Math.sin(t * 12)), 4, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(px + 7, sy + 14 - hop, 1, 1); ctx.fillRect(px + 9, sy + 13 - hop, 1, 3); ctx.fillStyle = '#8a94b0'; ctx.fillRect(sx + 24 - ((t * 3) % 6), sy + 14, 5, 4); }
   else if (c.id === 'shiba-scuffle') { ctx.fillStyle = '#4f9a4a'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 6 + Math.round(Math.sin(t * 2) * 3), sy + 10, 8, 2); const k = Math.floor(t * 4) % 2; ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 1 + k, sy + 8, 4, 4); ctx.fillStyle = '#3a7bd5'; ctx.fillRect(sx + 1 + k, sy + 11, 4, 1); ctx.fillStyle = '#c86a2a'; ctx.fillRect(sx + 13 - k, sy + 8, 4, 4); ctx.fillStyle = '#d6302f'; ctx.fillRect(sx + 13 - k, sy + 11, 4, 1); if (k) { ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 8, sy + 6, 2, 2); } }
+  else if (c.id === 'fud-swarm') { ctx.fillStyle = '#3e7a46'; ctx.fillRect(sx, sy, 30, 22); for (let i = 0; i < 8; i++) { const a = t * 1.5 + i * 0.785, r = 7 + Math.sin(t * 2 + i) * 1.5; ctx.fillStyle = i % 3 ? '#8a7ac4' : '#c8302a'; ctx.fillRect(sx + 8 + Math.round(Math.cos(a) * r), sy + 10 + Math.round(Math.sin(a) * r * 0.8), 3, 3); } ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 7, sy + 9, 4, 4); ctx.fillStyle = '#9b6dff'; ctx.fillRect(sx + 7, sy + 12, 4, 1); ctx.fillStyle = '#c88a3c'; const o = t * 5; ctx.fillRect(sx + 8 + Math.round(Math.cos(o) * 4), sy + 10 + Math.round(Math.sin(o) * 4), 2, 2); }
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
   ctx.restore();
   ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 8, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + CW - 11, y + 43, 3, 3); ctx.fillRect(x + CW - 7, y + 43, 3, 3);
