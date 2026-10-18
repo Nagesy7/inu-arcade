@@ -42,7 +42,7 @@ export const MAX_W = 4, MAX_P = 4, LIVES = 2;
 export const PTS = { sec: 10, overtimeSec: 20, level: 100, crumb: 2, coin: 500, treat: 50 };
 // weapon stats by level (1-based)
 export const WSTAT = {
-  bark: (l) => ({ cd: 74 - l * 6, r: 30 + l * 6, dmg: 7 + l * 3 }),
+  bark: (l) => ({ cd: 62 - l * 5, r: 40 + l * 6, dmg: 8 + l * 3 }),
   bone: (l) => ({ cd: 54 - l * 3, n: l >= 4 ? 3 : l >= 2 ? 2 : 1, dmg: 12 + l * 3, pierce: 1 + (l >> 1), speed: 3.2 }),
   orbit: (l) => ({ n: 1 + l, r: 24 + l * 2, dmg: 6 + l * 1.5, spin: 0.055 + l * 0.005 }),
   gaze: (l) => ({ cd: 96 - l * 9, len: 120 + l * 10, dmg: 14 + l * 5 }),
@@ -50,9 +50,9 @@ export const WSTAT = {
   tail: (l) => ({ cd: 48 - l * 3, r: 40 + l * 3, dmg: 10 + l * 3 }) };
 export const need = (L) => 4 + 3 * L + Math.floor(L * L * 0.35);
 export const minutes = (s) => s.t / 60;
-export const hpMul = (m) => 1 + 0.22 * m + (m > 10 ? 0.5 * (m - 10) : 0);
+export const hpMul = (m) => 1 + 0.3 * m + 0.04 * m * m + (m > 10 ? 1.5 * (m - 10) : 0);
 export const spdMul = (m) => Math.min(1.4, 1 + 0.03 * m);
-export const targetCount = (m) => Math.min(CAP.enemies - 10, Math.floor(10 + 7 * m + 1.6 * m * m));
+export const targetCount = (m) => Math.min(CAP.enemies - 10, Math.floor(14 + 8 * m + 1.6 * m * m));
 // ---------- pools (fixed objects, swap-remove; nothing allocated per frame) ----------
 function pool(n, mk) { return { a: Array.from({ length: n }, mk), n: 0, cap: n }; }
 function take(P) { return P.n < P.cap ? P.a[P.n++] : null; }
@@ -121,7 +121,7 @@ function director(s) { const m = minutes(s);
   if (s.warn > 0) s.warn--;
   if (s.t >= s.swarmT) { s.swarmT += 75; const n = Math.min(24, s.E.cap - s.E.n - 6); for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; spawnAt(s, 'drone', s.p.x + Math.cos(a) * 150, s.p.y + Math.sin(a) * 150); } if (n > 0) { s.warn = Math.max(s.warn, 90); s.warnText = 'FUD SWARM!'; ev(s, 'swarm'); } }
   if (++s.spawnT < 20) return; s.spawnT = 0; const want = targetCount(m) - s.E.n; if (want <= 0) return;
-  for (let i = 0; i < Math.min(4 + (m >> 2), want); i++) spawn(s, pickType(s, m)); }
+  for (let i = 0; i < Math.min(4 + Math.floor(m * 1.5), want); i++) spawn(s, pickType(s, m)); }
 function pickType(s, m) { const w = [['drone', 10], ['roller', m >= 1 ? 4 + m : 0], ['paper', m >= 2 ? 3 + m : 0], ['shill', m >= 3 ? 2 + m * 0.6 : 0], ['bear', m >= 4 ? Math.min(3, 0.6 + 0.2 * m) : 0]];
   let tot = 0; for (const [, x] of w) tot += x; let r = s.rnd() * tot; for (const [t, x] of w) { if ((r -= x) < 0) return t; } return 'drone'; }
 function spawn(s, type, boss = false) { const a = s.rnd() * Math.PI * 2, d = boss ? 140 : 150 + s.rnd() * 30; return spawnAt(s, type, s.p.x + Math.cos(a) * d, s.p.y + Math.sin(a) * d); }
@@ -150,7 +150,7 @@ export function segDist(px, py, ax, ay, bx, by) { const vx = bx - ax, vy = by - 
 export function orbitPts(s) { if (!s.wep.orbit) return []; const W_ = WSTAT.orbit(s.wep.orbit), out = []; for (let i = 0; i < W_.n; i++) { const a = s.orbA + (i * Math.PI * 2) / W_.n; out.push({ x: s.p.x + Math.cos(a) * W_.r, y: s.p.y + Math.sin(a) * W_.r }); } return out; }
 // ---------- damage / death ----------
 export function hurt(s, o, amt) { if (o.hp <= 0) return false; o.hp -= amt; o.flash = 4; if (o.hp <= 0) { kill(s, o); return true; } ev(s, 'hit'); return false; }
-function kill(s, o) { const F = FOES[o.type]; s.stats.kills++; s.score += F.pts; if (s.p.shield <= 0) s.p.meter = Math.min(100, s.p.meter + (o.boss ? 40 : o.elite ? 8 : 0.6)); // no refill while shielded (no shield chains) fx(s, o.x, o.y, o.boss ? '#f2c14e' : '#b48cff', o.boss ? 16 : 5); ev(s, o.boss ? 'bossdown' : 'pop');
+function kill(s, o) { const F = FOES[o.type]; s.stats.kills++; s.score += F.pts; if (s.p.shield <= 0) s.p.meter = Math.min(100, s.p.meter + (o.boss ? 40 : o.elite ? 8 : 0.6)); /* no refill while shielded: no shield chains */ fx(s, o.x, o.y, o.boss ? '#f2c14e' : '#b48cff', o.boss ? 16 : 5); ev(s, o.boss ? 'bossdown' : 'pop');
   crumb(s, o.x, o.y, F.xp); const r = s.rnd();
   if (o.boss) { s.stats.bosses++; s.boss = null; item(s, 'chest', o.x, o.y); if (s.inu) item(s, 'coin', o.x + 14, o.y); pop(s, o.x, o.y - 20, `${F.name} DOWN! +${F.pts}`, '#f2c14e'); s.shake = 0.4; }
   else if (o.elite) { if (s.inu) item(s, 'coin', o.x, o.y); else if (r < 0.5) item(s, 'treat', o.x, o.y); }
@@ -213,14 +213,15 @@ export function botPick(s) { const c = s.choice; let best = 0, bs = -1e9; c.opts
 export function bot(s) { const o = {};
   if (s.phase === 'choose') { const want = botPick(s); if (s.choice.sel !== want) { if (s.frame % 4 === 0) o.right = true; } else if (s.choice.t > 24 && s.frame % 4 < 2) o.a = true; return o; }
   if (s.phase !== 'play') return o; const p = s.p; let vx = 0, vy = 0, danger = 0;
-  forNear(s, p.x, p.y, 70, (e, d) => { const w = (FOES[e.type].dmg / 6) * (e.boss ? 3 : 1) / Math.max(36, d * d); vx += (p.x - e.x) * w; vy += (p.y - e.y) * w; if (d < 30 + e.r) danger++; });
+  const ring = s.wep.bark ? WSTAT.bark(s.wep.bark).r : 40; forNear(s, p.x, p.y, 54, (e, d) => { const w = (FOES[e.type].dmg / 6) * (e.boss ? 3 : 1) / Math.max(36, d * d); vx += (p.x - e.x) * w; vy += (p.y - e.y) * w; if (d < 30 + e.r) danger++; });
   for (let i = 0; i < s.Q.n; i++) { const q = s.Q.a[i], d = Math.hypot(q.x - p.x, q.y - p.y); if (d < 40) { vx += (p.x - q.x) / (d * d + 20) * 2; vy += (p.y - q.y) / (d * d + 20) * 2; } }
   let cx = null, cd = 140; for (let i = 0; i < s.X.n; i++) { const c = s.X.a[i], d = Math.abs(c.x - p.x) + Math.abs(c.y - p.y); if (d < cd) { cd = d; cx = c; } }
   for (let i = 0; i < s.I.n; i++) { const c = s.I.a[i], d = Math.abs(c.x - p.x) + Math.abs(c.y - p.y); if (d < 200 && (c.kind !== 'treat' || p.hp < p.maxHp * 0.7)) { cd = d * 0.5; cx = c; } }
   const dl = Math.hypot(vx, vy); if (dl) { vx /= dl; vy /= dl; }
   if (cx && danger < 2) { const d = Math.hypot(cx.x - p.x, cx.y - p.y) || 1; const w = dl ? 0.6 : 1; vx += ((cx.x - p.x) / d) * w; vy += ((cx.y - p.y) / d) * w; }
   const edge = 70; if (p.x < edge) vx += 0.8; if (p.x > FW - edge) vx -= 0.8; if (p.y < edge) vy += 0.8; if (p.y > FH - edge) vy -= 0.8;
-  if (!dl && !cx) { vx += (FW / 2 - p.x) / 300 + Math.cos(s.t * 0.7) * 0.6; vy += (FH / 2 - p.y) / 300 + Math.sin(s.t * 0.5) * 0.6; }
+  if (!dl && !cx && p.hp > p.maxHp * 0.4) { const n = nearest(s, p.x, p.y, 220); if (n && Math.hypot(n.x - p.x, n.y - p.y) > ring * 0.7) { const d = Math.hypot(n.x - p.x, n.y - p.y); vx += (n.x - p.x) / d; vy += (n.y - p.y) / d; } } // hunt: walk the bark ring into stragglers
+  if (!dl && !cx && !vx && !vy) { vx += (FW / 2 - p.x) / 300 + Math.cos(s.t * 0.7) * 0.6; vy += (FH / 2 - p.y) / 300 + Math.sin(s.t * 0.5) * 0.6; }
   for (const t of TREES) { const d = Math.hypot(p.x - t.x, p.y - t.y); if (d < 26) { vx += (p.x - t.x) / d; vy += (p.y - t.y) / d; } }
   const l = Math.hypot(vx, vy); if (l > 0.2) { vx /= l; vy /= l; if (vx > 0.38) o.right = true; if (vx < -0.38) o.left = true; if (vy > 0.38) o.down = true; if (vy < -0.38) o.up = true; }
   if (danger >= 2 && p.dashCd <= 0) o.a = true; if (p.meter >= 100 && (danger >= 3 || p.hp < p.maxHp * 0.35)) o.b = true;
