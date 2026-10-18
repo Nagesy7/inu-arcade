@@ -1,7 +1,7 @@
 // Rewards: Bones (free currency, never cashed out) + prize tickets, earned for playing and for skill.
 // Prize counter is a FIXED shop: fixed ticket price per cosmetic, no randomness, no loot boxes.
 // $KIBBLE (live, real on-chain token) is only ever burned/spent for cosmetics (cabinet skins); it is never a prize or an entry fee.
-export const TICKET_TIERS = { 'kibble-chomp': [800, 2000, 4000, 8000], 'bark-invaders': [400, 1200, 2500, 5000], 'pup-crossing': [300, 900, 2000, 4000], 'bone-breaker': [500, 1500, 3000, 6000] };
+export const TICKET_TIERS = { 'kibble-chomp': [800, 2000, 4000, 8000], 'bark-invaders': [400, 1200, 2500, 5000], 'pup-crossing': [300, 900, 2000, 4000], 'bone-breaker': [500, 1500, 3000, 6000], 'street-sniffer': [900, 2200, 4500, 9000] };
 export const DAILY_BONE_CAP = 600;
 export function earn(game, score) {
   const tiers = TICKET_TIERS[game] || []; const tickets = 1 + tiers.filter((t) => score >= t).length;
@@ -19,7 +19,7 @@ export const SHOP = [
 ];
 // Per-cabinet skin hooks: sponsor slot (simulated) + burn-to-unlock skin paid with $KIBBLE (real burn via Phantom; simulated only with ?demo=1).
 export const SKINS = { gold: { name: 'Gold Cabinet', burn: 250000 }, neon: { name: 'Neon Cabinet', tickets: 12 } };
-export const SPONSORS = { 'kibble-chomp': null, 'bark-invaders': null, 'pup-crossing': null, 'bone-breaker': null }; // e.g. { name: 'Your Brand', url } set server-side later
+export const SPONSORS = { 'kibble-chomp': null, 'bark-invaders': null, 'pup-crossing': null, 'bone-breaker': null, 'street-sniffer': null }; // e.g. { name: 'Your Brand', url } set server-side later
 export function newWallet() { return { bones: 0, tickets: 0, owned: [], skins: {}, today: '', todayBones: 0, plays: 0 }; }
 export function grant(w, game, score, now = new Date()) {
   const day = now.toISOString().slice(0, 10); if (w.today !== day) { w.today = day; w.todayBones = 0; }

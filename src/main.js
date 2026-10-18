@@ -10,10 +10,10 @@ import * as R from './core/rewards.js';
 import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './core/wallet.js';
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
-import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js';
+import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -75,11 +75,12 @@ addEventListener('popstate', () => go(routeId(), false));
 
 // ---------- lobby ----------
 export const CABS = [
-  { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 22 },
-  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 82 },
-  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 142 },
-  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 202 },
-  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 262 },
+  { id: 'inu-rescue', title: 'INU RESCUE', short: 'RESCUE', color: '#f08030', x: 14 },
+  { id: 'kibble-chomp', title: 'KIBBLE CHOMP', short: 'CHOMP', color: Chomp.META.color, x: 62 },
+  { id: 'bark-invaders', title: 'BARK INVADERS', short: 'INVADE', color: Bark.META.color, x: 110 },
+  { id: 'pup-crossing', title: 'PUP CROSSING', short: 'CROSS', color: Crossing.META.color, x: 158 },
+  { id: 'bone-breaker', title: 'BONE BREAKER', short: 'BREAK', color: Breaker.META.color, x: 206 },
+  { id: 'street-sniffer', title: Street.META.title, short: Street.META.short, color: Street.META.color, x: 254 },
 ];
 const CW = 40, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
@@ -137,6 +138,7 @@ function drawCabinet(c, now, skin) {
   else if (c.id === 'bark-invaders') { for (let i = 0; i < 4; i++) { ctx.fillStyle = i % 2 ? '#9b59d6' : '#e0303a'; ctx.fillRect(sx + 3 + i * 7 + Math.sin(t) * 2, sy + 3, 4, 3); } ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 15, sy + 16 - ((t * 20) % 12), 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 13, sy + 18, 5, 3); }
   else if (c.id === 'pup-crossing') { ctx.fillStyle = '#1d4fa0'; ctx.fillRect(sx, sy + 2, 30, 7); ctx.fillStyle = '#7a4a22'; ctx.fillRect(sx + ((t * 10) % 30) - 6, sy + 4, 12, 3); ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 12, 30, 8); ctx.fillStyle = '#e0303a'; ctx.fillRect(sx + 30 - ((t * 14) % 36), sy + 14, 6, 4); }
   else if (c.id === 'bone-breaker') { for (let r = 0; r < 3; r++) for (let i = 0; i < 5; i++) { ctx.fillStyle = ['#ff5d73', '#f2c14e', '#5fd37a'][r]; ctx.fillRect(sx + 1 + i * 6, sy + 2 + r * 3, 5, 2); } ctx.fillStyle = '#c8f04e'; ctx.fillRect(sx + 15 + Math.sin(t * 2) * 12, sy + 14 - Math.abs(Math.sin(t * 3)) * 4, 2, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 10 + Math.sin(t * 2) * 10, sy + 19, 10, 2); }
+  else if (c.id === 'street-sniffer') { ctx.fillStyle = '#2a2a34'; ctx.fillRect(sx, sy + 8, 30, 6); ctx.fillStyle = '#fbf1e0'; for (let i = 0; i < 5; i++) ctx.fillRect(sx + 2 + i * 6, sy + 11, 3, 1); ctx.fillStyle = '#f2c14e'; ctx.fillRect(sx + ((t * 12) % 40) - 8, sy + 9, 7, 4); ctx.fillStyle = '#c88a3c'; for (let i = 0; i < 4; i++) ctx.fillRect(sx + 3 + i * 7, sy + 18, 2, 2); ctx.fillStyle = '#3b8a5a'; ctx.fillRect(sx + 25, sy + 1, 4, 6); PIX.blit(ctx, PIX.shibaHead(), sx + 2 + ((t * 5) % 16), sy + 15, 1); }
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
   ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 10, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 22, y + 43, 3, 3); ctx.fillRect(x + 27, y + 43, 3, 3);
   ctx.fillStyle = '#1a1424'; ctx.fillRect(x + 16, y + 53, 8, 3); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 19, y + 53, 2, 2);

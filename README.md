@@ -11,6 +11,7 @@ Only the mechanics are borrowed. All names, characters and art are original and 
 | `/bark-invaders` | Bark Invaders | fixed shooter: 43-dog arrowhead fleet (rows 5/7/9/11/11; 40/25/15 pts), pebble (aimed) + zigzag (sweeping) bombs, diving pups, balloon bonus 300→100 |
 | `/pup-crossing` | Pup Crossing | lane hopper: 4 dog-park gates, 50 s timer, bins/scooters/mowers/vans/buses then flipping frisbees, pool noodles and a raft, lawn sprinklers, biscuit +250, toy +150 |
 | `/bone-breaker` | Bone Breaker | paddle + ball: 12×7 crate wall, 3 screen maps, tough 2-hit crates, rally speed-ups, paddle wears down every 20 hits |
+| `/street-sniffer` | Street Sniffer *(working name)* | city-street chase: original city-block map with alleys, two avenues of one-way traffic (dog and cats both dodge it), one-way alleys, bins to hide in (cats lose track), hydrant splash, squeaky-toy lure, delivery-scooter dash; cats are never edible |
 | hall cabinet | Inu Rescue | links to https://inu-rescue.vercel.app (the first cabinet) |
 
 Every cabinet has a title screen, attract mode (bot demo), play, pause (START), game over, 3-letter initials entry, a results card, its own URL and its own share card (`og/*.png`, per-game `og:`/`twitter:` tags in `/<game>/index.html`) plus a share-to-X button carrying the score.
@@ -23,16 +24,17 @@ Each cabinet's title screen has a mode select (◀ ▶ / tap). **Every mode has 
   - Bark Invaders: **Mega Woof** (hold A for 0.9 s, release for a piercing beam, 6 s cooldown), **rug-pull whale boss** on every 3rd wave (+2000), and streak bonuses.
   - Pup Crossing: **Zoomies Leap** (A; 2 rows, 5 s cooldown), plus **lost puppies** riding the logs. Carry one to a kennel for +300.
   - Bone Breaker: **Bone Smash** (A; a bone shot, 6 s cooldown), bone power-ups (**Fetch** catch, **Bone Storm** pierce, Big Bone, Pup Pack), and a moving **FUD-bot boss brick** each level (+500).
+  - Street Sniffer: **Pocket** (A; power-ups are pocketed and used when you choose) plus **$KIBBLE coins** (+500) twice per city.
 - **DAILY CHALLENGE:** Inu Mode on a seed shared by everyone for the day (`dailySeed`). It has its own board.
 - **Weekly modifiers** rotate every Monday (Zoomies, Glass Pup, Iron Coat, Diamond Paws). Each changes speed and/or lives, with a score multiplier, and applies the same to everyone in Inu and Daily modes.
-- **Achievements** (13, 🏅 button) pay a fixed number of tickets, once each.
+- **Achievements** (16, 🏅 button) pay a fixed number of tickets, once each.
 - **Ghost replays:** every run records its inputs (RLE, deterministic fixed-step sim). Your best run per board races you as a translucent "BEST" ghost and plays back in attract mode.
 - **Presentation:** CRT scanlines + bloom (📺 toggle, on by default), particles, screen shake, combo/score pop-ups, and a dynamic chiptune loop that adds layers and tempo with level, danger and Inu Mode.
 
 ## Controls
 Desktop: arrows/WASD move, Space/Z/J = A, Enter = START, Esc = back to the hall. Click a cabinet to walk to it and play.
 Phone (landscape): on-screen D-pad, A, START and BACK, with multi-touch and finger-sliding between buttons. Tap a cabinet in the hall to play.
-Optional **joystick** (⚙ Settings → Joystick controls, OFF by default): a semi-transparent left-thumb stick with a dead zone replaces the D-pad (4-way in Kibble Chomp / Pup Crossing, left/right in Bark Invaders / Bone Breaker, 4-way in menus, 8-way in the hall). A/START/BACK stay on the right and work together with the stick. One setting for every cabinet (`src/core/joystick.js`, key `inuarcade.settings.v1`, also in the wallet cloud save). `node scripts/joystick-check.mjs` checks it never covers the playfield at 667x375 / 750x342 and runs the toggle test; `JOY=1 node scripts/phone-playtest.mjs` plays with it on.
+Optional **joystick** (⚙ Settings → Joystick controls, OFF by default): a semi-transparent left-thumb stick with a dead zone replaces the D-pad (4-way in Kibble Chomp / Pup Crossing / Street Sniffer, left/right in Bark Invaders / Bone Breaker, 4-way in menus, 8-way in the hall). A/START/BACK stay on the right and work together with the stick. One setting for every cabinet (`src/core/joystick.js`, key `inuarcade.settings.v1`, also in the wallet cloud save). `node scripts/joystick-check.mjs` checks it never covers the playfield at 667x375 / 750x342 and runs the toggle test; `JOY=1 node scripts/phone-playtest.mjs` plays with it on.
 
 ## Scores, prizes, rewards
 - Per-game boards and a combined **Arcade** board (each game's top score in the period = 1000 pts, others get a share). Daily, weekly (from Monday), monthly and all-time.
@@ -56,7 +58,7 @@ or **embed** it in an iframe panel:
 ```html
 <iframe src="https://inu-arcade.vercel.app/bone-breaker" allow="autoplay; fullscreen" style="width:100%;aspect-ratio:16/9;border:0"></iframe>
 ```
-Inside an iframe, keyboard needs a click into the frame first. Scores and tickets live in the arcade origin's localStorage until the server API is authoritative. Valid cabinet ids are `kibble-chomp`, `bark-invaders`, `pup-crossing` and `bone-breaker`; `#/kibble-chomp` hashes also work.
+Inside an iframe, keyboard needs a click into the frame first. Scores and tickets live in the arcade origin's localStorage until the server API is authoritative. Valid cabinet ids are `kibble-chomp`, `bark-invaders`, `pup-crossing`, `bone-breaker` and `street-sniffer`; `#/kibble-chomp` hashes also work.
 
 ## Dev
 ```
@@ -74,8 +76,9 @@ Every cabinet is an original Inu design. **Classic** = classic-difficulty rules 
 - **Bark Invaders**: 43 dogs in an arrowhead (5/7/9/11/11; 40/25/15). The fleet steps faster as it thins and starts lower each wave (128 + 12·((wave−1) mod 6)). Two bomb types: pebble (aimed) and zigzag (sweeping). Divers peel off (+2 each). Balloon bonus is worth 300 to 100 (earlier = more). Extra life at 2,000. Wave 1 is gentler: slower volley and divers start later.
 - **Pup Crossing**: 4 dog-park gates, 50 s timer, 10 per step, 60 + 10/s per gate, +800 for all four, biscuit +250, toy +150 (Inu Mode: lost puppy +300), extra life at 15,000. Shut gates and fences kill; sprinklers splash. Level 1 is forgiving: lanes at 0.75× speed, no flipping frisbees, shorter and smaller sprinkler bursts, 3 px edge grace on floaters. Flips start at level 2 (second flipper at 3) and lanes speed up 10% per level from level 2 (cap 1.7×).
 - **Bone Breaker**: 12×7 crates across 3 screen maps, rows worth 6/5/4/3/2/2/1, tough 2-hit crates, ball speed ladder 1.6→3.2 every 10 rally hits and on reaching the deep rows, paddle 24 px that wears 2 px every 20 hits (minimum 16), max angle 62°. Classic max is about 714.
+- **Street Sniffer** (working name; rename via `NAME` in `src/games/street.js`): 32×27 original city map. Kibble 10, power-up 50, hydrant soak 200, car honks a cat home 100, scooter bump 50, avenue crossing 25, city clear 300 + 150/level (max 1500), extra life at 10,000. Avenues (rows 9 east, 17 west) carry `min(4, 2 + ⌊(L−1)/2⌋)` cars at `0.5 + 0.09·(L−1)` px/frame (+20% rush hour when ≤25% kibble is left); headlights blink at the curb before a car enters. One-way alleys block both dog and cats. Bins hide you for `max(2.5, 4.5 − 0.25·(L−1))` s (12 s cooldown); hydrants spray 6 tiles for 1.5 s (20 s cooldown); toy lure `max(3, 7 − 0.5·(L−1))` s; scooter dash `max(2.5, 4.5 − 0.25·(L−1))` s at 1.45× speed, car-immune. Cats patrol/hunt on their own clock (first patrol 7 s, shrinking per level) and share Kibble Chomp's personality module (`src/core/cats.js`). Level 1–2 forgive a car scrape. Tables are asserted in `tests/street.test.mjs`.
 - **Leaderboards**: local boards and ghosts use `inuarcade.scores.v2` / `inuarcade.ghost.v2.*`, so pre-remix scores never mix. House scores (INU/PUP/DOG) were rescaled for v2 from the human-sim medians.
-- **Prize scores**: posted to kibble-pay as `{game, score, durationMs, v: 2}` (`kp.submitScore(game, score, ms, { v: 2 })`) with the same game ids (`kibble-chomp`, `bark-invaders`, `pup-crossing`, `bone-breaker`).
+- **Prize scores**: posted to kibble-pay as `{game, score, durationMs, v: 2}` (`kp.submitScore(game, score, ms, { v: 2 })`) with the same game ids (`kibble-chomp`, `bark-invaders`, `pup-crossing`, `bone-breaker`, `street-sniffer`). `street-sniffer` needs a kibble-pay `scoreGames` entry before its prize scores are accepted.
 - **Difficulty tuning**: `node scripts/human-sim.mjs 16` replays each cabinet with a human-like bot (about 250 ms reaction, held decisions, 6% wrong inputs, 4% dropped inputs, occasional zone-outs) and prints the median survival time per cabinet.
 
 The pre-remix rule set (v1) is retired; its scores live under the old v1 storage keys and are never mixed with v2.

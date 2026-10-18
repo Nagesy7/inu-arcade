@@ -30,10 +30,18 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Twist:** Bat a tennis ball into a crate wall and catch bone-shaped treats for power-ups; Inu Mode remixes paddle and pickup rules.
 - **Genre inspiration (internal only):** classic brick-breaker cabinets (e.g. Breakout / Arkanoid). Never use those names, characters, sprites, sounds or layouts player-facing.
 
+### Street Sniffer *(working name — pending Zachary's approval)*
+
+- **Status:** LIVE at `/street-sniffer` (Oct 18). Name lives in one constant (`NAME` in `src/games/street.js`) for an easy rename.
+- **Player-facing name (pending):** Street Sniffer
+- **Twist:** A Shiba sniffs kibble through an original city-block map while the cat gang (Kibble Chomp's shared personality module) hunts. Plays differently: avenues of traffic that dog and cats both dodge, one-way alleys both must obey, bins to hide in (cats lose track), and power-ups that never make cats edible (squeaky-toy lure, fire-hydrant splash, delivery-scooter dash). Inu Mode pockets power-ups (A) and adds $KIBBLE coins.
+- **Genre inspiration (internal only):** urban maze-chase / street-run genre. No source-game names, characters, sprites, sounds or layouts.
+- **Kibble Pay:** game id `street-sniffer` needs a `scoreGames` entry in kibble-pay before prize scores / Inu Score count (see the Oct 18 report).
+
 ## Build order
 
 1. Joystick toggle (in progress)
-2. Street Sniffer (queued #1)
+2. Street Sniffer (LIVE, working name pending approval)
 3. Paw-Fu Tower (queued #2)
 4. Bone Digger (queued #3)
 5. Pip's Big Bark (queued #4)
@@ -42,7 +50,7 @@ Mask Pup and the Inu fighter are logged only for now, not scheduled.
 
 ## Queued cabinets (all original)
 
-### 1. Street Sniffer *(working name — pending Zachary's approval)*
+### 1. Street Sniffer *(working name — pending Zachary's approval)* — ✅ LIVE (see Live cabinets)
 
 - **Player-facing name (pending):** Street Sniffer
 - **Twist:** A dog runs through maze-like city streets eating kibble and dodging cats. Keeps Kibble Chomp's cat personality system but must play clearly differently: street blocks, alleys, traffic/one-way lanes, bins to hide behind, new power-ups.

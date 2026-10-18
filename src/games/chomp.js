@@ -4,6 +4,7 @@
 // flips between hunting and wandering), timed house release, a late "dinner bell" rush, scared cats that flee.
 // Inu Mode adds Bark Stun + $KIBBLE coins.
 import { rng } from '../core/rng.js';
+import { personalityTarget } from '../core/cats.js';
 export const META = { id: 'kibble-chomp', title: 'KIBBLE CHOMP', color: '#f2c14e', blurb: 'Clear the maze of kibble. Four bear-market cats hunt you: one tracks your scent, one guards the bones, one flanks, one is moody. Power bones turn the hunt around.', controls: 'Arrows / WASD / D-pad to steer', inuMove: 'BARK STUN (A): freezes nearby cats for 2s, 8s cooldown. $KIBBLE coins (+500) appear twice a maze.', classicNote: 'Original Inu rules at classic difficulty.' };
 export const W = 224, H = 288, OY = 24, COLS = 28, ROWS = 31, TILE = 8;
 // Original Inu Arcade maze (v4): 28x31, mirrored halves, 240 kibble + 4 power bones, side tunnel on row 14, no dead ends.
@@ -129,15 +130,11 @@ function moveCat(s, c) {
   }
 }
 export function catTarget(s, c) {
-  const P = tileOf(s.pup), d = DIRS[s.pup.dir];
+  const P = tileOf(s.pup);
   if (c.eyes) return { x: 13, y: 11 };
   if (scatterMode(s) && !dinnerBell(s)) return BEDS[c.i]; // napping (the dinner bell wakes everyone)
-  if (c.i === 0) return s.trail.length > TRAIL_LAG ? s.trail[s.trail.length - 1 - TRAIL_LAG] : P; // Tracker: your scent ~1s ago
-  if (c.i === 1) { let best = null, bd = Infinity; for (const k of s.energizers) { const [x, y] = k.split(',').map(Number); const dd = (x - P.x) ** 2 + (y - P.y) ** 2; if (dd < bd) { bd = dd; best = { x, y }; } }
-    return best && bd > 9 ? best : P; } // Guard: camps the power bone nearest you, pounces once you are close to it
-  if (c.i === 2) return { x: P.x - d[1] * 5, y: P.y + d[0] * 5 }; // Flanker: 5 tiles off your right-hand side
-  if (Math.floor(s.roundF / (MOODY_SWAP * 60)) % 2 === 0) return P; // Moody: hunts...
-  return BEDS[(c.i + Math.floor(s.roundF / (MOODY_SWAP * 120))) % 4]; // ...then wanders between beds
+  const guards = [...s.energizers].map((k) => { const [x, y] = k.split(',').map(Number); return { x, y }; });
+  return personalityTarget(c.i, { P, dir: s.pup.dir, trail: s.trail, lag: TRAIL_LAG, guards, pounce: 3, flank: 5, beds: BEDS, roundF: s.roundF, swap: MOODY_SWAP }); // shared cat-gang system (src/core/cats.js)
 }
 function chooseDir(s, c) {
   const t = tileOf(c); const opts = ORDER.filter((d) => d !== OPP[c.dir] && !catWall(t.x + DIRS[d][0], t.y + DIRS[d][1], c.eyes));

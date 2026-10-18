@@ -7,7 +7,7 @@ export const TRAVEL = 40; // knob travel radius in CSS px
 export const BASE = 112; // stick base diameter in CSS px (sits inside the 172 px left gutter fitBox keeps clear)
 // Direction mapping per cabinet while playing: 4-way for maze/grid games, horizontal for paddle/shooter.
 // Menus (title, initials, results...) always use 4-way so up/down still pick modes and letters.
-export const JOY_MODES = { 'kibble-chomp': '4way', 'pup-crossing': '4way', 'bark-invaders': 'h', 'bone-breaker': 'h', lobby: '8way' };
+export const JOY_MODES = { 'kibble-chomp': '4way', 'pup-crossing': '4way', 'bark-invaders': 'h', 'bone-breaker': 'h', 'street-sniffer': '4way', lobby: '8way' };
 export const joyMode = (cabId, playing) => (cabId ? (playing ? JOY_MODES[cabId] || '4way' : '4way') : JOY_MODES.lobby);
 
 export function loadSettings(storage) { try { const v = JSON.parse(storage?.getItem(SETTINGS_KEY) || 'null'); return { joystick: v?.joystick === true }; } catch { return { joystick: false }; } }

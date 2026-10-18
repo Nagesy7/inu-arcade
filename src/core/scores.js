@@ -1,6 +1,6 @@
 // Leaderboards: per-game + combined Arcade board, filtered by day/week/month. Local storage now; server stub in /api/scores.
 // Prizes are awarded by RANK ONLY (skill). Free to play, no paid entry, no chance-based prizes.
-export const GAME_IDS = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'];
+export const GAME_IDS = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer'];
 export const MODE_SUFFIX = ['', '@inu', '@daily'];
 export const SCORES_VERSION = 2, SCORES_KEY = 'inuarcade.scores.v' + SCORES_VERSION; // v2 = remixed original cabinets; v1 (arcade-table) scores stay in their own key
 export const BOARD_KEYS = GAME_IDS.flatMap((g) => MODE_SUFFIX.map((m) => g + m));
@@ -50,7 +50,7 @@ export async function postScore(game, entry, base = '') { try { const r = await 
 // House demo scores so a fresh cabinet has something to beat. Flagged house: shown, never eligible for prizes.
 // House scores for the v2 (remixed) rules, scaled from the human-sim medians (scripts/human-sim.mjs): INU ~2x a typical
 // first-session run, PUP ~ typical, DOG ~ beginner. Bone Breaker classic tops out at MAX_SCORE (714) over 3 screens.
-export const HOUSE = { 'kibble-chomp': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bark-invaders': [['INU', 2500], ['PUP', 1200], ['DOG', 500]], 'pup-crossing': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bone-breaker': [['INU', 650], ['PUP', 400], ['DOG', 200]] };
+export const HOUSE = { 'kibble-chomp': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bark-invaders': [['INU', 2500], ['PUP', 1200], ['DOG', 500]], 'pup-crossing': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bone-breaker': [['INU', 650], ['PUP', 400], ['DOG', 200]], 'street-sniffer': [['INU', 4500], ['PUP', 2200], ['DOG', 900]] };
 export function seedHouse(db, now = Date.now()) { if (db._seeded) return db; db._seeded = 1;
   const H = HOUSE;
   for (const [g, list] of Object.entries(H)) for (const [name, score] of list) addScore(db, g, { name, score, at: now, house: true }); return db; }

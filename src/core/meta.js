@@ -44,6 +44,9 @@ export const ACHIEVEMENTS = [
   { id: 'cross-rescue', name: 'Good Samaritan', desc: 'Pup Crossing (Inu): rescue 3 puppies', tickets: 6, test: (r) => r.game === 'pup-crossing' && r.stats.rescued >= 3 },
   { id: 'brk-rally', name: 'Rally Pup', desc: 'Bone Breaker: 20 paddle hits in a row', tickets: 4, test: (r) => r.game === 'bone-breaker' && r.stats.maxRally >= 20 },
   { id: 'brk-boss', name: 'FUD Buster', desc: 'Bone Breaker (Inu): smash the FUD-bot boss brick', tickets: 5, test: (r) => r.game === 'bone-breaker' && r.stats.bosses >= 1 },
+  { id: 'snf-hide', name: 'Bin Ninja', desc: 'Street Sniffer: hide in 3 bins in one run', tickets: 3, test: (r) => r.game === 'street-sniffer' && r.stats.hides >= 3 },
+  { id: 'snf-soak', name: 'Hose Down', desc: 'Street Sniffer: soak 3 cats with hydrants in one run', tickets: 4, test: (r) => r.game === 'street-sniffer' && r.stats.soaked >= 3 },
+  { id: 'snf-clear', name: 'Block Party', desc: 'Street Sniffer: clear a city', tickets: 5, test: (r) => r.game === 'street-sniffer' && r.level >= 2 },
   { id: 'daily', name: 'Daily Grind', desc: 'Finish a Daily Challenge', tickets: 3, test: (r) => r.mode === 'daily' },
   { id: 'all-four', name: 'Arcade Rat', desc: 'Play all four cabinets', tickets: 5, test: (r, p) => ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'].every((g) => p.played?.[g]) },
 ];
