@@ -27,11 +27,12 @@ export const A = { db: S.seedHouse(scoreStore.load()), purse: load(PURSE_KEY, R.
 if (!DEMO) for (const g of Object.keys(A.purse.skins || {})) A.purse.skins[g] = A.purse.skins[g].filter((k) => k !== 'gold'); // burn skins come only from the wallet's server inventory
 setWallet(DEMO ? simWallet(LS) : pendingWallet()); A.wallet = wallet; A.mode = DEMO ? 'demo' : 'loading';
 // kibble-pay glue: real wallet + footer (Terms / Prize Rules). Demo (fake KIBBLE) only with ?demo=1.
-import('https://kibble-pay.vercel.app/inu-games.js').then(async (g) => { A.glue = g;
+import('./vendor/inu-games.js').then(async (g) => { A.glue = g;
   const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
   const pj = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
   g.mountHome?.({ url: () => V.returnUrl(verseIn()), onLeave: (url) => V.post('inu-arcade:exit', { cabinetId: A.cab?.id || 'arcade', reason: 'home', url }) }); // 🏠 Back to Inu Verse → allowlisted return= (verse.js); confirms + saves via globalThis.__inuHome
   if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v', JOY.SETTINGS_KEY], position: 'top-right',
+    playerName: () => A.profile?.name || '',
     progress: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return (p.plays || 0) * 10 + (p.bones || 0) + (p.tickets || 0) * 5; },
     label: (get) => { const p = pj(get('inuarcade.wallet.v1'), {}); return `${p.plays || 0} plays · ${p.bones || 0} bones · ${p.tickets || 0} tickets`; },
     onWallet: ({ address, tier }) => { A.holderTier = address ? tier : null; if (address) syncWallet().catch(() => {}); } });

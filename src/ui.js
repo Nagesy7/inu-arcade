@@ -67,7 +67,7 @@ export function showProfile(msg = '') {
   <input id="pf-wallet" placeholder="Wallet address" value="${esc(p.wallet || '')}"><button class="btn" id="pf-load">Load profile</button>
   <h3>Wallet</h3><p class="small">${A.wallet().simulated ? 'DEMO wallet (fake KIBBLE, ?demo=1)' : A.wallet().address ? 'Signed in: ' + esc(A.wallet().address) + '. Your scores post to the $KIBBLE prize board.' : 'Sign in with Phantom to post wallet-signed scores (free entry), keep burn skins on your wallet and load your Inu Verse Shiba automatically.'}</p>${!A.wallet().simulated && !A.wallet().address && A.kp ? '<button class="btn gold" id="pf-connect">Sign in with Phantom</button>' : ''}</div></div>`, 'profile');
   $('#pv').appendChild(avatarCanvas(p, 3));
-  if ($('#pf-connect')) $('#pf-connect').onclick = async () => { try { await A.wallet().connect(); await syncWallet(); showProfile('Signed in. Loaded your wallet Shiba and skins.'); } catch (e) { showProfile('Sign-in failed: ' + e.message); } };
+  if ($('#pf-connect')) $('#pf-connect').onclick = async () => { try { await A.wallet().connect(); await syncWallet(); try { A.walletUi?.resync?.(); } catch {} showProfile('Signed in. Loaded your wallet Shiba and skins.'); } catch (e) { showProfile('Sign-in failed: ' + e.message); } };
   $('#pf-name').onchange = (e) => { p.name = e.target.value.replace(/[<>]/g, '').slice(0, 20) || 'Shiba'; save(); };
   document.querySelectorAll('[data-coat]').forEach((b) => (b.onclick = () => { p.look.coat = b.dataset.coat; save(); showProfile(); }));
   document.querySelectorAll('[data-eq]').forEach((b) => (b.onclick = () => { const s = R.SHOP.find((x) => x.id === b.dataset.eq); p.outfit[s.slot] = p.outfit[s.slot]?.id === s.id ? null : s.item; save(); showProfile(); }));
