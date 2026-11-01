@@ -227,6 +227,7 @@ function finishRun() {
   const got = R.grant(A.purse, C.id, score); const ach = MET.evalAchievements(A.purse, { game: C.id, mode: C.gmode, score, level: C.s.level, stats: C.s.stats || {} });
   save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score, raw: C.s.score, mult: C.mod?.mult || 1, gmode: C.gmode, rank, drank, got, ach, newGhost, level: C.s.level };
   S.postScore(key, entry); showResults(C.id, C.result);
+  try { globalThis.InuProfile?.gameOver?.({ score }); } catch {} // guests: Hall of Fame / Kennel Chest prompt (kibble-pay /inu-profile.js)
   // wallet-signed score -> kibble-pay prize board (only when signed in with a real wallet)
   const w = wallet(); if (w?.submitScore && w.address) w.submitScore(C.id, score, Date.now() - (C.runStart || Date.now())).then((r) => note(r.ok ? 'Posted to the $KIBBLE prize board (wallet-signed).' : 'Prize board: ' + r.reason)).catch((e) => note('Prize board: ' + e.message));
   function note(m) { C.result.posted = m; const pn = document.getElementById('panel'); if (pn && !pn.hidden && pn.dataset.kind === 'results') document.getElementById('pbody').insertAdjacentHTML('beforeend', `<p class="small">${m.replace(/[<>&]/g, '')}</p>`); }
