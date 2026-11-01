@@ -1,7 +1,7 @@
 // Inu Arcade runtime: router, fixed-step loop, lobby hall, cabinet state machine (title/attract/play/over/initials/results).
 import { createInput } from './core/input.js';
 import { sfx, unlockAudio, isMuted, setMuted, setMusic, audioState } from './core/audio.js';
-import { fitBox } from './core/layout.js';
+import { gbcScale, gbcShell, GBC_SCREEN } from './core/layout.js';
 import * as JOY from './core/joystick.js';
 import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
@@ -47,16 +47,27 @@ export function save() { scoreStore.save(A.db); LS.setItem(PURSE_KEY, JSON.strin
 window.__arcade = A; A.audioState = audioState;
 
 // ---------- layout ----------
-function fit() { const top = isTouch ? 0 : 40, b = fitBox(innerWidth, innerHeight - top, cv.width, cv.height, isTouch);
-  cv.style.width = b.w + 'px'; cv.style.height = b.h + 'px'; $('#stage').style.top = top + 'px'; $('#stage').style.paddingLeft = b.off * 2 + 'px'; }
-// Keep the toolbar clear of kibble-pay's fixed Connect Wallet pill + 🏠 (top-right): under it on phones, left of it on desktop.
-function placeBar() { const host = document.getElementById('inu-wallet') || document.getElementById('inu-home'), bar = $('#bar');
-  const q = host?.offsetWidth ? host.getBoundingClientRect() : null;
-  if (!q || q.left < innerWidth / 2) { bar.style.top = ''; bar.style.right = ''; return; } // nothing docked top-right (e.g. ?demo=1: 🏠 alone sits top-left)
-  if (isTouch) { bar.style.right = ''; bar.style.top = Math.ceil(q.top + Math.min(q.height, 44) + 4) + 'px'; } else { bar.style.top = ''; bar.style.right = Math.ceil(innerWidth - q.left + 8) + 'px'; } }
-{ let ro = null, seen = null; const watch = () => { const host = document.getElementById('inu-wallet') || document.getElementById('inu-home'); if (host !== seen) { seen = host; ro?.disconnect(); if (host && 'ResizeObserver' in window) { ro = new ResizeObserver(placeBar); ro.observe(host); } } placeBar(); };
-  new MutationObserver(watch).observe(document.body, { childList: true }); addEventListener('resize', placeBar); watch(); }
-addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 120)); fit();
+// Portrait handheld: the shell (#gbc) is scaled to fit the viewport (minus safe areas, the wallet pill / legal footer when
+// they would sit over it, and the toolbar under it); the 10:9 screen box holds the canvas at a pixel-perfect scale.
+const safeProbe = document.createElement('div'); safeProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)'; document.body.appendChild(safeProbe);
+const LAND = matchMedia('(orientation:landscape) and (pointer:coarse) and (max-height:600px)');
+function fit() { const app = $('#app'), gbc = $('#gbc'), bar = $('#bar'), cs = getComputedStyle(safeProbe), px = (v) => parseFloat(v) || 0;
+  const ins = { t: px(cs.paddingTop), r: px(cs.paddingRight), b: px(cs.paddingBottom), l: px(cs.paddingLeft) }, vw = innerWidth, vh = innerHeight, GAP = 8;
+  const fixedEls = ['inu-wallet', 'inu-home', 'inu-legal'].map((id) => document.getElementById(id)).filter((e) => e && e.offsetWidth);
+  let rt = Math.max(6, ins.t), rb = Math.max(6, ins.b), gw = 0;
+  for (let it = 0; it < 3; it++) { const barH = bar.offsetHeight || 30; gw = gbcShell(vw - Math.max(6, ins.l) - Math.max(6, ins.r), vh - rt - rb - barH - GAP);
+    const span = Math.max(gw, bar.offsetWidth || 0), x0 = (vw - span) / 2 - 4, x1 = (vw + span) / 2 + 4; let nt = Math.max(6, ins.t), nb = Math.max(6, ins.b);
+    for (const e of fixedEls) { const q = e.getBoundingClientRect(); if (q.right < x0 || q.left > x1) continue; if (q.top < vh / 2) nt = Math.max(nt, Math.ceil(q.top + Math.min(q.height, 48) + 4)); else nb = Math.max(nb, Math.ceil(vh - q.top + 4)); }
+    if (nt === rt && nb === rb) break; rt = nt; rb = nb; }
+  app.style.setProperty('--rt', rt + 'px'); app.style.setProperty('--rb', rb + 'px'); gbc.style.setProperty('--u', gw / 100 + 'px'); bar.style.maxWidth = Math.max(gw, Math.min(vw - 12, 720)) + 'px';
+  const st = $('#stage'), bw = Math.floor(gw * GBC_SCREEN), bh = Math.floor(bw * 0.9); st.style.width = bw + 'px'; st.style.height = bh + 'px';
+  const b = gbcScale(bw - 2, bh - 2, cv.width, cv.height, devicePixelRatio || 1); cv.style.width = b.w + 'px'; cv.style.height = b.h + 'px'; A.fitInfo = { gw, bw, bh, ...b }; }
+// Forced portrait: try to lock (works in installed / fullscreen web apps), otherwise the #rotate overlay asks to turn upright.
+const lockPortrait = () => { try { const o = screen.orientation; if (o?.lock) o.lock('portrait').catch(() => {}); } catch {} };
+addEventListener('touchend', lockPortrait, { once: true, passive: true });
+{ let ro = null, seen = new Set(); const watch = () => { for (const id of ['inu-wallet', 'inu-home', 'inu-legal']) { const e = document.getElementById(id); if (e && !seen.has(e)) { seen.add(e); if ('ResizeObserver' in window) (ro ||= new ResizeObserver(() => fit())).observe(e); } } fit(); };
+  new MutationObserver(watch).observe(document.body, { childList: true }); addEventListener('load', watch); }
+addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 120)); visualViewport?.addEventListener?.('resize', fit); LAND.addEventListener?.('change', fit);
 
 // ---------- text helpers ----------
 const F = (px) => `${px}px "Press Start 2P", monospace`;
@@ -92,7 +103,10 @@ export const CABS = [
 const CW = 28, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
-function toLobby(push = true) { setRes(384, 216); document.body.classList.remove('twobtn', 'threebtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
+// The hall is 384 px wide; the handheld screen shows a 240x216 (10:9) window of it that follows the Shiba (A.lobbyCam).
+export const HALL_W = 384, VIEW_W = 240;
+export const lobbyCam = (x) => Math.round(Math.max(0, Math.min(HALL_W - VIEW_W, x - VIEW_W / 2)));
+function toLobby(push = true) { setRes(VIEW_W, 216); document.body.classList.remove('twobtn', 'threebtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
 function lobbyTargets() { return [...CABS.map((c) => ({ kind: 'cab', id: c.id, x: c.x + CW / 2, y: FLOOR_Y + 8, label: c.title })), { kind: 'prizes', x: COUNTER.x + COUNTER.w / 2, y: COUNTER.y - 10, label: 'PRIZE COUNTER' }, { kind: 'scores', x: BOARD.x + BOARD.w / 2, y: FLOOR_Y + 8, label: 'HI-SCORE BOARD' }]; }
 function nearTarget(L) { return lobbyTargets().find((t) => Math.abs(t.x - L.x) < 18 && Math.abs(t.y - L.y) < 16); }
 function activate(t) { if (!t) return; sfx('select'); if (t.kind === 'cab') go(t.id); else if (t.kind === 'prizes') showPrizes(); else if (t.kind === 'scores') showScores(); }
@@ -107,15 +121,12 @@ function updateLobby(dt, inp) {
 }
 function marqueeText() { return CABS.filter((c) => GAMES[c.id]).map((c) => { const b = S.board(A.db, c.id, 'all')[0]; return `${c.title} HI ${b ? b.name + ' ' + b.score : '---'}`; }).join('   ★   ') + '   ★   ARCADE CHAMP: ' + (S.arcadeBoard(A.db, 'daily')[0]?.name || '---') + '   ★   FREE PLAY · SKILL PRIZES ONLY   ★   '; }
 function drawLobby(now) {
-  const L = A.lobby;
+  const L = A.lobby, cam = A.lobbyCam = lobbyCam(L.x); ctx.save(); ctx.translate(-cam, 0);
   // floor + walls
   ctx.fillStyle = '#120c2a'; ctx.fillRect(0, 0, 384, 216);
   for (let y = FLOOR_Y; y < 216; y += 12) for (let x = 0; x < 384; x += 12) { ctx.fillStyle = ((x + y) / 12) % 2 ? '#241a4a' : '#1b1440'; ctx.fillRect(x, y, 12, 12); }
   ctx.fillStyle = '#2a1f55'; ctx.fillRect(0, 12, 384, FLOOR_Y - 12); ctx.fillStyle = '#3b2a6e'; for (let x = 0; x < 384; x += 24) ctx.fillRect(x, 14, 22, FLOOR_Y - 16);
   const glow = 0.5 + 0.5 * Math.sin(now * 2); ctx.fillStyle = `rgba(255,93,115,${0.5 + glow * 0.5})`; ctx.fillRect(0, FLOOR_Y - 3, 384, 2); ctx.fillStyle = '#4fc3e8'; ctx.fillRect(0, 22, 384, 1);
-  // marquee
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 384, 12); const mt = marqueeText(); ctx.font = F(8); const mw = ctx.measureText(mt).width; const off = (now * 40) % mw;
-  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 384, 12); ctx.clip(); for (let k = 0; k < 3; k++) text(mt, 4 - off + k * mw, 2, '#f2c14e', 8, 'left', false); ctx.restore();
   // cabinets
   for (const c of CABS) { const skin = (A.purse.skins[c.id] || []).includes('gold') ? 'gold' : (A.purse.skins[c.id] || []).includes('neon') ? 'neon' : null; drawCabinet(c, now, skin); }
   // hi-score board
@@ -130,8 +141,14 @@ function drawLobby(now) {
   const fr = L.walk ? Math.floor(L.walk * 8) % 4 : 0; drawInuAvatar(ctx, A.profile, Math.round(L.x), Math.round(L.y), { scale: 0.6, face: L.face, frame: fr, shadow: true });
   if (A.purse.owned.includes('trail-stars') && L.walk) { ctx.fillStyle = '#f2c14e'; for (let i = 0; i < 3; i++) ctx.fillRect(L.x - 6 + ((now * 37 + i * 5) % 12), L.y - 2 - ((now * 23 + i * 7) % 8), 1, 1); }
   ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#fbf1e0'; ctx.textAlign = 'center'; ctx.fillText(A.profile.name, L.x, L.y + 2); ctx.textAlign = 'left';
-  const n = nearTarget(L); const hint = n ? `${isTouch ? 'TAP A' : 'PRESS SPACE'}: ${n.label}` : isTouch ? 'TAP A CABINET TO PLAY' : 'ARROWS TO WALK · CLICK A CABINET';
-  text(hint, 192, 206, n ? '#7ef0ff' : '#8a7ac4', 8, 'center');
+  ctx.restore(); const VW = VIEW_W;
+  // marquee (screen space)
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 12); const mt = marqueeText(); ctx.font = F(8); const mw = ctx.measureText(mt).width; const off = (now * 40) % mw;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, VW, 12); ctx.clip(); for (let k = 0; k < 3; k++) text(mt, 4 - off + k * mw, 2, '#f2c14e', 8, 'left', false); ctx.restore();
+  // more hall off-screen: blinking edge arrows
+  if (Math.floor(now * 2) % 2) { ctx.fillStyle = '#f2c14e'; if (cam > 0) for (let i = 0; i < 4; i++) ctx.fillRect(3 + i, 58 - i, 1, 1 + i * 2); if (cam < HALL_W - VW) for (let i = 0; i < 4; i++) ctx.fillRect(VW - 4 - i, 58 - i, 1, 1 + i * 2); }
+  const n = nearTarget(L); const hint = n ? `${isTouch ? 'A' : 'SPACE'}: ${n.label}` : isTouch ? 'D-PAD WALK · TAP A CABINET' : 'ARROWS WALK · CLICK A CABINET';
+  text(hint, VW / 2, 206, n ? '#7ef0ff' : '#8a7ac4', 8, 'center', true, VW - 6);
 }
 function drawCabinet(c, now, skin) {
   const { x } = c, y = CY, body = skin === 'gold' ? '#c9a24a' : skin === 'neon' ? '#141428' : '#2b2150', edge = skin === 'gold' ? '#f2d070' : c.color;
@@ -262,7 +279,7 @@ function bloom() { if (!A.crt || !canFilter) return; const bw = cv.width >> 1, b
 // ---------- canvas pointer (tap/click) ----------
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * cv.width, y: ((e.clientY - r.top) / r.height) * cv.height }; }
 cv.addEventListener('pointerdown', (e) => { unlockAudio(); if (panelOpen()) return; const p = toCanvas(e);
-  if (A.scene === 'lobby') { const L = A.lobby; const c = CABS.find((c) => { const r = cabRect(c); return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h + 8; });
+  if (A.scene === 'lobby') { p.x += A.lobbyCam || 0; const L = A.lobby; const c = CABS.find((c) => { const r = cabRect(c); return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h + 8; });
     const tg = lobbyTargets(); let t = c ? tg.find((t) => t.id === c.id) : null;
     if (!t && p.x >= COUNTER.x - 4 && p.x <= COUNTER.x + COUNTER.w + 4 && p.y >= COUNTER.y - 32 && p.y <= COUNTER.y + COUNTER.h) t = tg.find((t) => t.kind === 'prizes');
     if (!t && p.x >= BOARD.x && p.y <= BOARD.y + BOARD.h) t = tg.find((t) => t.kind === 'scores');
@@ -282,13 +299,14 @@ function twoBtn(inp) { const n = A.scene === 'cab' && A.cab?.mode === 'play' ? A
 function frame(t) {
   const dt = snapDt(Math.min(0.1, (t - last) / 1000)); last = t; acc += dt; const now = t / 1000; let nSteps = 0;
   while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++; const inp = twoBtn(input.snapshot()); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
+  if (isTouch && LAND.matches && A.scene === 'cab' && A.cab.mode === 'play' && !A.cab.paused) { A.cab.paused = true; setMusic(false); } // forced portrait: sideways phone pauses
   (window.__stepHist ||= {})[nSteps] = (window.__stepHist[nSteps] || 0) + 1; // jitter probe
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
   if (A.scene === 'lobby') drawLobby(now); else if (A.scene === 'cab') drawCab(now);
   bloom();
   requestAnimationFrame(frame);
 }
-A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const setCrt = () => { document.body.classList.toggle('crt', A.crt); crtB.textContent = A.crt ? '📺 CRT' : '📺 off'; }; setCrt(); crtB.onclick = () => { A.crt = !A.crt; LS.setItem('inuarcade.crt', A.crt ? '1' : '0'); setCrt(); };
+A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const setCrt = () => { document.body.classList.toggle('crt', A.crt); crtB.innerHTML = A.crt ? '📺<span class="lbl"> CRT</span>' : '📺<span class="lbl"> off</span>'; }; setCrt(); crtB.onclick = () => { A.crt = !A.crt; LS.setItem('inuarcade.crt', A.crt ? '1' : '0'); setCrt(); };
 $('#b-ach').onclick = () => showAchievements();
 // Settings (⚙): optional virtual joystick, shared by every cabinet. Saved in localStorage + the wallet cloud save.
 { const sb = document.createElement('button'); sb.className = 'tb'; sb.id = 'b-settings'; sb.title = 'Settings'; sb.textContent = '⚙'; sb.setAttribute('aria-label', 'Settings');

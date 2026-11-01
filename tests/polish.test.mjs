@@ -37,3 +37,10 @@ test('remix: leaderboard + ghost storage keys bumped to v2 so old and new scores
   const store = S.createScoreStore(st); const db = store.load(); assert.ok(!(db['kibble-chomp'] || []).some((e) => e.name === 'OLD'), 'v1 scores are not loaded into v2 boards');
   const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'); assert.ok(main.includes("'inuarcade.ghost.v2.'"));
 });
+import { gbcScale, gbcShell } from '../src/core/layout.js';
+test('handheld: phone portrait cabinets are pixel-perfect (whole device pixels per game pixel)', () => {
+  for (const [cw, ch] of [[256, 256], [224, 256], [224, 288], [240, 216]]) { const b = gbcScale(323, 289, cw, ch, 3); assert.ok(b.exact, `${cw}x${ch}`); assert.equal(Math.round(b.s * 3), b.s * 3); assert.ok(b.w <= 323 && b.h <= 289); } });
+test('handheld: desktop keeps at least 1 CSS px per pixel exact; tiny phones fall back to an exact fit', () => {
+  const d = gbcScale(409, 366, 240, 216, 1); assert.ok(d.exact); assert.equal(d.s, 1);
+  const se = gbcScale(285, 256, 224, 288, 2); assert.ok(!se.exact && se.h <= 256 && se.h > 240); });
+test('handheld: shell fits width and height (172% tall)', () => { assert.equal(gbcShell(378, 2000), 378); assert.equal(gbcShell(1440, 860), Math.floor(860 / 1.72)); });

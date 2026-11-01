@@ -12,8 +12,9 @@ const tag = process.env.TAG || 'local';
   await p.keyboard.down('ArrowRight'); await p.waitForTimeout(500); await p.keyboard.up('ArrowRight'); let b = await st(); ok(b.L.x > a.L.x + 20, `desktop: arrow walks Shiba ${a.L.x | 0}->${b.L.x | 0}`);
   await p.keyboard.down('ArrowUp'); await p.waitForTimeout(900); await p.keyboard.up('ArrowUp'); await p.screenshot({ path: `proof/${tag}-desktop-lobby.png` });
   // walk to Kibble Chomp cabinet by clicking it
-  const box = await p.locator('#screen').boundingBox(); const sc = box.width / 384;
-  await p.mouse.click(box.x + (38 + 16) * sc, box.y + 60 * sc); for (let i = 0; i < 40 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
+  const box = await p.locator('#screen').boundingBox(); const sc = box.width / 240; // handheld: 240-wide window of the 384-wide hall (A.lobbyCam)
+  await p.evaluate(() => { window.__arcade.lobby.x = 60; }); await p.waitForTimeout(100); const cam = await p.evaluate(() => window.__arcade.lobbyCam);
+  await p.mouse.click(box.x + (35 + 14 - cam) * sc, box.y + 60 * sc); for (let i = 0; i < 40 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
   b = await st(); ok(b.scene === 'cab' && b.id === 'kibble-chomp' && b.path === '/kibble-chomp', `desktop: clicking cabinet walks over and opens it (${b.path})`);
   await p.keyboard.press('Escape'); await p.waitForTimeout(200); ok((await st()).scene === 'lobby', 'desktop: Esc returns to the hall');
   for (const g of GAMES) {
@@ -90,9 +91,9 @@ const tag = process.env.TAG || 'local';
   await p.goto(URL + '/'); await p.waitForTimeout(800); await p.screenshot({ path: `proof/${tag}-desktop-lobby-after.png` });
   ok(errs.length === 0, 'desktop: no page errors ' + errs.join(' | ')); await ctx.close();
 }
-// ---------------- iPhone landscape touch ----------------
+// ---------------- iPhone portrait touch (handheld shell) ----------------
 {
-  const ctx = await browser.newContext({ ...devices['iPhone 13 landscape'] }); const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p); const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
+  const ctx = await browser.newContext({ ...devices['iPhone 13'] }); const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p); const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
   const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((q, i) => ({ x: q.x, y: q.y, id: q.id ?? i })) });
   const c = async (k) => { const b = await p.locator(`#pad [data-k="${k}"]`).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
   const tap = async (q) => { await touch('touchStart', [q]); await p.waitForTimeout(60); await touch('touchEnd', []); };
@@ -103,11 +104,11 @@ const tag = process.env.TAG || 'local';
   for (const k of ['left', 'right', 'up', 'down', 'a', 'start', 'back']) { const q = await c(k); ok(q.x > 0 && q.y > 0 && q.x < vp.width && q.y < vp.height, `iphone: ${k} button on screen`); }
   let a = await st(); await hold('right', 500); let b = await st(); ok(b.L.x > a.L.x + 15, `iphone: d-pad walks Shiba ${a.L.x | 0}->${b.L.x | 0}`);
   await p.screenshot({ path: `proof/${tag}-iphone-lobby.png` });
-  const sc = cv.width / 384; await tap({ x: cv.x + (140 + 16) * sc, y: cv.y + 60 * sc }); for (let i = 0; i < 50 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
+  const sc = cv.width / 240, cam = await p.evaluate(() => window.__arcade.lobbyCam); await tap({ x: cv.x + (128 + 14 - cam) * sc, y: cv.y + 60 * sc }); for (let i = 0; i < 50 && (await st()).scene !== 'cab'; i++) await p.waitForTimeout(100);
   b = await st(); ok(b.id === 'bone-breaker', `iphone: tapping a cabinet opens it (${b.id})`); await tap(await c('back')); await p.waitForTimeout(200); ok((await st()).scene === 'lobby', 'iphone: BACK returns to hall');
   for (const g of GAMES) {
     await p.goto(URL + '/' + g); await p.waitForTimeout(700); await tap(await c('start')); await p.waitForTimeout(120); ok((await st()).mode === 'play', `iphone ${g}: START begins play`);
-    if (g === 'kibble-chomp') ok(await p.locator('#pad [data-k=b]').isHidden(), `iphone ${g}: one-button cabinet hides B`);
+    if (g === 'kibble-chomp') ok(await p.locator('#pad [data-k=b]').isVisible() && await p.locator('#pad [data-k=c]').isHidden(), `iphone ${g}: handheld always shows A + B (B = A on one-button cabinets), C hidden`);
     if (g === 'kibble-chomp') { await p.waitForTimeout(1600); a = await st(); await hold('right', 600); b = await st(); ok(b.p.x > a.p.x + 1, `iphone ${g}: d-pad steers (${a.p.x}->${b.p.x.toFixed(1)})`); }
     if (g === 'bark-invaders') { await p.waitForTimeout(1100); a = await st(); const R = await c('right'), A_ = await c('a'); await touch('touchStart', [R]); await p.waitForTimeout(300); await touch('touchMove', [R, { ...A_, id: 1 }]); await p.waitForTimeout(80); await touch('touchEnd', []); b = await st(); ok(b.p.x > a.p.x + 15 && b.shots >= 1, `iphone ${g}: hold right + tap A (multi-touch) moves and barks`); }
     if (g === 'pup-crossing') { await tap(await c('up')); await p.waitForTimeout(200); b = await st(); ok(b.row === 13, `iphone ${g}: tap up hops (row ${b.row})`); }
