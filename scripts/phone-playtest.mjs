@@ -1,6 +1,7 @@
+// Phone playtest (portrait 390x844 touch; the handheld shell is portrait-only). T=<prefix> JOY=1 URL=<site>
 import { chromium } from 'playwright';
 const U=process.env.URL||'http://localhost:8140', D='/workspace/inu-arcade-shots/', T=process.env.T||'after';
-const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:844,height:390},hasTouch:true,isMobile:true,deviceScaleFactor:2,...(process.env.STATE?{storageState:process.env.STATE}:{})});
+const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2,...(process.env.STATE?{storageState:process.env.STATE}:{})});
 const JOY=process.env.JOY==='1'; // JOY=1: run with Settings > Joystick controls ON (directions via the stick, multi-touch)
 const p=await ctx.newPage(); if(JOY) await p.addInitScript(()=>localStorage.setItem('inuarcade.settings.v1','{"joystick":true}'));
 const nav=async(url)=>{await p.goto(url);if(process.env.SHARE&&/vercel\.com|Login/.test(p.url()+await p.title())){await p.goto(process.env.SHARE);await p.goto(url);}}; // protected preview: SHARE link sets the bypass cookie

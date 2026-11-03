@@ -38,6 +38,7 @@ export function createJoystick(pad, mode = () => '4way') {
     keys(x, y) { const q = el.getBoundingClientRect(); cx = q.left + q.width / 2; cy = q.top + q.height / 2;
       let dx = x - cx, dy = y - cy; const d = stickDir(dx, dy, mode()); const m = Math.hypot(dx, dy); if (m > TRAVEL) { dx *= TRAVEL / m; dy *= TRAVEL / m; }
       knob.style.transform = `translate(${dx}px,${dy}px)`; el.classList.toggle('on', !!(d.x || d.y)); return d; },
+    show(ax, ay) { const m = Math.hypot(ax, ay) || 1, k = Math.min(1, m) / m; knob.style.transform = `translate(${ax * k * TRAVEL}px,${ay * k * TRAVEL}px)`; el.classList.add('on'); }, // gamepad left stick (-1..1 axes)
     release() { knob.style.transform = ''; el.classList.remove('on'); } };
   S.set(false); return S;
 }

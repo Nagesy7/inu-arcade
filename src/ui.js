@@ -1,5 +1,5 @@
 // DOM panels: results + share, leaderboards & prize pools, prize counter, profile/wallet, Inu Rescue link.
-import { A, GAMES, RESCUE_URL, save, go, startPlay, syncWallet } from './main.js';
+import { A, GAMES, RESCUE_URL, save, go, startPlay, syncWallet } from './main.js'; import * as EV from './core/daily.js';
 import * as S from './core/scores.js'; import * as R from './core/rewards.js'; import { sfx } from './core/audio.js'; import * as MET from './core/meta.js';
 import { avatarCanvas } from './vendor/inu-avatar.js'; import { normalizeProfile } from './vendor/profile-schema.js';
 const $ = (q) => document.querySelector(q), esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -15,6 +15,7 @@ export function shareUrl(id, score, gmode = 'classic') { const text = `🐕🕹�
 export function showResults(id, r) {
   openPanel(`<h2>${esc(title(id))}</h2><p><b style="color:var(--gold);font-size:18px">${r.score}</b> points · level ${r.level}</p>
   ${r.mult !== 1 ? `<p class="small">${r.raw} × ${r.mult} weekly modifier</p>` : ''}<p>${esc(MET.MODES[r.gmode].name)} · Rank <b>#${r.drank}</b> today · <b>#${r.rank}</b> all-time</p>${r.posted ? `<p class="small">${esc(r.posted)}</p>` : ''}<p>Earned <b>+${r.got.bones} Bones</b> and <b>+${r.got.tickets} prize tickets</b> 🎟</p>
+  ${r.event ? `<div class="note">★ <b>Daily Event complete!</b> ${esc(r.event.goal)}. ${r.event.bonus ? `<b>+${r.event.bonus} event Bones</b> are included above.` : 'No extra Bones this time: this run already hit the 60-per-run cap or today\'s 600 Bones cap.'} ${r.event.cosmetic ? `You unlocked the <b>${esc(r.event.cosmetic.name)}</b> cosmetic (equip it under 🐕 Me).` : r.event.count < EV.RIBBON_AFTER ? `${EV.RIBBON_AFTER - r.event.count} more event day${EV.RIBBON_AFTER - r.event.count > 1 ? 's' : ''} to the Event Ribbon cosmetic.` : ''}</div>` : ''}
   ${r.ach?.length ? `<div class="note">🏅 Achievement${r.ach.length > 1 ? 's' : ''}: ${r.ach.map((a) => `<b>${esc(a.name)}</b> (+${a.tickets} 🎟)`).join(', ')}</div>` : ''}${r.newGhost ? '<p class="small">👻 New personal best saved as your ghost. It will race you next time and play in attract mode.</p>' : ''}
   <div><a class="btn x2" id="r-share" href="${shareUrl(id, r.score, r.gmode)}" target="_blank" rel="noopener">Share on 𝕏</a><button class="btn" id="r-copy">Copy link</button></div>
   <div><button class="btn gold" id="r-again">Play again</button><button class="btn" id="r-scores">Leaderboards</button><button class="btn" id="r-prizes">Prize counter</button><button class="btn" id="r-hall">Back to hall</button></div>
@@ -58,7 +59,7 @@ export async function showPrizes(msg = '') {
 }
 const COATS = ['#e0802c', '#2a2a2a', '#f3e6cc', '#c9452a', '#8a5a3c', '#d9b38c'];
 export function showProfile(msg = '') {
-  const p = A.profile, owned = R.SHOP.filter((s) => s.slot && A.purse.owned.includes(s.id));
+  const p = A.profile, owned = [...R.SHOP, ...EV.EVENT_COSMETICS].filter((s) => s.slot && A.purse.owned.includes(s.id));
   openPanel(`<h2>Your Shiba</h2>${msg ? `<div class="note">${esc(msg)}</div>` : ''}<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"><div id="pv"></div><div style="flex:1;min-width:220px">
   <label class="small">Name</label><input id="pf-name" maxlength="20" value="${esc(p.name)}">
   <p class="small">Coat</p><div>${COATS.map((c) => `<button class="btn" data-coat="${c}" style="background:${c};width:28px;height:24px;${p.look.coat === c ? 'outline:2px solid #fff' : ''}"></button>`).join('')}</div>
@@ -70,7 +71,7 @@ export function showProfile(msg = '') {
   if ($('#pf-connect')) $('#pf-connect').onclick = async () => { try { await A.wallet().connect(); await syncWallet(); try { A.walletUi?.resync?.(); } catch {} showProfile('Signed in. Loaded your wallet Shiba and skins.'); } catch (e) { showProfile('Sign-in failed: ' + e.message); } };
   $('#pf-name').onchange = (e) => { p.name = e.target.value.replace(/[<>]/g, '').slice(0, 20) || 'Shiba'; save(); };
   document.querySelectorAll('[data-coat]').forEach((b) => (b.onclick = () => { p.look.coat = b.dataset.coat; save(); showProfile(); }));
-  document.querySelectorAll('[data-eq]').forEach((b) => (b.onclick = () => { const s = R.SHOP.find((x) => x.id === b.dataset.eq); p.outfit[s.slot] = p.outfit[s.slot]?.id === s.id ? null : s.item; save(); showProfile(); }));
+  document.querySelectorAll('[data-eq]').forEach((b) => (b.onclick = () => { const s = [...R.SHOP, ...EV.EVENT_COSMETICS].find((x) => x.id === b.dataset.eq); p.outfit[s.slot] = p.outfit[s.slot]?.id === s.id ? null : s.item; save(); showProfile(); }));
   $('#pf-load').onclick = async () => { const w = $('#pf-wallet').value.trim(); if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w)) return showProfile('That does not look like a Solana address.');
     try { const r = await fetch(`${KIBBLE_PAY}/api/profile?wallet=${encodeURIComponent(w)}`); const j = await r.json(); const keep = A.profile.outfit; A.profile = normalizeProfile(j.profile, w);
       for (const k of Object.keys(keep)) if (!A.profile.outfit[k] && keep[k]) A.profile.outfit[k] = keep[k]; save(); showProfile(j.exists ? 'Loaded your Inu Verse Shiba!' : 'No saved profile for that wallet yet, so you get the default Shiba.'); }
@@ -86,6 +87,12 @@ export function showSettings() {
   openPanel(`<h2>⚙ Settings</h2><label class="sw"><input type="checkbox" id="set-joy" role="switch" ${on ? 'checked' : ''}><span class="swt"></span> <b>Joystick controls</b></label>
   <p class="small">Off (default): the classic d-pad buttons. On: a thumb stick on the left (4-way in Kibble Chomp and Pup Crossing, left/right in Bark Invaders and Bone Breaker). A, START and BACK stay on the right. This setting applies to every cabinet and is saved on this device and to your wallet save when you are connected.</p>`, 'settings');
   $('#set-joy').onchange = (e) => { A.setJoystick(e.target.checked); sfx('blip'); };
+  $('#pbody').insertAdjacentHTML('beforeend', `<label class="sw"><input type="checkbox" id="set-lowfx" role="switch" ${A.fx.low ? 'checked' : ''}><span class="swt"></span> <b>Low FX</b></label>
+  <p class="small">Fewer wandering pups and particles in the hall and on title screens, no marquee bulb chase. ${A.reduced ? 'Your device asks for reduced motion, so ambient motion is already paused.' : 'Ambient motion also pauses automatically when your device asks for reduced motion.'}</p>
+  <label class="small" for="set-vol">Music &amp; ambience volume: <b id="set-vol-v">${Math.round(A.musicVolume() * 100)}%</b></label><input type="range" id="set-vol" min="0" max="100" step="5" value="${Math.round(A.musicVolume() * 100)}">
+  <p class="small">Sound effects stay at full level. 🔊 in the toolbar (or M) mutes everything. Nothing plays until you tap or press a key.</p>`);
+  $('#set-lowfx').onchange = (e) => { A.setLowFx(e.target.checked); sfx('blip'); };
+  $('#set-vol').oninput = (e) => { A.setMusicVolume(e.target.value / 100); $('#set-vol-v').textContent = e.target.value + '%'; };
 }
 export function showAchievements() { const got = A.purse.ach || {};
   openPanel(`<h2>Achievements</h2><p class="small">${Object.keys(got).length}/${MET.ACHIEVEMENTS.length} unlocked. Each pays a fixed number of prize tickets once.</p><div class="grid">${MET.ACHIEVEMENTS.map((a) => `<div class="card ach ${got[a.id] ? '' : 'locked'}"><div>${got[a.id] ? '🏅' : '🔒'}</div><div><b>${esc(a.name)}</b><br><span class="small">${esc(a.desc)}</span><br>🎟 ${a.tickets}</div></div>`).join('')}</div>`, 'ach'); }
@@ -102,4 +109,23 @@ async function fillServerBoard(game, period) {
       <table><tr><th>#</th><th>Wallet</th><th>${game === 'arcade' ? 'Combined' : 'Best'}</th></tr>${rows || '<tr><td colspan=3>No wallet-signed scores yet. Sign in under 🐕 Me and play!</td></tr>'}</table>
       <p class="small"><a href="https://kibble-pay.vercel.app/prize-rules.html" target="_blank" rel="noopener">Prize Rules</a>: skill only, free entry, 18+.</p>`;
   } catch (e) { if (el()) el().textContent = 'Prize board error: ' + e.message; }
+}
+
+// Today: the Daily Event (rules + progress) and the activity feed (real data only, with its source).
+const ago = (ms) => { const m = Math.floor(ms / 6e4); return m < 60 ? `${Math.max(1, m)}m ago` : m < 1440 ? `${Math.floor(m / 60)}h ago` : `${Math.floor(m / 1440)}d ago`; };
+export function showToday() {
+  const ev = A.todayEvent(), pr = EV.progress(A.purse, ev), f = A.feed, loc = A.localFeed(), left = EV.resetsIn(Date.now());
+  const live = f.status === 'live' ? `<table><tr><th>#</th><th>Cabinet</th><th>Wallet</th><th>Best</th></tr>${f.entries.map((e) => `<tr><td>${e.rank}</td><td>${esc(title(e.game))}</td><td>${esc(e.who)}</td><td>${e.score.toLocaleString('en-US')}</td></tr>`).join('')}</table>`
+    : `<p class="small">${f.status === 'loading' ? 'Checking the prize board…' : f.status === 'empty' ? 'No wallet-signed scores on the prize board this week yet. Sign in under 🐕 Me and be the first.' : 'Prize board unreachable right now (offline or timed out). Showing only this device\'s own runs.'}</p>`;
+  const local = loc.length ? `<table><tr><th>Who</th><th>Cabinet</th><th>Score</th><th>When</th></tr>${loc.map((e) => `<tr><td>${esc(e.who)}</td><td>${esc(title(e.game))}</td><td>${e.score.toLocaleString('en-US')}</td><td class="small">${ago(Date.now() - e.at)}</td></tr>`).join('')}</table>` : '<p class="small">No runs on this device in the last 7 days.</p>';
+  openPanel(`<h2>★ Today at Inu Arcade</h2>
+  <div class="card"><b>Daily Event · ${esc(ev.tierName)}</b><br><span style="color:var(--gold);font-size:15px">${esc(ev.goal)}</span><br>
+  Reward: <b>+${ev.bones} Bones</b> once today${pr.ribbon ? '' : `, and the <b>${esc(EV.RIBBON.name)}</b> cosmetic after ${EV.RIBBON_AFTER} event days (${pr.count}/${EV.RIBBON_AFTER})`}.<br>
+  ${pr.done ? '<b style="color:#5fd37a">✓ Done today.</b>' : 'Not done yet.'} <span class="small">New event in ${fmtT(left)} (midnight Sydney time).</span><br>
+  <button class="btn gold" id="td-go">Play ${esc(title(ev.game))}</button></div>
+  <p class="small">Same event for everyone, picked from the Sydney date. Free: no wallet, no entry fee, no wagers. Event Bones are added to that run's Bones and still count toward the normal caps (60 per run, 600 per day), so a run that already earns 60 gets no extra. ${ev.mode === 'inu' ? 'Inu Mode or Daily runs count.' : 'Classic runs only.'} Bones are free play currency: they can't be cashed out and are never $KIBBLE.</p>
+  <h3>Prize board this week</h3>${live}<p class="small">Source: kibble-pay public prize board (wallet-signed scores, ${esc(f.period || 'weekly')}), wallets shortened. Nothing here is simulated.</p>
+  <h3>This device</h3>${local}<p class="small">Your own recent runs on this device (initials). House demo scores are not shown.</p>`, 'today');
+  $('#td-go').onclick = () => { closePanel(); if (ev.mode !== 'classic') A.LS.setItem('inuarcade.mode', 'inu'); else A.LS.setItem('inuarcade.mode', 'classic'); go(ev.game); };
+  if (f.status !== 'live' && Date.now() - f.at > 20000) A.refreshFeed().then(() => { if (panelOpen() && $('#panel').dataset.kind === 'today') showToday(); });
 }

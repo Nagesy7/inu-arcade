@@ -164,4 +164,21 @@ const tag = process.env.TAG || 'local';
   ok(ex && ex.data.reason === 'home' && ex.data.cabinetId === 'shiba-scuffle' && ex.data.url === RET && bk && bk.data.url === RET && msgs.every((m) => m.origin === fo), `verse v2 framed: 🏠 posts inu-arcade:exit + inu:back-to-verse to the Verse (url ${ex?.data.url})`);
   ok(errs.length === 0, 'scuffle co-op + verse: no page errors ' + errs.join(' | ')); await ctx.close();
 }
+// ---------------- simulated gamepad (navigator.getGamepads mocked; full suite: scripts/gamepad-check.mjs) ----------------
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 } }); const errs = [];
+  await ctx.addInitScript(() => { const pads = [null]; const mk = (id) => ({ id, index: 0, connected: true, mapping: 'standard', buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })), axes: [0, 0, 0, 0] });
+    Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => pads.slice() }); const fire = (t, g) => { const e = new Event(t); Object.defineProperty(e, 'gamepad', { value: g }); dispatchEvent(e); };
+    window.__pad = { connect(id) { pads[0] = mk(id); fire('gamepadconnected', pads[0]); }, disconnect() { const g = pads[0]; pads[0] = null; g.connected = false; fire('gamepaddisconnected', g); }, btn(b, on) { pads[0].buttons[b] = { pressed: on, value: on ? 1 : 0 }; }, axes(x, y) { pads[0].axes = [x, y, 0, 0]; } }; });
+  const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); const g = () => p.evaluate(() => { const A = window.__arcade; return { scene: A.scene, mode: A.cab?.mode, x: A.lobby?.x, toast: document.querySelector('#gp-toast')?.innerText || '' }; });
+  const press = async (b) => { await p.evaluate((b) => window.__pad.btn(b, true), b); await p.waitForTimeout(90); await p.evaluate((b) => window.__pad.btn(b, false), b); await p.waitForTimeout(90); };
+  await p.goto(URL + '/'); await p.waitForTimeout(800); await p.evaluate(() => window.__pad.connect('DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)')); await p.waitForTimeout(300);
+  let a = await g(); ok(/PS controller connected/.test(a.toast) && /✕ A\/jump/.test(a.toast), `gamepad: connect toast (${a.toast.replace(/\n/g, ' / ')})`);
+  await p.evaluate(() => window.__pad.axes(1, 0)); await p.waitForTimeout(400); await p.evaluate(() => window.__pad.axes(0, 0)); let b = await g(); ok(b.x > a.x + 15, `gamepad: left stick walks the hall (${a.x | 0}->${b.x | 0})`);
+  await p.goto(URL + '/bone-breaker'); await p.waitForTimeout(700); await p.evaluate(() => window.__pad.connect('Xbox Wireless Controller')); await p.waitForTimeout(150);
+  await press(0); ok((await g()).mode === 'play', 'gamepad: A (south) starts a cabinet'); await press(8); ok((await g()).scene === 'lobby', 'gamepad: SELECT exits to the hall');
+  await p.evaluate(() => window.__pad.disconnect()); await p.waitForTimeout(200); ok(/disconnected/.test((await g()).toast), 'gamepad: disconnect toast');
+  a = await g(); await p.keyboard.down('ArrowRight'); await p.waitForTimeout(300); await p.keyboard.up('ArrowRight'); ok((await g()).x > a.x + 10, 'gamepad: keyboard unchanged after unplug');
+  ok(errs.length === 0, 'gamepad: no page errors ' + errs.join(' | ')); await ctx.close();
+}
 await browser.close(); console.log(fail ? `${fail} FAILED` : 'ALL PASS'); process.exit(fail ? 1 : 0);

@@ -52,17 +52,24 @@ SFX.mega = () => { tone(110, 880, 0.35, 'sawtooth', 0.09); noise(0.3, 0.1, 0.05,
 const BASS = [45, 45, 52, 45, 48, 48, 55, 48, 43, 43, 50, 43, 40, 40, 47, 52], ARP = [[57, 60, 64], [60, 64, 67], [55, 59, 62], [52, 56, 59]];
 const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
 let mus = null, route = null; // route: music notes go to the current track's bus
+// Music + ambience volume (0..1, Settings). SFX stay at full level; the 🔊 mute silences everything.
+let musVol = 0.7; try { const v = parseFloat(localStorage.getItem('inuarcade.musvol')); if (Number.isFinite(v)) musVol = Math.max(0, Math.min(1, v)); } catch {}
+export const musicVolume = () => musVol;
+export function setMusicVolume(v) { musVol = Math.max(0, Math.min(1, Number(v) || 0)); try { localStorage.setItem('inuarcade.musvol', String(musVol)); } catch {} if (mus?.bus && ac) mus.bus.gain.setTargetAtTime(musVol, ac.currentTime, 0.03); }
+export const musicTrack = () => mus?.track || null;
 export function setMusic(on, intensity = 0, track = 'arcade') {
   if (!on) { if (mus) { clearInterval(mus.id); mus.bus?.gain.setTargetAtTime(0, ac.currentTime, 0.02); mus = null; } return; } // stop: also silence the notes already queued ahead
   if (mus && mus.track !== track) setMusic(false);
-  if (!mus) { mus = { step: 0, next: 0, intensity, track, id: null, bus: ac ? ac.createGain() : null }; if (mus.bus) mus.bus.connect(master); mus.id = setInterval(tick, 25); }
+  if (!mus) { mus = { step: 0, next: 0, intensity, track, id: null, bus: ac ? ac.createGain() : null }; if (mus.bus) { mus.bus.gain.value = musVol; mus.bus.connect(master); } mus.id = setInterval(tick, 25); }
   mus.intensity = Math.max(0, Math.min(3, intensity));
 }
 function tick() {
   if (!ac || muted || !mus) return; const bpm = 118 + mus.intensity * 12, sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
-  if (!mus.bus) { mus.bus = ac.createGain(); mus.bus.connect(master); } route = mus.bus;
+  if (!mus.bus) { mus.bus = ac.createGain(); mus.bus.gain.value = musVol; mus.bus.connect(master); } route = mus.bus;
   if (mus.track === 'pip') return pipTick();
   if (mus.track === 'scuffle') return scuffleTick();
+  if (mus.track === 'hall') return hallTick();
+  if (mus.track.startsWith('attract:')) return attractTick(mus.track.slice(8));
   while (mus.next < ac.currentTime + 0.12) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, I = mus.intensity;
     tone(mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), mtof(BASS[i] - 12 + (bar === 3 ? 2 : 0)), sp * 0.8, 'triangle', 0.07, d);
     if (I >= 1 && i % 2 === 0) { const ch = ARP[bar]; tone(mtof(ch[(i / 2) % 3] + 12), mtof(ch[(i / 2) % 3] + 12), sp * 0.5, 'square', 0.025, d); }
@@ -125,3 +132,30 @@ SFX.rally = () => { seq([392, 523, 659, 784], 0.06, 'square', 0.05); tone(300, 6
 SFX.fight = () => { tone(260, 520, 0.12, 'square', 0.08); tone(520, 520, 0.2, 'square', 0.07, 0.12); noise(0.1, 0.05, 0.12, 2000); };
 SFX.roundwin = () => seq([659, 784, 988, 1319], 0.08, 'triangle', 0.08); SFX.roundlose = () => seq([392, 349, 294, 262], 0.1, 'triangle', 0.07);
 SFX.matchwin = () => seq([523, 659, 784, 1047, 784, 1047, 1319], 0.08, 'square', 0.06);
+
+// ---- ambience (original): soft hall lounge loop + per-cabinet attract loops. Quiet by design, routed through the music bus
+// (so the volume slider and 🔊 mute apply) and only ever heard after the first user gesture (no AudioContext before unlockAudio).
+const HALL_CH = [[57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 65], [52, 55, 59, 64]]; // Am7 Fmaj7 G7 Em7, slow and mellow
+function hallTick() { const sp = 60 / 84 / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
+  while (mus.next < ac.currentTime + 0.15) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, ch = HALL_CH[bar];
+    if (i === 0 || i === 10) for (const n of ch.slice(0, 3)) tone(mtof(n), mtof(n), sp * 3.2, 'triangle', 0.012, d); // soft pad stab
+    if (i % 4 === 0) tone(mtof(ch[0] - 24), mtof(ch[0] - 24), sp * 1.6, 'sine', 0.05, d); // round bass
+    if (i % 4 === 2) tone(mtof(ch[(i >> 2) % 4] - 12 + 7), mtof(ch[(i >> 2) % 4] - 12 + 7), sp * 0.8, 'sine', 0.018, d);
+    if (i % 2 === 1) noise(0.015, 0.006, d, 7000); // brushed hat
+    if (i === 6 && bar % 2) tone(mtof(ch[3] + 12), mtof(ch[3] + 12), sp * 2, 'triangle', 0.01, d); // twinkle
+    if (i === 12 && (mus.step >> 6) % 3 === 1) { seq_d([988, 1319], 0.06, d, 0.006); } // a distant cabinet coin chime now and then
+    if (i === 4 && (mus.step >> 4) % 4 === 3) noise(0.6, 0.004, d, 350); // crowd murmur swell
+    mus.step++; mus.next += sp; }
+  route = null; }
+function seq_d(fs, step, d, vol) { fs.forEach((f, k) => tone(f, f, step * 0.9, 'triangle', vol, d + k * step)); }
+// per-cabinet attract loops: same engine, cabinet-flavoured root, scale, tempo and lead voice
+const ATTRACT = { 'kibble-chomp': [57, [0, 3, 7, 10], 112, 'square'], 'bark-invaders': [50, [0, 7, 3, 5], 96, 'sawtooth'], 'pup-crossing': [60, [0, 4, 7, 9], 120, 'triangle'],
+  'bone-breaker': [55, [0, 7, 12, 4], 108, 'square'], 'street-sniffer': [53, [0, 3, 5, 10], 100, 'triangle'], 'paw-fu-tower': [52, [0, 3, 5, 7], 92, 'triangle'],
+  'bone-digger': [48, [0, 5, 7, 3], 88, 'sine'], 'pips-big-bark': [62, [0, 4, 7, 11], 126, 'square'], 'shiba-scuffle': [52, [0, 3, 7, 5], 116, 'sawtooth'] };
+function attractTick(id) { const [root, sc, bpm, wave] = ATTRACT[id] || ATTRACT['kibble-chomp'], sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
+  while (mus.next < ac.currentTime + 0.15) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, tr = [0, 5, 3, 7][bar];
+    if (i % 4 === 0) tone(mtof(root - 12 + tr), mtof(root - 12 + tr), sp * 1.8, 'triangle', 0.04, d);
+    if (i % 2 === 0) { const n = root + 12 + tr + sc[(i >> 1) % 4]; tone(mtof(n), mtof(n), sp * 0.6, wave, wave === 'sine' ? 0.02 : 0.008, d); }
+    if (i % 4 === 2) noise(0.02, 0.008, d, 6000);
+    mus.step++; mus.next += sp; }
+  route = null; }

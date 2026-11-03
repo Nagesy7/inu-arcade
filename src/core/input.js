@@ -3,6 +3,7 @@
 // Desktop local 2P (co-op cabinets that opt in): Comma/Period/Slash = P2 A/B/C; once P2 joins (setP2(true)) the arrows move P2 and P1 keeps WASD.
 const P2KEYS = { Comma: 'a', Period: 'b', Slash: 'c' }, P2ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', Space: 'a', KeyZ: 'a', KeyJ: 'a', KeyX: 'b', KeyK: 'b', KeyC: 'b', KeyV: 'c', KeyL: 'c', Enter: 'start', Escape: 'back' };
+const GP = (id) => typeof id === 'string' && id.startsWith('gp:'); // gamepad-held keys (see setPad), never released by touch routing
 export function createInput(root = document) {
   const held = new Set(), pressed = new Set(), touchHeld = new Map(); // pointerId -> key
   const down = (k) => { if (!held.has(k)) pressed.add(k); held.add(k); }, up = (k) => held.delete(k);
@@ -15,12 +16,14 @@ export function createInput(root = document) {
   const keyAt = (x, y) => document.elementFromPoint(x, y)?.closest?.('[data-k]')?.dataset.k;
   const refresh = () => { const want = new Set(touchHeld.values()); for (const k of ['left', 'right', 'up', 'down', 'a', 'b', 'c', 'start', 'back']) { const el = pad?.querySelectorAll(`[data-k="${k}"]`); const on = want.has(k); el?.forEach((e) => e.classList.toggle('on', on)); } };
   const setTouch = (id, k) => { const prev = touchHeld.get(id); if (prev === k) return; touchHeld.delete(id); if (prev && ![...touchHeld.values()].includes(prev)) up(prev); if (k) { touchHeld.set(id, k); down(k); } refresh(); };
-  const api = { joy: null }; const router = createTouchRouter({ setTouch, keyAt, ids: () => [...touchHeld.keys()], joy: () => api.joy });
+  const api = { joy: null }; const router = createTouchRouter({ setTouch, keyAt, ids: () => [...touchHeld.keys()].filter((id) => !GP(id)), joy: () => api.joy });
   // Touch events (not pointer) so sliding a finger across buttons retargets, and multi-touch works on iOS.
   const onT = (e) => { if (!e.target.closest?.('#pad')) return; e.preventDefault(); router.update([...e.touches].map((t) => ({ id: t.identifier, x: t.clientX, y: t.clientY }))); };
   for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(ev, onT, { passive: false });
   pad?.addEventListener('mousedown', (e) => { const k = e.target.closest('[data-k]')?.dataset.k; if (k) { setTouch('m', k); const u = () => { setTouch('m', null); removeEventListener('mouseup', u); }; addEventListener('mouseup', u); } });
-  return { setJoystick: (j) => { api.joy = j; }, router,
+  // Gamepad: keys = Set of shell keys the pad(s) hold right now. Held under 'gp:<key>' ids so keyboard, touch and pad mix freely.
+  const setPad = (keys) => { for (const k of ['left', 'right', 'up', 'down', 'a', 'b', 'c', 'start', 'back']) setTouch('gp:' + k, keys?.has(k) ? k : null); };
+  return { setJoystick: (j) => { api.joy = j; }, router, setPad,
     held, isDown: (k) => held.has(k), hit: (k) => pressed.has(k), any: () => pressed.size > 0,
     setP2(on) { if (p2.on === !!on) return; p2.on = !!on; p2.held.clear(); for (const k of ['left', 'right', 'up', 'down']) held.delete(k); },
     frame() { const p = new Set(pressed); pressed.clear(); p2.pressed.clear(); return p; }, // call once per tick, after game reads

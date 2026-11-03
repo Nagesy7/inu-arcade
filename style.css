@@ -101,3 +101,16 @@ body.touch #bar{gap:3px}body.touch .tb{min-width:32px;height:30px;padding:2px 3p
 @keyframes rot{0%,20%{transform:rotate(-90deg)}60%,100%{transform:rotate(0)}}
 @media (orientation:landscape) and (pointer:coarse) and (max-height:600px){#rotate{display:flex}}
 body.landscape-lock #rotate{display:flex}
+/* Gamepad connect / disconnect toast: sits over the top edge of the game screen (inside #stage), never over the wallet pill, 🏠, toolbar or pad */
+#gp-toast{position:absolute;left:50%;top:6%;transform:translate(-50%,-8px);width:max-content;max-width:92%;box-sizing:border-box;padding:5px 9px;border-radius:7px;
+  background:rgba(12,9,38,.94);border:1px solid #7ef0ff;color:#e9f7ff;font:600 11px/1.3 system-ui,sans-serif;text-align:center;
+  pointer-events:none;opacity:0;transition:opacity .2s,transform .2s;z-index:3}
+#gp-toast.show{opacity:1;transform:translate(-50%,0)}
+#gp-toast.off{border-color:#f2a14e}
+#gp-toast b{display:block;font-weight:700}
+#gp-toast small{display:block;margin-top:2px;font-size:10px;color:#bfe9ff;letter-spacing:.2px}
+#gp-toast .gp-ico{font-style:normal;letter-spacing:1px;color:#f2c14e}
+#gp-toast .gp-ps{color:#9fd0ff}
+#gp-toast .gp-xbox{color:#8fe08f}
+#panel .gp-focus:focus,#panel .gp-focus:focus-visible{outline:2px solid #f2c14e;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){#gp-toast{transition:none}}

@@ -1,11 +1,11 @@
 // Toolbar vs kibble-pay Connect Wallet / 🏠 overlap check. URL=<site> TAG=<prefix> node scripts/overlap-check.mjs
-// At desktop 1280x800 and phone landscape 667x375 / 750x342 (hall + every cabinet, joystick off and on for phones):
+// At desktop 1280x800 and phone portrait 375x667 / 390x844 (hall + every cabinet, joystick off and on for phones):
 // every toolbar button, the wallet button and 🏠 are each the top element at their own centre (visible + tappable),
 // none of them overlap each other, and none of them cover the playfield canvas. Screenshots -> /workspace/inu-arcade-shots/.
 import { chromium } from 'playwright';
 const U = process.env.URL || 'http://localhost:8140', D = '/workspace/inu-arcade-shots/', TAG = process.env.TAG || 'overlap';
 const fails = [], ok = (c, m) => { if (!c) { fails.push(m); console.log('FAIL ' + m); } else if (process.env.V) console.log('PASS ' + m); };
-const VPS = [['desktop', 1280, 800, false], ['667x375', 667, 375, true], ['750x342', 750, 342, true]];
+const VPS = [['desktop', 1280, 800, false], ['375x667', 375, 667, true], ['390x844', 390, 844, true]]; // portrait handheld (landscape phones: rotate overlay, checked below)
 const b = await chromium.launch(); let n = 0;
 for (const [name, w, h, touch] of VPS) for (const joy of touch ? [false, true] : [false]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch, deviceScaleFactor: touch ? 2 : 1 });
@@ -17,7 +17,8 @@ for (const [name, w, h, touch] of VPS) for (const joy of touch ? [false, true] :
       const items = [...document.querySelectorAll('#bar .tb')].map((e) => ['bar:' + e.id, e]).concat([['wallet', document.querySelector('#inu-wallet-btn')], ['home', document.querySelector('#inu-home')]]).filter(([, e]) => e && e.offsetWidth);
       const out = items.map(([k, e]) => { const q = R(e), top = document.elementFromPoint(q.x + q.w / 2, q.y + q.h / 2); return { k, ...q, top: !!top && (top === e || e.contains(top)) }; });
       const pads = [...document.querySelectorAll('#pad b, #joy')].filter((e) => e.offsetWidth && getComputedStyle(e).display !== 'none' && !e.hidden).map(R);
-      return { items: out, cv: R(document.querySelector('#screen')), pads, purse: R(document.querySelector('#purse')) }; });
+      const alive = ['#inu-wallet-btn', '#inu-home', '#bar'].map((q) => document.querySelector(q)).filter(Boolean).map(R); // hall bands live inside the canvas, so they can never sit under these
+      return { items: out, cv: R(document.querySelector('#screen')), pads, purse: R(document.querySelector('#purse')), alive }; });
     const X = (a, b2) => a.x < b2.x + b2.w - 0.5 && b2.x < a.x + a.w - 0.5 && a.y < b2.y + b2.h - 0.5 && b2.y < a.y + a.h - 0.5;
     const tag = `${name}${touch ? (joy ? ' joy' : ' pad') : ''} ${g}`;
     ok(r.items.some((i) => i.k === 'wallet') && r.items.some((i) => i.k === 'home'), `${tag}: Connect Wallet + 🏠 present`);
@@ -28,4 +29,8 @@ for (const [name, w, h, touch] of VPS) for (const joy of touch ? [false, true] :
   }
   await ctx.close();
 }
+// landscape phones: the portrait shell shows the rotate overlay over everything (incl. the new hall bands)
+for (const [w, h] of [[844, 390], [667, 375]]) { const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }); const p = await ctx.newPage();
+  await p.goto(U + '/'); await p.waitForTimeout(800); const r = await p.evaluate(() => { const e = document.querySelector('#rotate'); const q = e?.getBoundingClientRect(); return { vis: !!e && getComputedStyle(e).display !== 'none', w: q?.width, h: q?.height }; });
+  ok(r.vis && r.w >= w - 1 && r.h >= h - 1, `${w}x${h} landscape touch: rotate overlay covers the screen`); n++; await ctx.close(); }
 await b.close(); console.log(`${n} screens, ${fails.length ? fails.length + ' FAILED' : 'ALL PASS'}`); process.exit(fails.length ? 1 : 0);

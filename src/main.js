@@ -1,8 +1,9 @@
 // Inu Arcade runtime: router, fixed-step loop, lobby hall, cabinet state machine (title/attract/play/over/initials/results).
 import { createInput } from './core/input.js';
-import { sfx, unlockAudio, isMuted, setMuted, setMusic, audioState } from './core/audio.js';
+import { sfx, unlockAudio, isMuted, setMuted, setMusic, audioState, musicTrack, musicVolume, setMusicVolume } from './core/audio.js';
+import * as AMB from './core/ambient.js'; import * as EV from './core/daily.js'; import * as FEED from './core/feed.js';
 import { gbcScale, gbcShell, GBC_SCREEN } from './core/layout.js';
-import * as JOY from './core/joystick.js';
+import * as JOY from './core/joystick.js'; import * as GPAD from './core/gamepad.js';
 import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
 import * as S from './core/scores.js';
@@ -11,7 +12,7 @@ import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
 import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js'; import * as V from './core/verse.js'; import * as Scuffle from './games/shiba.js';
-import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings } from './ui.js';
+import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings, showToday } from './ui.js';
 
 export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip, 'shiba-scuffle': Scuffle };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
@@ -27,8 +28,11 @@ export const A = { db: S.seedHouse(scoreStore.load()), purse: load(PURSE_KEY, R.
 if (!DEMO) for (const g of Object.keys(A.purse.skins || {})) A.purse.skins[g] = A.purse.skins[g].filter((k) => k !== 'gold'); // burn skins come only from the wallet's server inventory
 setWallet(DEMO ? simWallet(LS) : pendingWallet()); A.wallet = wallet; A.mode = DEMO ? 'demo' : 'loading';
 // kibble-pay glue: real wallet + footer (Terms / Prize Rules). Demo (fake KIBBLE) only with ?demo=1.
-import('./vendor/inu-games.js').then(async (g) => { A.glue = g;
-  const K = await g.initKibble({ game: 'inu-arcade' }); A.mode = K.mode; g.mountFooter(K.mode);
+// Both the module import and initKibble are time-boxed: a hung kibble-pay falls back to 'offline' instead of 'loading' forever.
+export const KIBBLE_TIMEOUT_MS = Math.max(500, Math.min(30000, +new URLSearchParams(location.search).get('kptimeout') || 10000));
+FEED.withTimeout(import('./vendor/inu-games.js'), KIBBLE_TIMEOUT_MS, 'kibble-pay glue timeout').then(async (g) => { A.glue = g;
+  const K = await FEED.withTimeout(g.initKibble({ game: 'inu-arcade' }), KIBBLE_TIMEOUT_MS, 'kibble-pay timeout').catch((e) => ({ game: 'inu-arcade', mode: 'offline', kp: null, cfg: null, reason: e.message }));
+  A.mode = K.mode; A.kibbleReason = K.reason || ''; g.mountFooter(K.mode);
   const pj = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
   g.mountHome?.({ url: () => V.returnUrl(verseIn()), onLeave: (url) => V.post('inu-arcade:exit', { cabinetId: A.cab?.id || 'arcade', reason: 'home', url }) }); // 🏠 Back to Inu Verse → allowlisted return= (verse.js); confirms + saves via globalThis.__inuHome
   if (!DEMO) A.walletUi = g.mountWallet(K, { game: 'inu-arcade', keys: ['inuarcade.wallet.v1', 'inuarcade.profile.v1', 'inuarcade.initials', 'inuarcade.scores.v', JOY.SETTINGS_KEY], position: 'top-right',
@@ -45,6 +49,20 @@ export async function syncWallet() { const w = wallet(); if (!w?.address || w.si
 function load(k, d) { try { const v = JSON.parse(LS.getItem(k)); return v ?? d; } catch { return d; } }
 export function save() { scoreStore.save(A.db); LS.setItem(PURSE_KEY, JSON.stringify(A.purse)); LS.setItem('inuarcade.profile.v1', JSON.stringify(A.profile)); LS.setItem('inuarcade.initials', A.initials); refreshPurse(); }
 window.__arcade = A; A.audioState = audioState;
+
+// ---------- alive: ambient FX level, Daily Event, real activity feed ----------
+A.fx = AMB.loadFx(LS); const RM = matchMedia('(prefers-reduced-motion: reduce)'); A.reduced = RM.matches; RM.addEventListener?.('change', (e) => { A.reduced = e.matches; });
+const LOW_MEM = (navigator.deviceMemory || 8) <= 2;
+A.fxLevel = () => AMB.fxLevel({ low: A.fx.low, reduced: A.reduced, lowMem: LOW_MEM });
+A.setLowFx = (on) => { A.fx.low = !!on; AMB.saveFx(LS, A.fx); A.crowd = null; };
+A.musicVolume = musicVolume; A.setMusicVolume = setMusicVolume; A.musicTrack = musicTrack;
+let evCache = null; export function todayEvent() { const t = Date.now(); if (!evCache || t - evCache.t > 15000) evCache = { t, ev: EV.dailyEvent(t) }; return evCache.ev; }
+A.todayEvent = todayEvent; A.EV = EV;
+// Feed: kibble-pay public weekly prize board (real wallet-signed scores only); 4 s timeout; refreshed every 90 s while the hall is visible.
+A.feed = { status: 'loading', entries: [], at: 0, period: '' }; let feedBusy = false;
+export async function refreshFeed() { if (feedBusy) return A.feed; feedBusy = true; try { A.feed = await FEED.fetchFeed(); } catch { A.feed = { status: 'offline', entries: [], at: Date.now(), period: '' }; } finally { feedBusy = false; } return A.feed; }
+A.refreshFeed = refreshFeed; A.localFeed = () => FEED.localFeed(A.db);
+refreshFeed(); setInterval(() => { if (!document.hidden && A.scene === 'lobby' && Date.now() - A.feed.at > 85000) refreshFeed(); }, 15000);
 
 // ---------- layout ----------
 // Portrait handheld: the shell (#gbc) is scaled to fit the viewport (minus safe areas, the wallet pill / legal footer when
@@ -119,16 +137,24 @@ function updateLobby(dt, inp) {
     L.x = nx; L.y = ny; L.walk += dt; L.face = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up'; } else L.walk = 0;
   if (inp.pressed.has('a') || inp.pressed.has('start')) activate(nearTarget(L));
 }
-function marqueeText() { return CABS.filter((c) => GAMES[c.id]).map((c) => { const b = S.board(A.db, c.id, 'all')[0]; return `${c.title} HI ${b ? b.name + ' ' + b.score : '---'}`; }).join('   ★   ') + '   ★   ARCADE CHAMP: ' + (S.arcadeBoard(A.db, 'daily')[0]?.name || '---') + '   ★   FREE PLAY · SKILL PRIZES ONLY   ★   '; }
+function marqueeText() { return CABS.filter((c) => GAMES[c.id]).map((c) => { const b = S.board(A.db, c.id, 'all')[0]; return `${c.title} HI ${b ? b.name + ' ' + b.score : '---'}`; }).join('   ★   ') + '   ★   ARCADE CHAMP: ' + (S.arcadeBoard(A.db, 'daily')[0]?.name || '---') + '   ★   TODAY: ' + todayEvent().goal.toUpperCase() + '   ★   FREE PLAY · SKILL PRIZES ONLY   ★   '; }
+let hallBgCv = null; function hallBg() { if (hallBgCv) return hallBgCv; const c = hallBgCv = Object.assign(document.createElement('canvas'), { width: 384, height: 216 }), g = c.getContext('2d');
+  g.fillStyle = '#120c2a'; g.fillRect(0, 0, 384, 216);
+  for (let y = FLOOR_Y; y < 216; y += 12) for (let x = 0; x < 384; x += 12) { g.fillStyle = ((x + y) / 12) % 2 ? '#241a4a' : '#1b1440'; g.fillRect(x, y, 12, 12); }
+  g.fillStyle = '#2a1f55'; g.fillRect(0, 12, 384, FLOOR_Y - 12); g.fillStyle = '#3b2a6e'; for (let x = 0; x < 384; x += 24) g.fillRect(x, 14, 22, FLOOR_Y - 16); return c; }
+// Marquee: text rebuilt every 2 s (it reads every board) and pre-rendered to a strip; each frame just blits the visible slice.
+let mq = null; function marquee() { const t = Date.now(); if (mq && t - mq.t < 2000) return mq; const txt = marqueeText(); if (mq && mq.txt === txt) { mq.t = t; return mq; }
+  const m = ctx.font; ctx.font = F(8); const w = Math.ceil(ctx.measureText(txt).width) + 1; ctx.font = m; const c = Object.assign(document.createElement('canvas'), { width: w, height: 12 }), g = c.getContext('2d');
+  g.font = F(8); g.textBaseline = 'top'; g.fillStyle = '#f2c14e'; g.fillText(txt, 0, 2); return (mq = { t, txt, c, w }); }
 function drawLobby(now) {
   const L = A.lobby, cam = A.lobbyCam = lobbyCam(L.x); ctx.save(); ctx.translate(-cam, 0);
   // floor + walls
-  ctx.fillStyle = '#120c2a'; ctx.fillRect(0, 0, 384, 216);
-  for (let y = FLOOR_Y; y < 216; y += 12) for (let x = 0; x < 384; x += 12) { ctx.fillStyle = ((x + y) / 12) % 2 ? '#241a4a' : '#1b1440'; ctx.fillRect(x, y, 12, 12); }
-  ctx.fillStyle = '#2a1f55'; ctx.fillRect(0, 12, 384, FLOOR_Y - 12); ctx.fillStyle = '#3b2a6e'; for (let x = 0; x < 384; x += 24) ctx.fillRect(x, 14, 22, FLOOR_Y - 16);
+  ctx.drawImage(hallBg(), 0, 0); // static floor + wall, pre-rendered once (was ~350 fillRects a frame)
   const glow = 0.5 + 0.5 * Math.sin(now * 2); ctx.fillStyle = `rgba(255,93,115,${0.5 + glow * 0.5})`; ctx.fillRect(0, FLOOR_Y - 3, 384, 2); ctx.fillStyle = '#4fc3e8'; ctx.fillRect(0, 22, 384, 1);
+  const lvl = A.fxLevel(), ev = todayEvent(); AMB.drawMotes(ctx, now, lvl);
   // cabinets
-  for (const c of CABS) { const skin = (A.purse.skins[c.id] || []).includes('gold') ? 'gold' : (A.purse.skins[c.id] || []).includes('neon') ? 'neon' : null; drawCabinet(c, now, skin); }
+  for (const c of CABS) { const skin = (A.purse.skins[c.id] || []).includes('gold') ? 'gold' : (A.purse.skins[c.id] || []).includes('neon') ? 'neon' : null; drawCabinet(c, now, skin); AMB.drawBulbs(ctx, c.x, CY, CW, now + c.x * 0.37, c.color, lvl);
+    if (c.id === ev.game) { ctx.globalAlpha = lvl === 'full' ? 0.45 + 0.35 * Math.sin(now * 4) : 0.7; ctx.strokeStyle = '#f2c14e'; ctx.lineWidth = 1; ctx.strokeRect(c.x - 1.5, CY - 3.5, CW + 3, CH + 5); ctx.globalAlpha = 1; AMB.drawEventStar(ctx, c.x + CW / 2, 25, now, lvl); } }
   // hi-score board
   ctx.fillStyle = '#000'; ctx.fillRect(BOARD.x, BOARD.y, BOARD.w, BOARD.h); ctx.strokeStyle = '#f2c14e'; ctx.lineWidth = 2; ctx.strokeRect(BOARD.x + 1, BOARD.y + 1, BOARD.w - 2, BOARD.h - 2);
   text('ARCADE', BOARD.x + BOARD.w / 2, BOARD.y + 4, '#f2c14e', 8, 'center', false); ctx.font = '8px Silkscreen, monospace';
@@ -137,19 +163,39 @@ function drawLobby(now) {
   const C = COUNTER; ctx.fillStyle = '#7a4a22'; ctx.fillRect(C.x, C.y, C.w, C.h); ctx.fillStyle = '#a06a32'; ctx.fillRect(C.x, C.y, C.w, 5); ctx.fillStyle = '#5fd37a'; ctx.fillRect(C.x - 2, C.y - 30, C.w + 4, 12);
   text('PRIZES', C.x + C.w / 2, C.y - 28, '#1a1424', 8, 'center', false); for (let i = 0; i < 4; i++) { ctx.fillStyle = ['#ff5d73', '#f2c14e', '#4fc3e8', '#9b59d6'][i]; ctx.fillRect(C.x + 6 + i * 15, C.y - 13, 9, 9); }
   PIX.blitC(ctx, PIX.sprite('ticket', ['tttttt', 't.tt.t', 'tttttt'], { t: '#ff5d73' }), C.x + C.w / 2, C.y + 20, 2);
+  // idle crowd of pups (cosmetic; wanders the floor, gathers and cheers at the Daily Event cabinet)
+  stepCrowd(now, lvl, ev); AMB.drawCrowd(ctx, A.crowd, now, PIX, lvl);
   // player
   const fr = L.walk ? Math.floor(L.walk * 8) % 4 : 0; drawInuAvatar(ctx, A.profile, Math.round(L.x), Math.round(L.y), { scale: 0.6, face: L.face, frame: fr, shadow: true });
   if (A.purse.owned.includes('trail-stars') && L.walk) { ctx.fillStyle = '#f2c14e'; for (let i = 0; i < 3; i++) ctx.fillRect(L.x - 6 + ((now * 37 + i * 5) % 12), L.y - 2 - ((now * 23 + i * 7) % 8), 1, 1); }
   ctx.font = '8px Silkscreen, monospace'; ctx.fillStyle = '#fbf1e0'; ctx.textAlign = 'center'; ctx.fillText(A.profile.name, L.x, L.y + 2); ctx.textAlign = 'left';
   ctx.restore(); const VW = VIEW_W;
   // marquee (screen space)
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 12); const mt = marqueeText(); ctx.font = F(8); const mw = ctx.measureText(mt).width; const off = (now * 40) % mw;
-  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, VW, 12); ctx.clip(); for (let k = 0; k < 3; k++) text(mt, 4 - off + k * mw, 2, '#f2c14e', 8, 'left', false); ctx.restore();
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, 12); const M = marquee(), mw = M.w, off = Math.floor((now * 40) % mw);
+  for (let x = 4 - off; x < VW; x += mw) { const sx = Math.max(0, -x), dw = Math.min(mw - sx, VW - Math.max(0, x)); if (dw > 0) ctx.drawImage(M.c, sx, 0, dw, 12, Math.max(0, x), 0, dw, 12); }
   // more hall off-screen: blinking edge arrows
   if (Math.floor(now * 2) % 2) { ctx.fillStyle = '#f2c14e'; if (cam > 0) for (let i = 0; i < 4; i++) ctx.fillRect(3 + i, 58 - i, 1, 1 + i * 2); if (cam < HALL_W - VW) for (let i = 0; i < 4; i++) ctx.fillRect(VW - 4 - i, 58 - i, 1, 1 + i * 2); }
+  drawAliveBands(now, ev);
   const n = nearTarget(L); const hint = n ? `${isTouch ? 'A' : 'SPACE'}: ${n.label}` : isTouch ? 'D-PAD WALK · TAP A CABINET' : 'ARROWS WALK · CLICK A CABINET';
   text(hint, VW / 2, 206, n ? '#7ef0ff' : '#8a7ac4', 8, 'center', true, VW - 6);
 }
+const CROWD_FLOOR = { x0: 12, x1: 296, y0: FLOOR_Y + 12, y1: 178 };
+function stepCrowd(now, lvl, ev) { const dt = Math.min(0.1, Math.max(0, now - (A.crowdT ?? now))); A.crowdT = now;
+  const spots = CABS.map((c) => ({ id: c.id, x: c.x + CW / 2 })); if (!A.crowd || A.crowd.lvl !== lvl) { A.crowd = AMB.createCrowd(AMB.crowdSize(lvl), CROWD_FLOOR, spots); A.crowd.lvl = lvl; }
+  A.cheer = Math.max(0, (A.cheer || 0) - dt); AMB.updateCrowd(A.crowd, dt, { floor: CROWD_FLOOR, spots, block: COUNTER, lvl, hot: ev.game, cheer: A.cheer }); }
+// Hall info bands (screen space): Daily Event under the marquee, activity feed above the hint line. Tap either: Today panel.
+export const BAND_TOP = { y: 12, h: 10 }, BAND_FEED = { y: 193, h: 11 };
+let flCache = null; export function feedLines() { const f = A.feed, t = Date.now(); if (flCache && flCache.f === f && t - flCache.t < 2000) return flCache.out; const out = [];
+  if (f.status === 'live') for (const e of f.entries) out.push({ t: `PRIZE BOARD #${e.rank} ${EV.NAMES[e.game]} ${e.who} ${e.score.toLocaleString('en-US')}`, c: '#7ef0ff' });
+  else out.push({ t: f.status === 'loading' ? 'PRIZE BOARD: CHECKING…' : f.status === 'empty' ? 'PRIZE BOARD: NO WALLET SCORES THIS WEEK YET' : 'PRIZE BOARD OFFLINE · LOCAL SCORES ONLY', c: '#8a7ac4' });
+  for (const e of A.localFeed().slice(0, 4)) out.push({ t: `THIS DEVICE: ${e.who} ${e.score.toLocaleString('en-US')} ${EV.NAMES[e.game]}`, c: '#c8bce8' });
+  flCache = { f, t, out }; return out; }
+function drawAliveBands(now, ev) { const VW = VIEW_W, done = EV.doneToday(A.purse, ev);
+  ctx.fillStyle = '#000000b0'; ctx.fillRect(0, BAND_TOP.y, VW, BAND_TOP.h); ctx.font = '8px Silkscreen, monospace'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#f2c14e'; ctx.fillText(done ? '✓' : '★', 3, BAND_TOP.y + 1); ctx.fillStyle = done ? '#5fd37a' : '#fbf1e0';
+  ctx.fillText(done ? `EVENT DONE · NEW ONE AT MIDNIGHT SYDNEY` : `TODAY: ${ev.short} = +${ev.bones} BONES`, 11, BAND_TOP.y + 1, VW - 14);
+  const L = feedLines(), k = A.reduced ? 0 : Math.floor(now / 3.5) % L.length, l = L[k] || L[0];
+  ctx.fillStyle = '#000000a0'; ctx.fillRect(0, BAND_FEED.y, VW, BAND_FEED.h); ctx.fillStyle = l.c; ctx.textAlign = 'center'; ctx.fillText(l.t, VW / 2, BAND_FEED.y + 2, VW - 6); ctx.textAlign = 'left'; }
 function drawCabinet(c, now, skin) {
   const { x } = c, y = CY, body = skin === 'gold' ? '#c9a24a' : skin === 'neon' ? '#141428' : '#2b2150', edge = skin === 'gold' ? '#f2d070' : c.color;
   ctx.fillStyle = '#00000066'; ctx.fillRect(x + 2, y + CH, CW, 5);
@@ -223,9 +269,12 @@ function finishRun() {
   const C = A.cab, key = modeKey(C), score = C.final; A.initials = C.ini.join(''); const entry = S.addScore(A.db, key, { name: A.initials, score, wallet: wallet().simulated ? null : wallet().address });
   const all = S.board(A.db, key, 'all', Date.now(), 100), day = S.board(A.db, key, 'daily', Date.now(), 100);
   const rank = all.findIndex((e) => e.name === entry.name) + 1, drank = day.findIndex((e) => e.name === entry.name) + 1;
-  const prev = loadGhost(C); let newGhost = false; if (!prev || score > (prev.score || 0)) { try { LS.setItem(ghostKey(C), JSON.stringify({ seed: C.seed, mode: C.gmode, mod: C.mod, score, rle: MET.encode(C.masks), at: Date.now() })); newGhost = true; } catch {} }
-  const got = R.grant(A.purse, C.id, score); const ach = MET.evalAchievements(A.purse, { game: C.id, mode: C.gmode, score, level: C.s.level, stats: C.s.stats || {} });
-  save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score, raw: C.s.score, mult: C.mod?.mult || 1, gmode: C.gmode, rank, drank, got, ach, newGhost, level: C.s.level };
+  const prev = loadGhost(C); let newGhost = false; if (!prev || score > (prev.score || 0)) { try { LS.setItem(ghostKey(C), JSON.stringify({ seed: C.seed, mode: C.gmode, mod: C.mod, score, rle: MET.encode(C.masks), at: Date.now() })); newGhost = true; C.hasGhost = null; } catch {} }
+  const ev = todayEvent(), hit = EV.qualifies(A.purse, ev, { game: C.id, mode: C.gmode, score }); // Daily Event: Bones bonus inside the run + day caps
+  const got = R.grant(A.purse, C.id, score, new Date(), hit ? ev.bones : 0); let evr = null;
+  if (hit) { evr = EV.markDone(A.purse, ev); evr.bonus = got.bonus; evr.goal = ev.goal; A.cheer = 4; if (evr.cosmetic) A.profile.cosmetics = [...new Set([...(A.profile.cosmetics || []), evr.cosmetic.id])]; }
+  const ach = MET.evalAchievements(A.purse, { game: C.id, mode: C.gmode, score, level: C.s.level, stats: C.s.stats || {} });
+  save(); sfx('ticket'); C.mode = 'results'; C.t = 0; C.result = { score, raw: C.s.score, mult: C.mod?.mult || 1, gmode: C.gmode, rank, drank, got, ach, newGhost, level: C.s.level, event: evr };
   S.postScore(key, entry); showResults(C.id, C.result);
   try { globalThis.InuProfile?.gameOver?.({ score }); } catch {} // guests: Hall of Fame / Kennel Chest prompt (kibble-pay /inu-profile.js)
   // wallet-signed score -> kibble-pay prize board (only when signed in with a real wallet)
@@ -243,7 +292,8 @@ function drawCab(now) {
   const C = A.cab, G = C.G, M = G.META, W = G.W, H = G.H, X = W / 2;
   if (C.mode === 'title') {
     const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#07051a'); g.addColorStop(1, '#170828'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = '#25124a'; ctx.lineWidth = 1; for (let i = 0; i < 12; i++) { const y = H - 70 + i * i * 0.5 + ((now * 8) % 6); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); } for (let i = -8; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(X + i * 6, H - 70); ctx.lineTo(X + i * 30, H); ctx.stroke(); }
+    ctx.strokeStyle = '#25124a'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 12; i++) { const y = H - 70 + i * i * 0.5 + ((now * 8) % 6); ctx.moveTo(0, y); ctx.lineTo(W, y); } for (let i = -8; i <= 8; i++) { ctx.moveTo(X + i * 6, H - 70); ctx.lineTo(X + i * 30, H); } ctx.stroke(); // one path, one stroke
+    AMB.drawTitleAmbient(ctx, C.id, W, H, now, A.fxLevel());
     const skins = A.purse.skins[C.id] || []; if (skins.length) { ctx.strokeStyle = skins.includes('gold') ? '#f2d070' : M.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, W - 2, H - 2); }
     const words = M.title.split(' '); words.forEach((w, i) => { text(w, X + 1, 14 + i * 20, '#000', 16, 'center', false); text(w, X, 13 + i * 20, M.color, 16, 'center', false); });
     let y = 58; wrap(M.blurb, 40).forEach((l) => { sText(l, X, y, '#c8bce8'); y += 9; }); y += 4;
@@ -254,8 +304,10 @@ function drawCab(now) {
     y += 6; text('TOP PUPS', X, y, '#f2c14e', 8, 'center'); y += 12;
     S.board(A.db, modeKey(C), C.gmode === 'daily' ? 'daily' : 'all', Date.now(), 5).forEach((e, i) => { text(`${i + 1} ${e.name} ${String(e.score).padStart(6, ' ')}`, X, y, i ? '#fbf1e0' : '#7ef0ff', 8, 'center'); y += 11; });
     if (Math.floor(now * 2) % 2) text(isTouch ? 'PRESS START' : 'PRESS SPACE', X, H - 48, '#ff5d73', 8, 'center');
-    sText('◀ ▶ CHANGE MODE' + (isTouch ? '' : ' · ESC: HALL'), X, H - 36, '#8a7ac4'); if (loadGhost(C)) sText('Your best run races you as a ghost', X, H - 27, '#8a7ac4');
-    const sp = R.SPONSORS[C.id]; sText(sp ? `SPONSOR: ${sp.name}` : 'FREE PLAY · SKILL PRIZES ONLY', X, H - 14, '#5a4a8a');
+    sText('◀ ▶ CHANGE MODE' + (isTouch ? '' : ' · ESC: HALL'), X, H - 36, '#8a7ac4'); if ((C.hasGhost ??= { k: modeKey(C), v: !!loadGhost(C) }).k !== modeKey(C) ? (C.hasGhost = { k: modeKey(C), v: !!loadGhost(C) }).v : C.hasGhost.v) sText('Your best run races you as a ghost', X, H - 27, '#8a7ac4');
+    const sp = R.SPONSORS[C.id], ev = todayEvent(), mine = ev.game === C.id, alt = A.reduced ? mine : Math.floor(now / 3) % 2 === 1;
+    if (alt) sText(mine ? (EV.doneToday(A.purse, ev) ? '✓ TODAY\'S EVENT DONE · NEW ONE TOMORROW' : `★ TODAY'S EVENT: ${ev.mode === 'inu' ? 'INU' : 'CLASSIC'} ${ev.target.toLocaleString('en-US')}+ = +${ev.bones} BONES`) : `TODAY'S EVENT: ${ev.name}`, X, H - 14, mine ? '#f2c14e' : '#8a7ac4');
+    else sText(sp ? `SPONSOR: ${sp.name}` : 'FREE PLAY · SKILL PRIZES ONLY', X, H - 14, '#5a4a8a');
     return;
   }
   const sh = C.s.shake > 0 && C.mode === 'play' ? C.s.shake * 8 : 0; ctx.save(); if (sh) ctx.translate(Math.round((Math.random() - 0.5) * sh), Math.round((Math.random() - 0.5) * sh));
@@ -271,7 +323,7 @@ function drawCab(now) {
   if (C.mode === 'initials') { centerBox(W, H / 2 - 56, 112); text('NEW SCORE', X, H / 2 - 48, '#f2c14e', 8, 'center'); text(String(C.final), X, H / 2 - 36, '#fbf1e0', 8, 'center'); text('YOUR INITIALS', X, H / 2 - 22, '#fbf1e0', 8, 'center');
     C.ini.forEach((ch, i) => { const x = X - 30 + i * 24; if (i === C.cur && Math.floor(now * 4) % 2) { ctx.fillStyle = M.color; ctx.fillRect(x - 2, H / 2 + 12, 20, 2); } text(ch, x, H / 2 - 6, i === C.cur ? M.color : '#fbf1e0', 16); });
     sText('UP/DOWN letter · A next', X, H / 2 + 20, '#8a7ac4'); sText(`${MET.MODES[C.gmode].name} boards`, X, H / 2 + 30, '#8a7ac4'); }
-  if (C.mode === 'results') { centerBox(W, H / 2 - 30, 60); text(`${C.result.score} PTS`, X, H / 2 - 22, '#f2c14e', 8, 'center'); text(`#${C.result.drank} TODAY`, X, H / 2 - 10, '#fbf1e0', 8, 'center'); sText(`+${C.result.got.bones} Bones  +${C.result.got.tickets} tickets`, X, H / 2 + 2, '#5fd37a'); if (Math.floor(now * 2) % 2) sText('A: PLAY AGAIN', X, H / 2 + 14, '#fbf1e0'); }
+  if (C.mode === 'results') { centerBox(W, H / 2 - 30, 60); text(`${C.result.score} PTS`, X, H / 2 - 22, '#f2c14e', 8, 'center'); text(`#${C.result.drank} TODAY`, X, H / 2 - 10, '#fbf1e0', 8, 'center'); sText(`+${C.result.got.bones} Bones  +${C.result.got.tickets} tickets`, X, H / 2 + 2, '#5fd37a'); if (C.result.event) sText('★ DAILY EVENT COMPLETE', X, H / 2 + 22, '#f2c14e'); if (Math.floor(now * 2) % 2) sText('A: PLAY AGAIN', X, H / 2 + 14, '#fbf1e0'); }
 }
 // bloom: blurred additive copy of the frame (CRT mode). Skipped where ctx.filter is unsupported.
 const bloomCv = document.createElement('canvas'); const bctx = bloomCv.getContext('2d'); const canFilter = 'filter' in bctx;
@@ -280,6 +332,7 @@ function bloom() { if (!A.crt || !canFilter) return; const bw = cv.width >> 1, b
 // ---------- canvas pointer (tap/click) ----------
 function toCanvas(e) { const r = cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * cv.width, y: ((e.clientY - r.top) / r.height) * cv.height }; }
 cv.addEventListener('pointerdown', (e) => { unlockAudio(); if (panelOpen()) return; const p = toCanvas(e);
+  if (A.scene === 'lobby' && ((p.y >= BAND_TOP.y && p.y < BAND_TOP.y + BAND_TOP.h) || (p.y >= BAND_FEED.y && p.y < BAND_FEED.y + BAND_FEED.h))) { sfx('select'); showToday(); return; }
   if (A.scene === 'lobby') { p.x += A.lobbyCam || 0; const L = A.lobby; const c = CABS.find((c) => { const r = cabRect(c); return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h + 8; });
     const tg = lobbyTargets(); let t = c ? tg.find((t) => t.id === c.id) : null;
     if (!t && p.x >= COUNTER.x - 4 && p.x <= COUNTER.x + COUNTER.w + 4 && p.y >= COUNTER.y - 32 && p.y <= COUNTER.y + COUNTER.h) t = tg.find((t) => t.kind === 'prizes');
@@ -298,15 +351,19 @@ let last = performance.now(), acc = 0;
 function twoBtn(inp) { const n = A.scene === 'cab' && A.cab?.mode === 'play' ? A.cab.G.META.buttons || 1 : 1; if (n < 3) { if (inp.c) inp.b = true; if (inp.pressed.has('c')) inp.pressed.add('b'); inp.c = false; }
   if (n < 2) { if (inp.b) inp.a = true; if (inp.pressed.has('b')) inp.pressed.add('a'); } return inp; }
 function frame(t) {
-  const dt = snapDt(Math.min(0.1, (t - last) / 1000)); last = t; acc += dt; const now = t / 1000; let nSteps = 0;
+  const dt = snapDt(Math.min(0.1, (t - last) / 1000)); last = t; acc += dt; const now = t / 1000; let nSteps = 0; A.gamepad?.poll();
   while (acc >= 1 / 60 - 1e-6) { acc = Math.max(0, acc - 1 / 60); nSteps++; const inp = twoBtn(input.snapshot()); if (!panelOpen()) { if (A.scene === 'lobby') updateLobby(1 / 60, inp); else if (A.scene === 'cab') updateCab(1 / 60, inp); } else if (inp.pressed.has('back')) closePanel(); input.frame(); }
   if (isTouch && LAND.matches && A.scene === 'cab' && A.cab.mode === 'play' && !A.cab.paused) { A.cab.paused = true; setMusic(false); } // forced portrait: sideways phone pauses
   (window.__stepHist ||= {})[nSteps] = (window.__stepHist[nSteps] || 0) + 1; // jitter probe
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
   if (A.scene === 'lobby') drawLobby(now); else if (A.scene === 'cab') drawCab(now);
-  bloom();
+  bloom(); ambience();
   requestAnimationFrame(frame);
 }
+// Ambient music: soft hall loop in the lobby, the cabinet's attract loop on its title/demo screens. Audio only exists after the
+// first user gesture (unlockAudio) and the 🔊 mute + Settings volume apply; gameplay music (setMusic in updateCab) takes over in play.
+function ambience() { const want = A.scene === 'lobby' ? 'hall' : A.scene === 'cab' && (A.cab.mode === 'title' || A.cab.mode === 'attract') ? 'attract:' + A.cab.id : null, cur = musicTrack();
+  if (want) { if (cur !== want) setMusic(true, 0, want); } else if (cur === 'hall' || cur?.startsWith('attract:')) setMusic(false); }
 A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const setCrt = () => { document.body.classList.toggle('crt', A.crt); crtB.innerHTML = A.crt ? '📺<span class="lbl"> CRT</span>' : '📺<span class="lbl"> off</span>'; }; setCrt(); crtB.onclick = () => { A.crt = !A.crt; LS.setItem('inuarcade.crt', A.crt ? '1' : '0'); setCrt(); };
 $('#b-ach').onclick = () => showAchievements();
 // Settings (⚙): optional virtual joystick, shared by every cabinet. Saved in localStorage + the wallet cloud save.
@@ -316,6 +373,26 @@ A.settings = JOY.loadSettings(LS);
 A.joy = JOY.createJoystick($('#pad'), () => JOY.joyMode(A.cab?.id, A.cab?.mode === 'play'));
 input.setJoystick(A.joy); A.joy.set(A.settings.joystick);
 A.setJoystick = (on) => { A.settings.joystick = !!on; JOY.saveSettings(LS, { joystick: !!on }); input.clear(); A.joy.set(!!on); A.walletUi?.save?.().catch?.(() => {}); };
+// Gamepads (Bluetooth / USB PS5, PS4, Xbox...): mapped onto the same virtual keys (see core/gamepad.js). Hot-plug events +
+// polling in frame(); with no pad connected poll() returns before touching navigator.getGamepads.
+{ const toastEl = () => { let t = $('#gp-toast'); if (!t) { t = document.createElement('div'); t.id = 'gp-toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); $('#stage').appendChild(t); } return t; };
+  let tt = 0; A.padToast = (info, on) => { const g = GPAD.GLYPHS[info.kind], t = toastEl();
+    t.innerHTML = `<b><i class="gp-ico gp-${info.kind}">${info.kind === 'ps' ? '✕○□△' : 'ⒶⒷⓍⓎ'}</i> ${g.name} ${on ? 'connected' : 'disconnected'}</b>` + (on ? `<small>${GPAD.padHints(info.kind)}</small>` : '');
+    t.className = 'show' + (on ? '' : ' off'); clearTimeout(tt); tt = setTimeout(() => { t.className = ''; }, on ? 4000 : 2500); };
+  const focusables = () => [...$('#panel').querySelectorAll('button, a[href], input, select, [tabindex]:not([tabindex="-1"])')].filter((e) => !e.disabled && e.offsetParent !== null);
+  const panelNav = (edge) => { const f = focusables(); if (!f.length) { if (edge.has('b')) closePanel(); return; } const cur = f.indexOf(document.activeElement);
+    const el = cur >= 0 ? f[cur] : null, range = el?.type === 'range';
+    if (range && (edge.has('left') || edge.has('right'))) { const st = +el.step || 0.05; el.value = String(Math.max(+el.min || 0, Math.min(+el.max || 1, +el.value + (edge.has('right') ? st : -st)))); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return; }
+    const mv = edge.has('down') || edge.has('right') ? 1 : edge.has('up') || edge.has('left') ? -1 : 0;
+    if (mv) { const n = f[(cur < 0 ? (mv > 0 ? 0 : f.length - 1) : (cur + mv + f.length) % f.length)]; for (const e of f) e.classList.remove('gp-focus'); n.classList.add('gp-focus'); n.focus({ preventScroll: false }); return; }
+    if (edge.has('a') || edge.has('start')) { (el || f.find((e) => e.id !== 'pclose') || f[0]).click(); return; }
+    if (edge.has('b')) closePanel(); }; // SELECT (back) already closes panels in frame()
+  A.gamepad = GPAD.createGamepad({ getPads: () => navigator.getGamepads?.() || [], target: window, joy: () => A.joy,
+    mode: () => JOY.joyMode(A.cab?.id, A.cab?.mode === 'play'),
+    onKeys: (k) => input.setPad(k),
+    onEdge: (e) => { unlockAudio(); if (panelOpen()) panelNav(e); },
+    onConnect: (i) => { A.padToast(i, true); document.body.classList.add('gamepad'); },
+    onDisconnect: (i) => { A.padToast(i, false); if (!A.gamepad?.count) document.body.classList.remove('gamepad'); } }); }
 $('#b-lobby').onclick = () => go(null); $('#b-scores').onclick = () => showScores(A.cab?.id); $('#b-prizes').onclick = () => showPrizes(); $('#b-profile').onclick = () => showProfile();
 const mb = $('#b-mute'); const setMb = () => { mb.textContent = isMuted() ? '🔇' : '🔊'; mb.setAttribute('aria-label', isMuted() ? 'Unmute sound' : 'Mute sound'); mb.setAttribute('aria-pressed', String(isMuted())); }; setMb();
 const toggleMute = () => { unlockAudio(); setMuted(!isMuted()); setMb(); }; mb.onclick = toggleMute;

@@ -2,10 +2,10 @@
 // Prize counter is a FIXED shop: fixed ticket price per cosmetic, no randomness, no loot boxes.
 // $KIBBLE (live, real on-chain token) is only ever burned/spent for cosmetics (cabinet skins); it is never a prize or an entry fee.
 export const TICKET_TIERS = { 'kibble-chomp': [800, 2000, 4000, 8000], 'bark-invaders': [400, 1200, 2500, 5000], 'pup-crossing': [300, 900, 2000, 4000], 'bone-breaker': [500, 1500, 3000, 6000], 'street-sniffer': [900, 2200, 4500, 9000], 'paw-fu-tower': [1000, 3000, 6000, 12000], 'bone-digger': [2000, 6000, 12000, 24000], 'pips-big-bark': [4000, 12000, 24000, 48000], 'shiba-scuffle': [4000, 12000, 24000, 48000] };
-export const DAILY_BONE_CAP = 600;
+export const DAILY_BONE_CAP = 600, RUN_BONE_CAP = 60;
 export function earn(game, score) {
   const tiers = TICKET_TIERS[game] || []; const tickets = 1 + tiers.filter((t) => score >= t).length;
-  const bones = Math.min(60, 5 + Math.floor(score / 150)); return { bones, tickets };
+  const bones = Math.min(RUN_BONE_CAP, 5 + Math.floor(score / 150)); return { bones, tickets };
 }
 export const SHOP = [
   { id: 'arcade-cap', name: 'Arcade Cap', tickets: 4, slot: 'hat', item: { id: 'arcade-cap', kind: 'cap', c: '#ff5d73', d: '#a02a3a' } },
@@ -21,10 +21,11 @@ export const SHOP = [
 export const SKINS = { gold: { name: 'Gold Cabinet', burn: 250000 }, neon: { name: 'Neon Cabinet', tickets: 12 } };
 export const SPONSORS = { 'kibble-chomp': null, 'bark-invaders': null, 'pup-crossing': null, 'bone-breaker': null, 'street-sniffer': null, 'paw-fu-tower': null, 'bone-digger': null, 'pips-big-bark': null, 'shiba-scuffle': null }; // e.g. { name: 'Your Brand', url } set server-side later
 export function newWallet() { return { bones: 0, tickets: 0, owned: [], skins: {}, today: '', todayBones: 0, plays: 0 }; }
-export function grant(w, game, score, now = new Date()) {
+// bonus: extra Bones for this run (Daily Event). It tops the run up but never past RUN_BONE_CAP, and the day cap still applies.
+export function grant(w, game, score, now = new Date(), bonus = 0) {
   const day = now.toISOString().slice(0, 10); if (w.today !== day) { w.today = day; w.todayBones = 0; }
-  const e = earn(game, score); const bones = Math.max(0, Math.min(e.bones, DAILY_BONE_CAP - w.todayBones));
-  w.bones += bones; w.todayBones += bones; w.tickets += e.tickets; w.plays++; return { bones, tickets: e.tickets };
+  const e = earn(game, score), run = Math.min(RUN_BONE_CAP, e.bones + Math.max(0, Math.floor(Number(bonus) || 0))); const bones = Math.max(0, Math.min(run, DAILY_BONE_CAP - w.todayBones));
+  w.bones += bones; w.todayBones += bones; w.tickets += e.tickets; w.plays++; const base = Math.min(e.bones, bones); return { bones, tickets: e.tickets, bonus: bones - base };
 }
 export function redeem(w, id) {
   const it = SHOP.find((s) => s.id === id); if (!it) return { ok: false, reason: 'Unknown prize' };
