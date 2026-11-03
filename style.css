@@ -114,3 +114,10 @@ body.landscape-lock #rotate{display:flex}
 #gp-toast .gp-xbox{color:#8fe08f}
 #panel .gp-focus:focus,#panel .gp-focus:focus-visible{outline:2px solid #f2c14e;outline-offset:2px}
 @media (prefers-reduced-motion:reduce){#gp-toast{transition:none}}
+
+/* Optional shop link in the toolbar: an <a> styled like the .tb buttons */
+a.tb{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+#bar .gp-focus{outline:2px solid #f2c14e;outline-offset:2px}
+.shop-nudge{margin:10px 0;padding:8px 10px;border:1px dashed var(--purple);border-radius:4px;font-size:12px;line-height:1.45}
+.shop-nudge p{margin:0 0 6px}
+@media (max-height:480px){.tb .lbl{display:none}.tb{min-width:30px}}

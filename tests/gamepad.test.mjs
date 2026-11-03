@@ -24,7 +24,8 @@ test('standard mapping onto the shell keys: south=A east=B west/north=C back=SEL
   const k = (on) => [...GP.padKeys(pad({ on }))].sort().join(',');
   assert.equal(k([0]), 'a'); assert.equal(k([1]), 'b'); assert.equal(k([2]), 'c'); assert.equal(k([3]), 'c');
   assert.equal(k([8]), 'back'); assert.equal(k([9]), 'start'); assert.equal(k([12, 14]), 'left,up'); assert.equal(k([13, 15]), 'down,right');
-  assert.equal(k([4, 5, 6, 7, 10, 11, 16]), ''); // shoulders, triggers, stick clicks, home: unmapped
+  assert.equal(k([4, 5]), 'lb,rb'); // shoulders: toolbar focus only
+  assert.equal(k([6, 7, 10, 11, 16]), ''); // triggers, stick clicks, home: unmapped
   assert.equal(GP.padKeys({ buttons: [0.9, 0.2], axes: [] }).has('a'), true); // numeric button values (older browsers)
 });
 
@@ -81,6 +82,6 @@ test('keyboard and touch keep working unchanged and mix with the pad', async () 
 test('wired into the shell: rAF poll, hot-plug events, toast, panel navigation, joystick knob', () => {
   const m = fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'), j = fs.readFileSync(new URL('../src/core/joystick.js', import.meta.url), 'utf8');
   assert.match(m, /A\.gamepad\?\.poll\(\);\n  while \(acc/); assert.match(m, /GPAD\.createGamepad\(\{ getPads: \(\) => navigator\.getGamepads/);
-  assert.match(m, /target: window/); assert.match(m, /onKeys: \(k\) => input\.setPad\(k\)/); assert.match(m, /panelNav\(e\)/); assert.match(m, /#gp-toast/);
+  assert.match(m, /target: window/); assert.match(m, /onKeys: \(k\) => input\.setPad\(A\.barFocus >= 0 \? new Set\(\) : k\)/); assert.match(m, /panelNav\(e\)/); assert.match(m, /#gp-toast/);
   assert.match(j, /show\(ax, ay\)/);
 });

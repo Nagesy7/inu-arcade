@@ -3,7 +3,7 @@ import { createInput } from './core/input.js';
 import { sfx, unlockAudio, isMuted, setMuted, setMusic, audioState, musicTrack, musicVolume, setMusicVolume } from './core/audio.js';
 import * as AMB from './core/ambient.js'; import * as EV from './core/daily.js'; import * as FEED from './core/feed.js';
 import { gbcScale, gbcShell, GBC_SCREEN } from './core/layout.js';
-import * as JOY from './core/joystick.js'; import * as GPAD from './core/gamepad.js';
+import * as JOY from './core/joystick.js'; import * as GPAD from './core/gamepad.js'; import * as SHOP from './core/shop.js';
 import * as MET from './core/meta.js';
 import * as PIX from './core/pix.js';
 import * as S from './core/scores.js';
@@ -368,7 +368,7 @@ A.crt = LS.getItem('inuarcade.crt') !== '0'; const crtB = $('#b-crt'); const set
 $('#b-ach').onclick = () => showAchievements();
 // Settings (⚙): optional virtual joystick, shared by every cabinet. Saved in localStorage + the wallet cloud save.
 { const sb = document.createElement('button'); sb.className = 'tb'; sb.id = 'b-settings'; sb.title = 'Settings'; sb.textContent = '⚙'; sb.setAttribute('aria-label', 'Settings');
-  $('#bar').insertBefore(sb, $('#purse')); sb.onclick = () => showSettings(); }
+  $('#bar').insertBefore(sb, $('#b-shop') || $('#purse')); sb.onclick = () => showSettings(); }
 A.settings = JOY.loadSettings(LS);
 A.joy = JOY.createJoystick($('#pad'), () => JOY.joyMode(A.cab?.id, A.cab?.mode === 'play'));
 input.setJoystick(A.joy); A.joy.set(A.settings.joystick);
@@ -385,12 +385,21 @@ A.setJoystick = (on) => { A.settings.joystick = !!on; JOY.saveSettings(LS, { joy
     if (range && (edge.has('left') || edge.has('right'))) { const st = +el.step || 0.05; el.value = String(Math.max(+el.min || 0, Math.min(+el.max || 1, +el.value + (edge.has('right') ? st : -st)))); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return; }
     const mv = edge.has('down') || edge.has('right') ? 1 : edge.has('up') || edge.has('left') ? -1 : 0;
     if (mv) { const n = f[(cur < 0 ? (mv > 0 ? 0 : f.length - 1) : (cur + mv + f.length) % f.length)]; for (const e of f) e.classList.remove('gp-focus'); n.classList.add('gp-focus'); n.focus({ preventScroll: false }); return; }
-    if (edge.has('a') || edge.has('start')) { (el || f.find((e) => e.id !== 'pclose') || f[0]).click(); return; }
+    if (edge.has('a') || edge.has('start')) { (el || f.find((e) => e.classList.contains('gold')) || f.find((e) => e.id !== 'pclose' && e.tagName !== 'A') || f[0]).click(); return; } // nothing focused: the primary button, never an outside link
     if (edge.has('b')) closePanel(); }; // SELECT (back) already closes panels in frame()
+  // Toolbar by pad: L1/R1 (LB/RB) move a focus ring along the toolbar (🛍️ Shop included); A/START presses, B/SELECT/up/down leaves.
+  A.barFocus = -1; const barItems = () => [...document.querySelectorAll('#bar .tb')].filter((e) => e.offsetParent !== null);
+  const barExit = () => { const it = barItems()[A.barFocus]; it?.classList.remove('gp-focus'); it?.blur(); A.barFocus = -1; };
+  const barNav = (edge) => { const it = barItems(); if (!it.length) return false;
+    if (edge.has('lb') || edge.has('rb')) { const d = edge.has('rb') ? 1 : -1; it[A.barFocus]?.classList.remove('gp-focus'); A.barFocus = A.barFocus < 0 ? (d > 0 ? 0 : it.length - 1) : (A.barFocus + d + it.length) % it.length; input.setPad(new Set()); it[A.barFocus].classList.add('gp-focus'); it[A.barFocus].focus(); return true; }
+    if (A.barFocus < 0) return false;
+    if (edge.has('left') || edge.has('right')) return barNav(new Set([edge.has('right') ? 'rb' : 'lb']));
+    if (edge.has('a') || edge.has('start')) { const el = it[A.barFocus]; barExit(); el?.click(); return true; }
+    if (edge.has('b') || edge.has('back') || edge.has('up') || edge.has('down')) { barExit(); return true; } return true; };
   A.gamepad = GPAD.createGamepad({ getPads: () => navigator.getGamepads?.() || [], target: window, joy: () => A.joy,
     mode: () => JOY.joyMode(A.cab?.id, A.cab?.mode === 'play'),
-    onKeys: (k) => input.setPad(k),
-    onEdge: (e) => { unlockAudio(); if (panelOpen()) panelNav(e); },
+    onKeys: (k) => input.setPad(A.barFocus >= 0 ? new Set() : k),
+    onEdge: (e) => { unlockAudio(); if (panelOpen()) { if (A.barFocus >= 0) barExit(); panelNav(e); } else barNav(e); },
     onConnect: (i) => { A.padToast(i, true); document.body.classList.add('gamepad'); },
     onDisconnect: (i) => { A.padToast(i, false); if (!A.gamepad?.count) document.body.classList.remove('gamepad'); } }); }
 $('#b-lobby').onclick = () => go(null); $('#b-scores').onclick = () => showScores(A.cab?.id); $('#b-prizes').onclick = () => showPrizes(); $('#b-profile').onclick = () => showProfile();
@@ -398,6 +407,7 @@ const mb = $('#b-mute'); const setMb = () => { mb.textContent = isMuted() ? '�
 const toggleMute = () => { unlockAudio(); setMuted(!isMuted()); setMb(); }; mb.onclick = toggleMute;
 addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.target.closest?.('input')) toggleMute(); });
 for (const b of document.querySelectorAll('#bar button')) b.addEventListener('click', (e) => e.currentTarget.blur());
+$('#b-shop')?.addEventListener('click', () => SHOP.trackClick('shop', 'inu-arcade-menu')); // optional cosmetics link (new tab)
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 export { startPlay, toLobby };
 (async () => { try { await document.fonts.load(F(8)); await document.fonts.load('8px Silkscreen'); } catch {} refreshPurse(); go(routeId(), false); requestAnimationFrame(frame); V.post('inu-arcade:ready', { cabinetId: routeId() || 'arcade', embed: true }); })();
