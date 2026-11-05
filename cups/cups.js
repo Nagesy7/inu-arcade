@@ -1,7 +1,7 @@
 // Inu Arcade cups page: reads the kibble-pay bracket API (/api/tournaments). Never decides winners; real data only.
 // Free entry, skill only: cosmetic rewards (inventory), Bones recorded for manual hand-out, no $KIBBLE, wagers or fees.
 const Q = new URLSearchParams(location.search);
-const API_OK = /^https:\/\/(kibble-pay\.vercel\.app|kibble-[a-z0-9-]+-prosper33\.vercel\.app)$|^http:\/\/localhost:\d+$/;
+const API_OK = /^https:\/\/(kibble-pay\.vercel\.app|kibble-[a-z0-9-]+-prosper33\.vercel\.app)$|^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
 export const API = API_OK.test(Q.get('api') || '') ? Q.get('api') : 'https://kibble-pay.vercel.app';
 const $ = (s) => document.querySelector(s), main = $('#main');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -20,8 +20,9 @@ async function api(params, { method = 'GET', body } = {}) {
 const left = (ms) => { if (!ms) return ''; const d = ms - Date.now(); if (d <= 0) return 'ended'; const h = Math.floor(d / 36e5), m = Math.floor((d % 36e5) / 6e4); return h > 47 ? `${Math.floor(h / 24)}d left` : h ? `${h}h ${m}m left` : `${m}m left`; };
 const fmtDur = (ms) => (ms ? `${(ms / 1000).toFixed(1)}s` : '');
 
+const pageQuery = (extra) => { const q = new URLSearchParams(extra || ''); if (Q.get('api')) q.set('api', API); if (Q.get('demo') === '1') q.set('demo', '1'); const s = q.toString(); return s ? '?' + s : ''; };
 export async function showList() {
-  cur = null; history.replaceState(null, '', location.pathname + (Q.get('api') ? `?api=${encodeURIComponent(API)}` : ''));
+  cur = null; history.replaceState(null, '', location.pathname + pageQuery());
   let j; try { j = await api({ op: 'list' }); } catch { j = { ok: false, reason: 'network' }; }
   if (!j.ok) { main.innerHTML = `<div class="empty"><h2>Cups are warming up</h2><p>We couldn't load the cup list right now. No cups are shown rather than made-up ones.</p><p class="muted">${esc(RULES)}</p><button class="btn" id="retry">Try again</button></div>`; $('#retry').onclick = showList; return; }
   const ts = j.tournaments || [];
@@ -41,7 +42,7 @@ const mStatus = (m) => m.bye ? 'bye' : m.status === 'flagged' ? '⚑ admin revie
 export async function showCup(tid) {
   let j; try { j = await api({ op: 'get', tid }); } catch { j = { ok: false }; }
   if (!j.ok) { main.innerHTML = `<div class="empty"><h2>Cup not found</h2><p>${esc(j.reason || 'It may have been removed.')}</p><button class="btn" id="back">All cups</button></div>`; $('#back').onclick = showList; return; }
-  cur = j; const t = j.tournament; history.replaceState(null, '', `${location.pathname}?tid=${encodeURIComponent(t.tid)}${Q.get('api') ? `&api=${encodeURIComponent(API)}` : ''}`);
+  cur = j; const t = j.tournament; history.replaceState(null, '', location.pathname + pageQuery({ tid: t.tid }));
   const rounds = t.rounds || 0, cols = [];
   for (let r = 1; r <= rounds; r++) { const ms = j.matches.filter((m) => m.round === r), rn = j.rounds.find((x) => x.round === r);
     const name = rn?.name || (r === rounds ? 'Final' : r === rounds - 1 ? 'Semifinals' : `Round ${r}`);
