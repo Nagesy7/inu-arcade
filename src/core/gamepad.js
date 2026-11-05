@@ -8,17 +8,17 @@ import { stickDir } from './joystick.js';
 
 export const DEADZONE = 0.3;
 // W3C "standard" mapping button indices -> shell keys ('back' is the shell's SELECT button)
-export const BTN = { 0: 'a', 1: 'b', 2: 'c', 3: 'c', 8: 'back', 9: 'start', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
-export const KEYS = ['left', 'right', 'up', 'down', 'a', 'b', 'c', 'start', 'back'];
+export const BTN = { 0: 'a', 1: 'b', 2: 'c', 3: 'c', 8: 'back', 9: 'start', 12: 'up', 13: 'down', 14: 'left', 15: 'right', 4: 'lb', 5: 'rb' };
+export const KEYS = ['left', 'right', 'up', 'down', 'a', 'b', 'c', 'start', 'back', 'lb', 'rb']; // lb / rb (shoulders) only move the toolbar focus ring, never reach a cabinet
 // PlayStation pads report "DualSense", "DualShock", "Wireless Controller" or Sony's USB vendor id 054c; everything else gets Xbox glyphs.
 export const padKind = (id = '') => (/dualsense|dualshock|playstation|054c|sony/i.test(String(id)) ? 'ps' : 'xbox');
 export const GLYPHS = {
-  ps: { name: 'PS controller', a: '✕', b: '○', c: '□', back: 'SHARE', start: 'OPTIONS' },
-  xbox: { name: 'Xbox controller', a: 'A', b: 'B', c: 'X', back: 'VIEW', start: 'MENU' },
+  ps: { name: 'PS controller', a: '✕', b: '○', c: '□', back: 'SHARE', start: 'OPTIONS', lb: 'L1', rb: 'R1' },
+  xbox: { name: 'Xbox controller', a: 'A', b: 'B', c: 'X', back: 'VIEW', start: 'MENU', lb: 'LB', rb: 'RB' },
 };
 // Short button hints for the toast, using the detected pad's glyphs.
 export function padHints(kind) { const g = GLYPHS[kind] || GLYPHS.xbox;
-  return `${g.a} A/jump · ${g.b} B/back · ${g.c} C · ${g.start} START/pause · ${g.back} SELECT/exit`; }
+  return `${g.a} A/jump · ${g.b} B/back · ${g.c} C · ${g.start} START/pause · ${g.back} SELECT/exit · ${g.lb}/${g.rb} toolbar`; }
 
 const pressed = (b) => !!b && (typeof b === 'object' ? b.pressed || b.value > 0.5 : b > 0.5);
 // One pad -> Set of shell keys. mode = joystick direction mode ('4way' | 'h' | '8way').

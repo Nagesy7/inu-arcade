@@ -1,5 +1,5 @@
 // DOM panels: results + share, leaderboards & prize pools, prize counter, profile/wallet, Inu Rescue link.
-import { A, GAMES, RESCUE_URL, save, go, startPlay, syncWallet } from './main.js'; import * as EV from './core/daily.js';
+import { A, GAMES, RESCUE_URL, save, go, startPlay, syncWallet } from './main.js'; import * as EV from './core/daily.js'; import * as SHOP from './core/shop.js';
 import * as S from './core/scores.js'; import * as R from './core/rewards.js'; import { sfx } from './core/audio.js'; import * as MET from './core/meta.js';
 import { avatarCanvas } from './vendor/inu-avatar.js'; import { normalizeProfile } from './vendor/profile-schema.js';
 const $ = (q) => document.querySelector(q), esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -13,14 +13,18 @@ const title = (id) => GAMES[id]?.META.title.replace(/\b\w+/g, (w) => w[0] + w.sl
 export function shareUrl(id, score, gmode = 'classic') { const text = `🐕🕹️ I scored ${score} on ${title(id)} (${MET.MODES[gmode].name.toLowerCase()}) at Inu Arcade! Free to play, beat me:`; const url = `${location.origin}/${id}`;
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`; }
 export function showResults(id, r) {
+  // Optional shop nudge: once per session, never on a Daily-Event-complete screen (that one already carries the event card).
+  const nudge = !r.event && !SHOP.nudgeSeen(); if (nudge) SHOP.markNudge();
   openPanel(`<h2>${esc(title(id))}</h2><p><b style="color:var(--gold);font-size:18px">${r.score}</b> points · level ${r.level}</p>
   ${r.mult !== 1 ? `<p class="small">${r.raw} × ${r.mult} weekly modifier</p>` : ''}<p>${esc(MET.MODES[r.gmode].name)} · Rank <b>#${r.drank}</b> today · <b>#${r.rank}</b> all-time</p>${r.posted ? `<p class="small">${esc(r.posted)}</p>` : ''}<p>Earned <b>+${r.got.bones} Bones</b> and <b>+${r.got.tickets} prize tickets</b> 🎟</p>
   ${r.event ? `<div class="note">★ <b>Daily Event complete!</b> ${esc(r.event.goal)}. ${r.event.bonus ? `<b>+${r.event.bonus} event Bones</b> are included above.` : 'No extra Bones this time: this run already hit the 60-per-run cap or today\'s 600 Bones cap.'} ${r.event.cosmetic ? `You unlocked the <b>${esc(r.event.cosmetic.name)}</b> cosmetic (equip it under 🐕 Me).` : r.event.count < EV.RIBBON_AFTER ? `${EV.RIBBON_AFTER - r.event.count} more event day${EV.RIBBON_AFTER - r.event.count > 1 ? 's' : ''} to the Event Ribbon cosmetic.` : ''}</div>` : ''}
   ${r.ach?.length ? `<div class="note">🏅 Achievement${r.ach.length > 1 ? 's' : ''}: ${r.ach.map((a) => `<b>${esc(a.name)}</b> (+${a.tickets} 🎟)`).join(', ')}</div>` : ''}${r.newGhost ? '<p class="small">👻 New personal best saved as your ghost. It will race you next time and play in attract mode.</p>' : ''}
+  ${nudge ? `<div class="shop-nudge" id="r-nudge"><p>${esc(SHOP.COPY.nudge)}</p><a class="btn" id="r-shop" href="${SHOP.SHOP_RESULTS_URL}" target="_blank" rel="noopener">${esc(SHOP.COPY.visit)}</a><button class="btn" id="r-nudge-no">${esc(SHOP.COPY.notNow)}</button></div>` : ''}
   <div><a class="btn x2" id="r-share" href="${shareUrl(id, r.score, r.gmode)}" target="_blank" rel="noopener">Share on 𝕏</a><button class="btn" id="r-copy">Copy link</button></div>
   <div><button class="btn gold" id="r-again">Play again</button><button class="btn" id="r-scores">Leaderboards</button><button class="btn" id="r-prizes">Prize counter</button><button class="btn" id="r-hall">Back to hall</button></div>
   <p class="small">Tickets come from playing and from score tiers. Bones are free play currency and can't be cashed out.</p>`, 'results');
   $('#r-again').onclick = () => { closePanel(); startPlay(); }; $('#r-scores').onclick = () => showScores(id, 'daily', r.gmode); $('#r-prizes').onclick = () => showPrizes(); $('#r-hall').onclick = () => go(null);
+  if (nudge) { const hide = () => $('#r-nudge')?.remove(); $('#r-shop').onclick = () => { SHOP.trackClick('shop', 'inu-arcade-results'); setTimeout(hide, 0); }; $('#r-nudge-no').onclick = hide; }
   $('#r-copy').onclick = async () => { try { await navigator.clipboard.writeText(`${location.origin}/${id}`); $('#r-copy').textContent = 'Copied!'; } catch { $('#r-copy').textContent = location.origin + '/' + id; } };
 }
 const fmtT = (ms) => { const h = Math.floor(ms / 36e5); return h >= 48 ? `${Math.floor(h / 24)}d` : `${h}h ${Math.floor((ms % 36e5) / 6e4)}m`; };
