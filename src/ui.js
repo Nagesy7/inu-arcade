@@ -49,7 +49,7 @@ export function showScores(game = 'arcade', period = 'daily', mode = 'classic') 
 export async function showPrizes(msg = '') {
   const P = A.purse, bal = await A.wallet().balance();
   const items = R.SHOP.map((it) => { const own = P.owned.includes(it.id); return `<div class="card"><b>${esc(it.name)}</b><br><span class="small">${it.slot ? it.slot + ' cosmetic' : 'lobby effect'}</span><br>🎟 ${it.tickets}<br><button class="btn ${own ? '' : 'gold'}" data-buy="${it.id}" ${own || P.tickets < it.tickets ? 'disabled' : ''}>${own ? 'Owned' : 'Swap tickets'}</button></div>`; }).join('');
-  const skins = Object.keys(GAMES).map((g) => { const has = A.purse.skins[g] || []; const sp = R.SPONSORS[g];
+  const skins = Object.keys(GAMES).filter((g) => !GAMES[g].META.freePlay).map((g) => { const has = A.purse.skins[g] || []; const sp = R.SPONSORS[g];
     return `<div class="card"><b>${esc(title(g))}</b><br><span class="small">Sponsor: ${sp ? esc(sp.name) : 'open slot'}</span><br>
     <button class="btn" data-neon="${g}" ${has.includes('neon') || P.tickets < R.SKINS.neon.tickets ? 'disabled' : ''}>${has.includes('neon') ? 'Neon ✓' : `Neon skin 🎟${R.SKINS.neon.tickets}`}</button>
     <button class="btn gold" data-gold="${g}" ${has.includes('gold') ? 'disabled' : ''}>${has.includes('gold') ? 'Gold ✓' : `Gold skin: optional burn ${R.SKINS.gold.burn} KIBBLE`}</button></div>`; }).join('');

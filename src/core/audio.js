@@ -151,7 +151,10 @@ function seq_d(fs, step, d, vol) { fs.forEach((f, k) => tone(f, f, step * 0.9, '
 // per-cabinet attract loops: same engine, cabinet-flavoured root, scale, tempo and lead voice
 const ATTRACT = { 'kibble-chomp': [57, [0, 3, 7, 10], 112, 'square'], 'bark-invaders': [50, [0, 7, 3, 5], 96, 'sawtooth'], 'pup-crossing': [60, [0, 4, 7, 9], 120, 'triangle'],
   'bone-breaker': [55, [0, 7, 12, 4], 108, 'square'], 'street-sniffer': [53, [0, 3, 5, 10], 100, 'triangle'], 'paw-fu-tower': [52, [0, 3, 5, 7], 92, 'triangle'],
-  'bone-digger': [48, [0, 5, 7, 3], 88, 'sine'], 'pips-big-bark': [62, [0, 4, 7, 11], 126, 'square'], 'shiba-scuffle': [52, [0, 3, 7, 5], 116, 'sawtooth'] };
+  'bone-digger': [48, [0, 5, 7, 3], 88, 'sine'], 'pips-big-bark': [62, [0, 4, 7, 11], 126, 'square'], 'shiba-scuffle': [52, [0, 3, 7, 5], 116, 'sawtooth'],
+  'gust-glider': [64, [0, 4, 7, 11], 132, 'triangle'], 'dash-line': [58, [0, 3, 7, 10], 140, 'square'], 'stack-shift': [55, [0, 5, 7, 12], 100, 'triangle'],
+  'hue-flood': [60, [0, 2, 4, 7], 96, 'sine'], 'beat-lanes': [62, [0, 3, 7, 10], 108, 'square'], 'tile-fuse': [53, [0, 4, 7, 9], 90, 'triangle'],
+  'sky-springs': [67, [0, 4, 7, 12], 124, 'triangle'], 'rift-runner': [56, [0, 3, 6, 10], 136, 'sawtooth'], 'coil': [50, [0, 3, 7, 8], 104, 'square'], 'spark-factory': [54, [0, 5, 7, 10], 112, 'triangle'] };
 function attractTick(id) { const [root, sc, bpm, wave] = ATTRACT[id] || ATTRACT['kibble-chomp'], sp = 60 / bpm / 2; if (mus.next < ac.currentTime) mus.next = ac.currentTime + 0.05;
   while (mus.next < ac.currentTime + 0.15) { const i = mus.step % 16, bar = Math.floor(mus.step / 16) % 4, d = mus.next - ac.currentTime, tr = [0, 5, 3, 7][bar];
     if (i % 4 === 0) tone(mtof(root - 12 + tr), mtof(root - 12 + tr), sp * 1.8, 'triangle', 0.04, d);

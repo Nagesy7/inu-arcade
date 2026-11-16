@@ -4,7 +4,7 @@
 // menus (Settings) by pad, joystick knob mirrors the stick, keyboard + touch + pad mixing, unplug, toast overlap.
 import { chromium } from 'playwright'; import { mkdirSync } from 'node:fs';
 const U = (process.env.URL || 'http://localhost:8140').replace(/\/$/, ''), D = '/workspace/inu-arcade-shots/', SHOTS = process.env.SHOTS !== '0';
-const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'];
+const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle', 'gust-glider', 'dash-line', 'stack-shift', 'hue-flood', 'beat-lanes', 'tile-fuse', 'sky-springs', 'rift-runner', 'coil', 'spark-factory'];
 let fail = 0, pass = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (c) pass++; else fail++; }; mkdirSync(D, { recursive: true });
 const MOCK = () => { const pads = [null, null, null, null]; window.__gpCalls = 0;
   const mk = (id, index) => ({ id, index, connected: true, mapping: 'standard', timestamp: 0, buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })), axes: [0, 0, 0, 0] });

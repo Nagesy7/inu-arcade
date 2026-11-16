@@ -1,5 +1,6 @@
 // Generates per-game entry pages (/kibble-chomp/index.html, ...) with their own og/twitter share-card tags.
 import fs from 'node:fs'; import * as Street from '../src/games/street.js'; import * as Pawfu from '../src/games/pawfu.js'; import * as Digger from '../src/games/digger.js'; import * as Pip from '../src/games/pip.js'; import * as Scuffle from '../src/games/shiba.js';
+import * as Gust from '../src/games/gust.js'; import * as Dash from '../src/games/dash.js'; import * as Stack from '../src/games/stack.js'; import * as Hue from '../src/games/hue.js'; import * as Beat from '../src/games/beat.js'; import * as Fuse from '../src/games/fuse.js'; import * as Sky from '../src/games/sky.js'; import * as Rift from '../src/games/rift.js'; import * as Coil from '../src/games/coil.js'; import * as Spark from '../src/games/spark.js';
 const SITE = process.env.SITE || 'https://inu-arcade.vercel.app';
 const html = fs.readFileSync('index.html', 'utf8');
 const GAMES = {
@@ -12,6 +13,16 @@ const GAMES = {
   'pips-big-bark': [Pip.NAME, 'Run, tail-wag double jump and scarf-glide Pip the Shiba across six lands: bark the Grey Cat Syndicate silly, throw the Bone-erang, sniff out secrets, hit the Zoomies and rescue the pack. Free-to-play Shiba platformer at Inu Arcade.'],
   'shiba-scuffle': [Scuffle.NAME, 'Pick a Shiba (Bruiser, Barker, Snacker or Zoomer) and tug the Big Bone home in 3v3 pack brawls against bot packs: yards with sprinklers, rooftops with rug bots and boardwalk surges. Free, skill-and-rank Shiba team brawler at Inu Arcade.'],
   'bone-breaker': ['Bone Breaker', 'Bat the tennis ball into the crate wall and catch treats for power-ups. Free-to-play Shiba brick breaker at Inu Arcade.'],
+  'gust-glider': [Gust.NAME, 'Flap a Shiba pup through bone cairns, peaked kennels and timber. Free-to-play at Inu Arcade.'],
+  'dash-line': [Dash.NAME, 'Sprint the kennel track, jump the crates and clear the creek gaps. Free-to-play at Inu Arcade.'],
+  'stack-shift': [Stack.NAME, 'Drop each bunk on the tower. Overhang is sliced off; a perfect fit keeps it wide. Free-to-play at Inu Arcade.'],
+  'hue-flood': [Hue.NAME, 'Spread one colour from the corner until the whole quilt matches. Free-to-play at Inu Arcade.'],
+  'beat-lanes': [Beat.NAME, 'Catch notes in four lanes as they cross the line. Free-to-play at Inu Arcade.'],
+  'tile-fuse': [Fuse.NAME, 'Slide numbered tiles. Matching numbers fuse into one. Free-to-play at Inu Arcade.'],
+  'sky-springs': [Sky.NAME, 'Bounce a pup up wood planks, drifting rafts and spring pads. Free-to-play at Inu Arcade.'],
+  'rift-runner': [Rift.NAME, 'Three lanes: switch, hop low fences, duck high bars and take the corner. Free-to-play at Inu Arcade.'],
+  'coil': [Coil.NAME, 'Steer a growing Shiba tail, eat the kibble, and don\'t nip yourself. Free-to-play at Inu Arcade.'],
+  'spark-factory': [Spark.NAME, 'A two-minute shift: bark the paw and build machines. Free-to-play at Inu Arcade. No wallet, no prizes.'],
 };
 for (const [id, [t, d]] of Object.entries(GAMES)) {
   const meta = `<title>${t} · Inu Arcade</title>

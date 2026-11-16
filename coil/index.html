@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!--META-->
+<title>Coil · Inu Arcade</title>
+<meta name="description" content="Steer a growing Shiba tail, eat the kibble, and don't nip yourself. Free-to-play at Inu Arcade.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Inu Arcade">
+<meta property="og:title" content="Coil · Inu Arcade">
+<meta property="og:description" content="Steer a growing Shiba tail, eat the kibble, and don't nip yourself. Free-to-play at Inu Arcade.">
+<meta property="og:image" content="https://inu-arcade.vercel.app/og/coil.png">
+<meta property="og:url" content="https://inu-arcade.vercel.app/coil">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Coil · Inu Arcade">
+<meta name="twitter:description" content="Steer a growing Shiba tail, eat the kibble, and don't nip yourself. Free-to-play at Inu Arcade.">
+<meta name="twitter:image" content="https://inu-arcade.vercel.app/og/coil.png">
+<!--/META-->
+<script type="importmap">{"imports":{"@solana/web3.js":"https://esm.sh/@solana/web3.js@1.98.4"}}</script>
+<link rel="icon" href="/favicon.png">
+<link rel="preload" href="/fonts/PressStart2P.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<!-- Vercel Web Analytics + Speed Insights (cookieless, no personal data) -->
+<script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments)};</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</head>
+<body>
+<div id="app">
+<div id="gbc" role="group" aria-label="Inu Arcade handheld">
+  <div class="gbc-bezel">
+    <div class="gbc-strip"><i class="gbc-led" title="Power"></i><span>SHIBA PIXEL SCREEN</span></div>
+    <div id="stage"><div id="crtwrap"><canvas id="screen" width="384" height="216" aria-label="Inu Arcade game screen"></canvas></div></div>
+  </div>
+  <div class="gbc-logo" aria-hidden="true"><b>INU</b> <span class="rb"><i>A</i><i>R</i><i>C</i><i>A</i><i>D</i><i>E</i></span></div>
+  <div id="pad" aria-hidden="true">
+    <div class="dpad"><i class="dx"></i><b data-k="up">▲</b><b data-k="left">◀</b><b data-k="right">▶</b><b data-k="down">▼</b></div>
+    <div class="btns"><b data-k="b" class="bbtn">B</b><b data-k="a" class="abtn">A</b><b data-k="c" class="cbtn">C</b></div>
+    <div class="pills"><b data-k="back" class="sbtn bk"><u></u>SELECT</b><b data-k="start" class="sbtn st"><u></u>START</b></div>
+  </div>
+  <div class="gbc-grille" aria-hidden="true"></div>
+</div>
+<div id="bar">
+  <button class="tb" id="b-lobby" title="Back to the arcade hall">⌂<span class="lbl"> Hall</span></button>
+  <button class="tb" id="b-scores" title="Leaderboards">🏆<span class="lbl"> Scores</span></button>
+  <button class="tb" id="b-prizes" title="Prize counter">🎟<span class="lbl"> Prizes</span></button>
+  <button class="tb" id="b-profile" title="Your Shiba">🐕<span class="lbl"> Me</span></button>
+  <button class="tb" id="b-ach" title="Achievements">🏅</button>
+  <button class="tb" id="b-crt" title="CRT / bloom">📺</button>
+  <button class="tb" id="b-mute" title="Sound">🔊</button>
+  <a class="tb" id="b-shop" href="https://kibbleinu.com/pay?utm_source=inu-arcade&amp;utm_medium=menu#shop-h" target="_blank" rel="noopener" title="Optional cosmetics. $KIBBLE is never needed to play." aria-label="Shop: optional cosmetics. $KIBBLE is never needed to play.">🛍️<span class="lbl"> Shop</span></a>
+  <span id="purse"></span>
+</div>
+</div>
+<div id="panel" hidden><div class="pbox"><button class="x" id="pclose" aria-label="Close">✕</button><div id="pbody"></div></div></div>
+<div id="rotate"><div><span class="rot-ico">📱↺</span><br>Rotate your phone upright<br>to play Inu Arcade</div></div>
+<script src="https://kibble-pay.vercel.app/inu-profile.js" data-game="inu-arcade" data-position="bottom-right" async></script>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

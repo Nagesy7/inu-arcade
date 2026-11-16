@@ -62,7 +62,7 @@ export const ACHIEVEMENTS = [
   { id: 'daily', name: 'Daily Grind', desc: 'Finish a Daily Challenge', tickets: 3, test: (r) => r.mode === 'daily' },
   { id: 'all-four', name: 'Arcade Rat', desc: 'Play the original four cabinets', tickets: 5, test: (r, p) => ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker'].every((g) => p.played?.[g]) },
   // Full hall (matches src/core/scores.js GAME_IDS). Additive; does not revoke Arcade Rat.
-  { id: 'all-cabinets', name: 'Hall Regular', desc: 'Play every cabinet in the hall', tickets: 8, test: (r, p) => ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'].every((g) => p.played?.[g]) },
+  { id: 'all-cabinets', name: 'Hall Regular', desc: 'Play the original nine cabinets', tickets: 8, test: (r, p) => ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'].every((g) => p.played?.[g]) },
 ];
 export function evalAchievements(purse, run) {
   purse.ach ||= {}; purse.played ||= {}; purse.played[run.game] = (purse.played[run.game] || 0) + 1; const got = [];

@@ -105,5 +105,15 @@ export function drawTitleAmbient(ctx, id, W, H, now, lvl = 'full') {
   else if (id === 'shiba-scuffle') { // arena spotlights sweeping, confetti drifting
     for (const [ph, c] of [[0, '#fff6c0'], [2.1, '#7ef0ff']]) { const a = Math.sin(t * 0.8 + ph) * 0.5; ctx.globalAlpha = 0.08; ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(W / 2 + (ph ? 60 : -60), 0); ctx.lineTo(W / 2 + Math.sin(a) * 160 - 20, H); ctx.lineTo(W / 2 + Math.sin(a) * 160 + 20, H); ctx.closePath(); ctx.fill(); }
     ctx.globalAlpha = 0.55; for (let i = 0; i < n(18); i++) { ctx.fillStyle = ['#ff5d73', '#f2c14e', '#4fc3e8', '#5fd37a'][i % 4]; ctx.fillRect(fr(i * 29 + Math.sin(t + i) * 5, W) | 0, fr(i * 47 + t * 18, H) | 0, 2, 1 + (i % 2)); } }
+  else if (id === 'gust-glider') { ctx.globalAlpha = 0.35; ctx.fillStyle = '#8ec8e8'; ctx.fillRect(0, H - 90, W, 50); ctx.fillStyle = '#f7f1e4'; for (let i = 0; i < n(5); i++) ctx.fillRect(16 + i * 40, H - 78 - (i % 3) * 10, 22, 4); }
+  else if (id === 'dash-line') { ctx.globalAlpha = 0.45; ctx.fillStyle = '#2a6a5a'; ctx.fillRect(0, H - 72, W, 10); ctx.fillStyle = '#c4523a'; ctx.fillRect(fr(t * 50, W + 20) - 10, H - 96, 16, 24); }
+  else if (id === 'stack-shift') { ctx.globalAlpha = 0.5; for (let i = 0; i < 6; i++) { ctx.fillStyle = ['#e8d4b0', '#f2c14e', '#e8892e', '#4fc3e8'][i % 4]; ctx.fillRect(W / 2 - 40 + (i % 2) * 4, H - 70 - i * 10, 70 - i * 4, 8); } }
+  else if (id === 'hue-flood') { ctx.globalAlpha = 0.45; const cs = ['#ff5d73', '#f2c14e', '#5fd37a', '#4fc3e8']; for (let i = 0; i < n(20); i++) { ctx.fillStyle = cs[(i + (t | 0)) % 4]; ctx.fillRect((i % 10) * 22, H - 100 + ((i / 10) | 0) * 16, 18, 12); } }
+  else if (id === 'beat-lanes') { ctx.globalAlpha = 0.4; for (let i = 0; i < 4; i++) { ctx.fillStyle = ['#ff5d73', '#f2c14e', '#5fd37a', '#4fc3e8'][i]; ctx.fillRect(30 + i * 42, H - 80 + Math.sin(t * 3 + i) * 16, 24, 8); } }
+  else if (id === 'tile-fuse') { ctx.globalAlpha = 0.4; for (let i = 0; i < 4; i++) { ctx.fillStyle = ['#eee4da', '#f2b179', '#e8892e', '#5fd37a'][(i + (t | 0)) % 4]; ctx.fillRect(40 + (i % 2) * 28, H - 90 + ((i / 2) | 0) * 28, 22, 22); } }
+  else if (id === 'sky-springs') { ctx.globalAlpha = 0.4; ctx.fillStyle = '#d7ecff'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#c4a06a'; for (let i = 0; i < n(5); i++) ctx.fillRect(fr(i * 50 + t * 8, W), 40 + i * 28, 36, 6); }
+  else if (id === 'rift-runner') { ctx.globalAlpha = 0.4; ctx.fillStyle = '#5c4a6e'; ctx.beginPath(); ctx.moveTo(W / 2 - 20, H - 120); ctx.lineTo(W / 2 + 20, H - 120); ctx.lineTo(W / 2 + 80, H - 40); ctx.lineTo(W / 2 - 80, H - 40); ctx.fill(); }
+  else if (id === 'coil') { ctx.globalAlpha = 0.5; ctx.fillStyle = '#e8892e'; for (let i = 0; i < n(8); i++) ctx.fillRect(fr(i * 18 + t * 20, W), H - 80 + (i % 3) * 6, 8, 8); ctx.fillStyle = '#c88a3c'; ctx.fillRect(W - 50, H - 70, 6, 6); }
+  else if (id === 'spark-factory') { ctx.globalAlpha = 0.45; ctx.fillStyle = '#f3c9a0'; ctx.fillRect(W / 2 - 16, H - 80, 32, 18); ctx.fillStyle = '#e07a3a'; ctx.fillRect(W / 2 - 18, H - 92, 8, 8); ctx.fillRect(W / 2 - 4, H - 96, 8, 8); ctx.fillRect(W / 2 + 10, H - 92, 8, 8); }
   ctx.restore();
 }
