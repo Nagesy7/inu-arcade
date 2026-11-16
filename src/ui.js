@@ -89,7 +89,7 @@ export function showRescue() {
 export function showSettings() {
   const on = !!A.settings?.joystick;
   openPanel(`<h2>⚙ Settings</h2><label class="sw"><input type="checkbox" id="set-joy" role="switch" ${on ? 'checked' : ''}><span class="swt"></span> <b>Joystick controls</b></label>
-  <p class="small">Off (default): the classic d-pad buttons. On: a thumb stick on the left (4-way in Kibble Chomp and Pup Crossing, left/right in Bark Invaders and Bone Breaker). A, START and BACK stay on the right. This setting applies to every cabinet and is saved on this device and to your wallet save when you are connected.</p>`, 'settings');
+  <p class="small">On (default, until you choose): a thumb stick on the left. Off: the classic d-pad buttons. 4-way in Kibble Chomp and Pup Crossing, left/right in Bark Invaders and Bone Breaker. A, START and BACK stay on the right. This setting applies to every cabinet. Turning it on or off is saved on this device and to your wallet save when you are connected.</p>`, 'settings');
   $('#set-joy').onchange = (e) => { A.setJoystick(e.target.checked); sfx('blip'); };
   $('#pbody').insertAdjacentHTML('beforeend', `<label class="sw"><input type="checkbox" id="set-lowfx" role="switch" ${A.fx.low ? 'checked' : ''}><span class="swt"></span> <b>Low FX</b></label>
   <p class="small">Fewer wandering pups and particles in the hall and on title screens, no marquee bulb chase. ${A.reduced ? 'Your device asks for reduced motion, so ambient motion is already paused.' : 'Ambient motion also pauses automatically when your device asks for reduced motion.'}</p>

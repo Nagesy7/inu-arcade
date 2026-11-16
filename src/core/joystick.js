@@ -1,6 +1,6 @@
-// Optional virtual joystick, shared by every cabinet (and the hall). OFF by default: with it off nothing here touches the
-// existing d-pad layout or input behaviour. With it on, a compact semi-transparent left-thumb stick replaces the d-pad;
-// the A / START / BACK buttons stay on the right and work at the same time (multi-touch, see createTouchRouter in input.js).
+// Virtual joystick, shared by every cabinet (and the hall). ON when nothing is saved: a compact semi-transparent
+// left-thumb stick replaces the d-pad. An explicit saved choice (true or false) is kept. The A / START / BACK buttons
+// stay on the right and work at the same time (multi-touch, see createTouchRouter in input.js).
 export const SETTINGS_KEY = 'inuarcade.settings.v1'; // also part of the wallet cloud save (mountWallet keys in main.js)
 export const DEAD = 0.28; // dead zone, fraction of the stick travel radius
 export const TRAVEL = 40; // knob travel radius in CSS px
@@ -11,7 +11,16 @@ export const BASE = 112; // stick base diameter in CSS px (sits inside the 172 p
 export const JOY_MODES = { 'kibble-chomp': '4way', 'pup-crossing': '4way', 'bark-invaders': 'h', 'bone-breaker': 'h', 'street-sniffer': '4way', 'paw-fu-tower': '8way', 'bone-digger': '4way', 'pips-big-bark': '8way', 'shiba-scuffle': '8way', 'gust-glider': 'h', 'dash-line': 'h', 'stack-shift': '4way', 'hue-flood': '4way', 'beat-lanes': '4way', 'tile-fuse': '4way', 'sky-springs': 'h', 'rift-runner': '4way', 'coil': '4way', 'spark-factory': '4way', lobby: '8way' };
 export const joyMode = (cabId, playing) => (cabId ? (playing ? JOY_MODES[cabId] || '4way' : '4way') : JOY_MODES.lobby);
 
-export function loadSettings(storage) { try { const v = JSON.parse(storage?.getItem(SETTINGS_KEY) || 'null'); return { joystick: v?.joystick === true }; } catch { return { joystick: false }; } }
+// No saved choice, corrupt storage, or a non-boolean: joystick on. Only a stored boolean is honoured.
+export function loadSettings(storage) {
+  try {
+    const raw = storage?.getItem?.(SETTINGS_KEY);
+    if (raw == null || raw === '') return { joystick: true };
+    const v = JSON.parse(raw);
+    if (typeof v?.joystick === 'boolean') return { joystick: v.joystick };
+    return { joystick: true };
+  } catch { return { joystick: true }; }
+}
 export function saveSettings(storage, s) { try { storage?.setItem(SETTINGS_KEY, JSON.stringify({ ...loadSettings(storage), ...s })); } catch {} }
 
 // dx, dy: finger offset from the stick centre (CSS px, +y = down). Returns { x: 'left'|'right'|null, y: 'up'|'down'|null }.

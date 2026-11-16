@@ -63,16 +63,17 @@ for (const [w, h] of [[375, 667], [390, 844]]) for (const joy of [false, true]) 
   const state = () => p.evaluate(() => ({ body: document.body.classList.contains('joy'), joy: !document.querySelector('#joy').hidden, dpad: getComputedStyle(document.querySelector('.dpad')).display !== 'none', ls: localStorage.getItem('inuarcade.settings.v1') }));
   const shot = (n) => p.screenshot({ path: `${D}${TAG}-toggle-${n}.png` });
   await nav(p, U + '/kibble-chomp'); await p.waitForTimeout(700); let s = await state();
-  ok(!s.body && !s.joy && s.dpad && s.ls === null, 'toggle: default OFF, original d-pad, nothing stored'); await shot('1-default-off');
-  await p.locator('#b-settings').tap(); await p.waitForTimeout(200); await shot('2-settings-off');
-  await p.locator('label.sw:has(#set-joy)').tap(); await p.waitForTimeout(200); await shot('3-settings-on'); s = await state();
-  ok(s.body && s.joy && !s.dpad && JSON.parse(s.ls).joystick === true, 'toggle: switch ON shows the stick and saves it');
-  await nav(p, p.url()); await p.waitForTimeout(800); s = await state(); ok(s.body && s.joy && !s.dpad, 'toggle: still ON after reload'); await shot('4-reload-on');
+  ok(s.body && s.joy && !s.dpad && s.ls === null, 'toggle: default ON, stick shown, nothing stored'); await shot('1-default-on');
+  await p.locator('#b-settings').tap(); await p.waitForTimeout(200); await shot('2-settings-on');
+  ok(await p.locator('#set-joy').isChecked(), 'toggle: switch shows ON when nothing is saved');
+  await p.locator('label.sw:has(#set-joy)').tap(); await p.waitForTimeout(200); await shot('3-settings-off'); s = await state();
+  ok(!s.body && !s.joy && s.dpad && JSON.parse(s.ls).joystick === false, 'toggle: switch OFF saves false and brings the d-pad back');
+  await nav(p, p.url()); await p.waitForTimeout(800); s = await state(); ok(!s.body && !s.joy && s.dpad, 'toggle: still OFF after reload'); await shot('4-reload-off');
   await nav(p, U + '/pup-crossing'); await p.waitForTimeout(700); await p.locator('#pad [data-k=start]').tap(); await p.waitForTimeout(400);
-  s = await state(); ok(s.body && s.joy && !s.dpad, 'toggle: ON in another cabinet (Pup Crossing)'); await shot('5-other-cabinet-on');
-  await p.locator('#b-settings').tap(); await p.waitForTimeout(200); ok(await p.locator('#set-joy').isChecked(), 'toggle: switch shows ON in the other cabinet');
+  s = await state(); ok(!s.body && !s.joy && s.dpad, 'toggle: OFF in another cabinet (Pup Crossing)'); await shot('5-other-cabinet-off');
+  await p.locator('#b-settings').tap(); await p.waitForTimeout(200); ok(!(await p.locator('#set-joy').isChecked()), 'toggle: switch shows OFF in the other cabinet');
   await p.locator('label.sw:has(#set-joy)').tap(); await p.waitForTimeout(200); await p.locator('#pclose').tap(); await p.waitForTimeout(200);
-  s = await state(); ok(!s.body && !s.joy && s.dpad && JSON.parse(s.ls).joystick === false, 'toggle: switch OFF brings the original d-pad back'); await shot('6-off-original');
-  await nav(p, p.url()); await p.waitForTimeout(800); s = await state(); ok(!s.body && !s.joy && s.dpad, 'toggle: still OFF after reload'); await shot('7-reload-off');
+  s = await state(); ok(s.body && s.joy && !s.dpad && JSON.parse(s.ls).joystick === true, 'toggle: switch ON brings the stick back and saves it'); await shot('6-on-stick');
+  await nav(p, p.url()); await p.waitForTimeout(800); s = await state(); ok(s.body && s.joy && !s.dpad, 'toggle: still ON after reload'); await shot('7-reload-on');
   await ctx.close(); }
 await b.close(); console.log(fails.length ? `${fails.length} FAILED` : 'ALL PASS'); process.exit(fails.length ? 1 : 0);

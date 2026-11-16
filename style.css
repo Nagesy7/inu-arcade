@@ -20,7 +20,7 @@ input{font:12px Silkscreen,monospace;background:#000;color:var(--cream);border:2
 .ach{display:flex;gap:8px;align-items:center}.ach.locked{opacity:.4}
 
 body.touch #inu-legal{font-size:9px!important;opacity:.75;left:max(6px,env(safe-area-inset-left))!important;right:auto!important;top:4px!important;bottom:auto!important;max-width:20vw;white-space:normal!important;line-height:1.5;}
-/* optional virtual joystick (Settings > Joystick controls), OFF by default */
+/* virtual joystick (Settings > Joystick controls). On when nothing is saved; a saved true or false is kept. */
 #joy[hidden]{display:none}
 #joy .knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:#ffffff38;border:2px solid #ffffff80;pointer-events:none;box-sizing:border-box}
 #joy.on .knob{background:#f2c14e88;border-color:var(--gold)}
@@ -86,7 +86,7 @@ body:not(.threebtn) #pad .cbtn{display:none}
 #pad .sbtn.on u{background:linear-gradient(#f2c14e,#c9932a)}
 .gbc-grille{position:absolute;right:calc(var(--u)*7);bottom:calc(var(--u)*6);width:calc(var(--u)*22);height:calc(var(--u)*15);transform:rotate(-24deg);pointer-events:none;
   background:radial-gradient(circle,#5a2a10aa calc(var(--u)*.85),transparent calc(var(--u)*1)) 0 0/calc(var(--u)*3.6) calc(var(--u)*3.6)}
-/* optional virtual joystick (Settings > Joystick controls), OFF by default: sits where the d-pad is */
+/* virtual joystick (Settings > Joystick controls). On when nothing is saved; sits where the d-pad is */
 #joy{position:absolute;left:calc(var(--u)*7);top:calc(var(--u)*6);width:calc(var(--u)*34);height:calc(var(--u)*34);border-radius:50%;background:#1a142433;border:2px solid #1a142466;pointer-events:auto;touch-action:none;box-sizing:border-box}
 /* chrome below the device */
 #bar{position:relative;flex:none;display:flex;gap:4px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:min(100%,720px);z-index:5}
