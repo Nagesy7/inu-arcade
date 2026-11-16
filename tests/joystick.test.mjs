@@ -3,10 +3,12 @@ import { loadSettings, saveSettings, SETTINGS_KEY, stickDir, joyMode, DEAD, TRAV
 import { createTouchRouter } from '../src/core/input.js';
 const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), m }; };
 
-test('joystick setting is OFF by default (empty, missing, corrupt storage)', () => {
-  assert.equal(loadSettings(mem()).joystick, false); assert.equal(loadSettings(null).joystick, false);
-  const s = mem(); s.setItem(SETTINGS_KEY, '{nope'); assert.equal(loadSettings(s).joystick, false);
-  s.setItem(SETTINGS_KEY, '{"joystick":"yes"}'); assert.equal(loadSettings(s).joystick, false, 'only a real true turns it on');
+test('joystick is ON when nothing is saved; an explicit true or false is kept', () => {
+  assert.equal(loadSettings(mem()).joystick, true); assert.equal(loadSettings(null).joystick, true);
+  const s = mem(); s.setItem(SETTINGS_KEY, '{nope'); assert.equal(loadSettings(s).joystick, true, 'corrupt storage is not a saved choice');
+  s.setItem(SETTINGS_KEY, '{"joystick":"yes"}'); assert.equal(loadSettings(s).joystick, true, 'only a real boolean is a saved choice');
+  s.setItem(SETTINGS_KEY, '{"joystick":true}'); assert.equal(loadSettings(s).joystick, true);
+  s.setItem(SETTINGS_KEY, '{"joystick":false}'); assert.equal(loadSettings(s).joystick, false);
 });
 test('joystick setting persists under one shared key (all cabinets, cloud save key)', () => {
   const s = mem(); saveSettings(s, { joystick: true }); assert.equal(SETTINGS_KEY, 'inuarcade.settings.v1');

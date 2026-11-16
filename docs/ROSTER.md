@@ -71,6 +71,23 @@ Each has Classic and Inu Mode, v2 remixed rules, and an optional joystick toggle
 - **Kibble Pay:** registered (`shiba-scuffle`, max 1,900,000 = ~10× best human-sim run 189,899, 600/s, min 5 s, version 2; arcade-run quest; Inu Score v7, 14 games, max 18,000).
 - **Inu Verse:** district `arena`, spawn `door-shiba-scuffle` (verse-districts.md v2).
 
+## Free-play wing (Inu side)
+
+Ten cabinets ported as original Inu games. They use the same title / hall / results flow, Classic and Inu Mode, and the cabinet stick. Bones come from the existing per-run and per-day caps. They are not on the $KIBBLE prize board, the daily-event cycle, or the gold-skin burn list. Lane-hopper and brick-burst were not added: Pup Crossing and Bone Breaker already cover those.
+
+| Slug | Name | Inu twist |
+|---|---|---|
+| `gust-glider` | Gust Glider | Tail glide, bones in the gaps. Towers are bone cairns, peaked kennels and timber. |
+| `dash-line` | Dash Line | Treat hops refresh a jump. |
+| `stack-shift` | Stack Shift | Bone glue gives width back every third perfect. |
+| `hue-flood` | Hue Flood | Sniff marks the swatch that grows the patch most. |
+| `beat-lanes` | Beat Lanes | Howl catches every lane. Lanes are Left, Down, Up, Right. |
+| `tile-fuse` | Tile Fuse | Sniff points at a slide that will fuse. |
+| `sky-springs` | Sky Springs | Zoomies bounce when A is held on a landing. |
+| `rift-runner` | Rift Runner | The corner sign takes a swipe sooner. |
+| `coil` | Coil | Bark shed drops the last three segments. Steer with the cabinet stick. |
+| `spark-factory` | Spark Factory | Rush bark. The button is a paw labelled BARK. |
+
 ## Build order
 
 1. Joystick toggle (in progress)

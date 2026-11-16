@@ -49,7 +49,7 @@ export function showScores(game = 'arcade', period = 'daily', mode = 'classic') 
 export async function showPrizes(msg = '') {
   const P = A.purse, bal = await A.wallet().balance();
   const items = R.SHOP.map((it) => { const own = P.owned.includes(it.id); return `<div class="card"><b>${esc(it.name)}</b><br><span class="small">${it.slot ? it.slot + ' cosmetic' : 'lobby effect'}</span><br>🎟 ${it.tickets}<br><button class="btn ${own ? '' : 'gold'}" data-buy="${it.id}" ${own || P.tickets < it.tickets ? 'disabled' : ''}>${own ? 'Owned' : 'Swap tickets'}</button></div>`; }).join('');
-  const skins = Object.keys(GAMES).map((g) => { const has = A.purse.skins[g] || []; const sp = R.SPONSORS[g];
+  const skins = Object.keys(GAMES).filter((g) => !GAMES[g].META.freePlay).map((g) => { const has = A.purse.skins[g] || []; const sp = R.SPONSORS[g];
     return `<div class="card"><b>${esc(title(g))}</b><br><span class="small">Sponsor: ${sp ? esc(sp.name) : 'open slot'}</span><br>
     <button class="btn" data-neon="${g}" ${has.includes('neon') || P.tickets < R.SKINS.neon.tickets ? 'disabled' : ''}>${has.includes('neon') ? 'Neon ✓' : `Neon skin 🎟${R.SKINS.neon.tickets}`}</button>
     <button class="btn gold" data-gold="${g}" ${has.includes('gold') ? 'disabled' : ''}>${has.includes('gold') ? 'Gold ✓' : `Gold skin: optional burn ${R.SKINS.gold.burn} KIBBLE`}</button></div>`; }).join('');
@@ -89,7 +89,7 @@ export function showRescue() {
 export function showSettings() {
   const on = !!A.settings?.joystick;
   openPanel(`<h2>⚙ Settings</h2><label class="sw"><input type="checkbox" id="set-joy" role="switch" ${on ? 'checked' : ''}><span class="swt"></span> <b>Joystick controls</b></label>
-  <p class="small">Off (default): the classic d-pad buttons. On: a thumb stick on the left (4-way in Kibble Chomp and Pup Crossing, left/right in Bark Invaders and Bone Breaker). A, START and BACK stay on the right. This setting applies to every cabinet and is saved on this device and to your wallet save when you are connected.</p>`, 'settings');
+  <p class="small">On (default, until you choose): a thumb stick on the left. Off: the classic d-pad buttons. 4-way in Kibble Chomp and Pup Crossing, left/right in Bark Invaders and Bone Breaker. A, START and BACK stay on the right. This setting applies to every cabinet. Turning it on or off is saved on this device and to your wallet save when you are connected.</p>`, 'settings');
   $('#set-joy').onchange = (e) => { A.setJoystick(e.target.checked); sfx('blip'); };
   $('#pbody').insertAdjacentHTML('beforeend', `<label class="sw"><input type="checkbox" id="set-lowfx" role="switch" ${A.fx.low ? 'checked' : ''}><span class="swt"></span> <b>Low FX</b></label>
   <p class="small">Fewer wandering pups and particles in the hall and on title screens, no marquee bulb chase. ${A.reduced ? 'Your device asks for reduced motion, so ambient motion is already paused.' : 'Ambient motion also pauses automatically when your device asks for reduced motion.'}</p>

@@ -12,9 +12,10 @@ import { simWallet, pendingWallet, kibblePayWallet, setWallet, wallet } from './
 import { drawInuAvatar } from './vendor/inu-avatar.js';
 import { normalizeProfile } from './vendor/profile-schema.js';
 import * as Chomp from './games/chomp.js'; import * as Bark from './games/bark.js'; import * as Crossing from './games/crossing.js'; import * as Breaker from './games/breaker.js'; import * as Street from './games/street.js'; import * as Pawfu from './games/pawfu.js'; import * as Digger from './games/digger.js'; import * as Pip from './games/pip.js'; import * as V from './core/verse.js'; import * as Scuffle from './games/shiba.js';
+import * as Gust from './games/gust.js'; import * as Dash from './games/dash.js'; import * as Stack from './games/stack.js'; import * as Hue from './games/hue.js'; import * as Beat from './games/beat.js'; import * as Fuse from './games/fuse.js'; import * as Sky from './games/sky.js'; import * as Rift from './games/rift.js'; import * as Coil from './games/coil.js'; import * as Spark from './games/spark.js';
 import { openPanel, closePanel, panelOpen, showResults, showScores, showPrizes, showProfile, showRescue, refreshPurse, showAchievements, showSettings, showToday } from './ui.js';
 
-export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip, 'shiba-scuffle': Scuffle };
+export const GAMES = { 'kibble-chomp': Chomp, 'bark-invaders': Bark, 'pup-crossing': Crossing, 'bone-breaker': Breaker, 'street-sniffer': Street, 'paw-fu-tower': Pawfu, 'bone-digger': Digger, 'pips-big-bark': Pip, 'shiba-scuffle': Scuffle, 'gust-glider': Gust, 'dash-line': Dash, 'stack-shift': Stack, 'hue-flood': Hue, 'beat-lanes': Beat, 'tile-fuse': Fuse, 'sky-springs': Sky, 'rift-runner': Rift, 'coil': Coil, 'spark-factory': Spark };
 export const RESCUE_URL = 'https://inu-rescue.vercel.app';
 const $ = (q) => document.querySelector(q);
 const cv = $('#screen'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -117,12 +118,22 @@ export const CABS = [
   { id: 'bone-digger', title: Digger.META.title, short: Digger.META.short, color: Digger.META.color, x: 242 },
   { id: 'pips-big-bark', title: Pip.META.title, short: Pip.META.short, color: Pip.META.color, x: 276 },
   { id: 'shiba-scuffle', title: Scuffle.META.title, short: Scuffle.META.short, color: Scuffle.META.color, x: 310 },
-].map((c, i) => ({ ...c, x: 4 + i * 31 })); // ten cabinets across the back wall
-const CW = 28, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 312, y: 150, w: 66, h: 34 }, BOARD = { x: 314, y: 22, w: 66, h: 54 };
+  { id: 'gust-glider', title: Gust.META.title, short: Gust.META.short, color: Gust.META.color },
+  { id: 'dash-line', title: Dash.META.title, short: Dash.META.short, color: Dash.META.color },
+  { id: 'stack-shift', title: Stack.META.title, short: Stack.META.short, color: Stack.META.color },
+  { id: 'hue-flood', title: Hue.META.title, short: Hue.META.short, color: Hue.META.color },
+  { id: 'beat-lanes', title: Beat.META.title, short: Beat.META.short, color: Beat.META.color },
+  { id: 'tile-fuse', title: Fuse.META.title, short: Fuse.META.short, color: Fuse.META.color },
+  { id: 'sky-springs', title: Sky.META.title, short: Sky.META.short, color: Sky.META.color },
+  { id: 'rift-runner', title: Rift.META.title, short: Rift.META.short, color: Rift.META.color },
+  { id: 'coil', title: Coil.META.title, short: Coil.META.short, color: Coil.META.color },
+  { id: 'spark-factory', title: Spark.META.title, short: Spark.META.short, color: Spark.META.color },
+].map((c, i) => ({ ...c, x: 4 + i * 31 })); // original row, then the free-play wing. The camera follows the Shiba.
+const CW = 28, CY = 30, CH = 62, FLOOR_Y = 100, COUNTER = { x: 640, y: 150, w: 66, h: 34 }, BOARD = { x: 642, y: 22, w: 66, h: 54 };
 export function cabRect(c) { return { x: c.x, y: CY, w: CW, h: CH }; }
 function setRes(w, h) { if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; ctx.imageSmoothingEnabled = false; fit(); } }
-// The hall is 384 px wide; the handheld screen shows a 240x216 (10:9) window of it that follows the Shiba (A.lobbyCam).
-export const HALL_W = 384, VIEW_W = 240;
+// The hall is wider than the handheld screen. The screen shows a 240x216 (10:9) window that follows the Shiba (A.lobbyCam).
+export const HALL_W = 720, VIEW_W = 240;
 export const lobbyCam = (x) => Math.round(Math.max(0, Math.min(HALL_W - VIEW_W, x - VIEW_W / 2)));
 function toLobby(push = true) { setRes(VIEW_W, 216); document.body.classList.remove('twobtn', 'threebtn'); if (push) history.pushState({}, '', '/'); A.scene = 'lobby'; A.cab = null; A.lobby ||= { x: 192, y: 150, face: 'down', walk: 0, target: null, pending: null, t: 0 }; document.title = 'Inu Arcade · Shiba-powered retro cabinets'; }
 function lobbyTargets() { return [...CABS.map((c) => ({ kind: 'cab', id: c.id, x: c.x + CW / 2, y: FLOOR_Y + 8, label: c.title })), { kind: 'prizes', x: COUNTER.x + COUNTER.w / 2, y: COUNTER.y - 10, label: 'PRIZE COUNTER' }, { kind: 'scores', x: BOARD.x + BOARD.w / 2, y: FLOOR_Y + 8, label: 'HI-SCORE BOARD' }]; }
@@ -132,16 +143,16 @@ function updateLobby(dt, inp) {
   const L = A.lobby; L.t += dt; let dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), dy = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
   if (dx || dy) { L.target = null; L.pending = null; }
   else if (L.target) { const vx = L.target.x - L.x, vy = L.target.y - L.y, d = Math.hypot(vx, vy); if (d < 2) { L.target = null; if (L.pending) { const p = L.pending; L.pending = null; activate(p); return; } } else { dx = vx / d; dy = vy / d; } }
-  if (dx || dy) { const m = Math.hypot(dx, dy), sp = 80 * dt; let nx = Math.max(10, Math.min(374, L.x + (dx / m) * sp)), ny = Math.max(FLOOR_Y + 6, Math.min(208, L.y + (dy / m) * sp));
+  if (dx || dy) { const m = Math.hypot(dx, dy), sp = 80 * dt; let nx = Math.max(10, Math.min(HALL_W - 10, L.x + (dx / m) * sp)), ny = Math.max(FLOOR_Y + 6, Math.min(208, L.y + (dy / m) * sp));
     if (nx > COUNTER.x - 6 && nx < COUNTER.x + COUNTER.w + 6 && ny > COUNTER.y - 2 && ny < COUNTER.y + COUNTER.h + 12) { nx = L.x; ny = L.y; }
     L.x = nx; L.y = ny; L.walk += dt; L.face = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up'; } else L.walk = 0;
   if (inp.pressed.has('a') || inp.pressed.has('start')) activate(nearTarget(L));
 }
 function marqueeText() { return CABS.filter((c) => GAMES[c.id]).map((c) => { const b = S.board(A.db, c.id, 'all')[0]; return `${c.title} HI ${b ? b.name + ' ' + b.score : '---'}`; }).join('   ★   ') + '   ★   ARCADE CHAMP: ' + (S.arcadeBoard(A.db, 'daily')[0]?.name || '---') + '   ★   TODAY: ' + todayEvent().goal.toUpperCase() + '   ★   FREE PLAY · SKILL PRIZES ONLY   ★   '; }
-let hallBgCv = null; function hallBg() { if (hallBgCv) return hallBgCv; const c = hallBgCv = Object.assign(document.createElement('canvas'), { width: 384, height: 216 }), g = c.getContext('2d');
-  g.fillStyle = '#120c2a'; g.fillRect(0, 0, 384, 216);
-  for (let y = FLOOR_Y; y < 216; y += 12) for (let x = 0; x < 384; x += 12) { g.fillStyle = ((x + y) / 12) % 2 ? '#241a4a' : '#1b1440'; g.fillRect(x, y, 12, 12); }
-  g.fillStyle = '#2a1f55'; g.fillRect(0, 12, 384, FLOOR_Y - 12); g.fillStyle = '#3b2a6e'; for (let x = 0; x < 384; x += 24) g.fillRect(x, 14, 22, FLOOR_Y - 16); return c; }
+let hallBgCv = null; function hallBg() { if (hallBgCv) return hallBgCv; const c = hallBgCv = Object.assign(document.createElement('canvas'), { width: HALL_W, height: 216 }), g = c.getContext('2d');
+  g.fillStyle = '#120c2a'; g.fillRect(0, 0, HALL_W, 216);
+  for (let y = FLOOR_Y; y < 216; y += 12) for (let x = 0; x < HALL_W; x += 12) { g.fillStyle = ((x + y) / 12) % 2 ? '#241a4a' : '#1b1440'; g.fillRect(x, y, 12, 12); }
+  g.fillStyle = '#2a1f55'; g.fillRect(0, 12, HALL_W, FLOOR_Y - 12); g.fillStyle = '#3b2a6e'; for (let x = 0; x < HALL_W; x += 24) g.fillRect(x, 14, 22, FLOOR_Y - 16); return c; }
 // Marquee: text rebuilt every 2 s (it reads every board) and pre-rendered to a strip; each frame just blits the visible slice.
 let mq = null; function marquee() { const t = Date.now(); if (mq && t - mq.t < 2000) return mq; const txt = marqueeText(); if (mq && mq.txt === txt) { mq.t = t; return mq; }
   const m = ctx.font; ctx.font = F(8); const w = Math.ceil(ctx.measureText(txt).width) + 1; ctx.font = m; const c = Object.assign(document.createElement('canvas'), { width: w, height: 12 }), g = c.getContext('2d');
@@ -150,8 +161,8 @@ function drawLobby(now) {
   const L = A.lobby, cam = A.lobbyCam = lobbyCam(L.x); ctx.save(); ctx.translate(-cam, 0);
   // floor + walls
   ctx.drawImage(hallBg(), 0, 0); // static floor + wall, pre-rendered once (was ~350 fillRects a frame)
-  const glow = 0.5 + 0.5 * Math.sin(now * 2); ctx.fillStyle = `rgba(255,93,115,${0.5 + glow * 0.5})`; ctx.fillRect(0, FLOOR_Y - 3, 384, 2); ctx.fillStyle = '#4fc3e8'; ctx.fillRect(0, 22, 384, 1);
-  const lvl = A.fxLevel(), ev = todayEvent(); AMB.drawMotes(ctx, now, lvl);
+  const glow = 0.5 + 0.5 * Math.sin(now * 2); ctx.fillStyle = `rgba(255,93,115,${0.5 + glow * 0.5})`; ctx.fillRect(0, FLOOR_Y - 3, HALL_W, 2); ctx.fillStyle = '#4fc3e8'; ctx.fillRect(0, 22, HALL_W, 1);
+  const lvl = A.fxLevel(), ev = todayEvent(); AMB.drawMotes(ctx, now, lvl, HALL_W);
   // cabinets
   for (const c of CABS) { const skin = (A.purse.skins[c.id] || []).includes('gold') ? 'gold' : (A.purse.skins[c.id] || []).includes('neon') ? 'neon' : null; drawCabinet(c, now, skin); AMB.drawBulbs(ctx, c.x, CY, CW, now + c.x * 0.37, c.color, lvl);
     if (c.id === ev.game) { ctx.globalAlpha = lvl === 'full' ? 0.45 + 0.35 * Math.sin(now * 4) : 0.7; ctx.strokeStyle = '#f2c14e'; ctx.lineWidth = 1; ctx.strokeRect(c.x - 1.5, CY - 3.5, CW + 3, CH + 5); ctx.globalAlpha = 1; AMB.drawEventStar(ctx, c.x + CW / 2, 25, now, lvl); } }
@@ -179,7 +190,7 @@ function drawLobby(now) {
   const n = nearTarget(L); const hint = n ? `${isTouch ? 'A' : 'SPACE'}: ${n.label}` : isTouch ? 'D-PAD WALK · TAP A CABINET' : 'ARROWS WALK · CLICK A CABINET';
   text(hint, VW / 2, 206, n ? '#7ef0ff' : '#8a7ac4', 8, 'center', true, VW - 6);
 }
-const CROWD_FLOOR = { x0: 12, x1: 296, y0: FLOOR_Y + 12, y1: 178 };
+const CROWD_FLOOR = { x0: 12, x1: COUNTER.x - 16, y0: FLOOR_Y + 12, y1: 178 };
 function stepCrowd(now, lvl, ev) { const dt = Math.min(0.1, Math.max(0, now - (A.crowdT ?? now))); A.crowdT = now;
   const spots = CABS.map((c) => ({ id: c.id, x: c.x + CW / 2 })); if (!A.crowd || A.crowd.lvl !== lvl) { A.crowd = AMB.createCrowd(AMB.crowdSize(lvl), CROWD_FLOOR, spots); A.crowd.lvl = lvl; }
   A.cheer = Math.max(0, (A.cheer || 0) - dt); AMB.updateCrowd(A.crowd, dt, { floor: CROWD_FLOOR, spots, block: COUNTER, lvl, hot: ev.game, cheer: A.cheer }); }
@@ -213,6 +224,7 @@ function drawCabinet(c, now, skin) {
   else if (c.id === 'bone-digger') { ctx.fillStyle = '#8a5a32'; ctx.fillRect(sx, sy + 5, 30, 17); ctx.fillStyle = '#5fb8f0'; ctx.fillRect(sx, sy, 30, 5); ctx.fillStyle = '#2a160c'; const d = (t * 6) % 14; ctx.fillRect(sx + 4, sy + 5, 4, 6 + d); ctx.fillRect(sx + 4, sy + 9 + d, 16, 4); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 19, sy + 16, 5, 1); ctx.fillRect(sx + 19, sy + 15, 1, 3); ctx.fillRect(sx + 23, sy + 15, 1, 3); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4, sy + 5 + d, 4, 4); ctx.fillStyle = '#8a8494'; ctx.fillRect(sx + 12, sy + 6, 5, 4); }
   else if (c.id === 'pips-big-bark') { ctx.fillStyle = '#ff8a5c'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#5a2a6a'; ctx.fillRect(sx, sy + 8, 6, 14); ctx.fillRect(sx + 14, sy + 5, 7, 17); ctx.fillStyle = '#d0603a'; ctx.fillRect(sx, sy + 18, 30, 4); const px = sx + ((t * 9) % 30) - 4, hop = Math.round(Math.abs(Math.sin(t * 4)) * 4); ctx.fillStyle = '#e8892e'; ctx.fillRect(px, sy + 13 - hop, 6, 5); ctx.fillStyle = '#e33b3b'; ctx.fillRect(px - 3, sy + 14 - hop + Math.round(Math.sin(t * 12)), 4, 2); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(px + 7, sy + 14 - hop, 1, 1); ctx.fillRect(px + 9, sy + 13 - hop, 1, 3); ctx.fillStyle = '#8a94b0'; ctx.fillRect(sx + 24 - ((t * 3) % 6), sy + 14, 5, 4); }
   else if (c.id === 'shiba-scuffle') { ctx.fillStyle = '#4f9a4a'; ctx.fillRect(sx, sy, 30, 22); ctx.fillStyle = '#fbf1e0'; ctx.fillRect(sx + 6 + Math.round(Math.sin(t * 2) * 3), sy + 10, 8, 2); const k = Math.floor(t * 4) % 2; ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 1 + k, sy + 8, 4, 4); ctx.fillStyle = '#3a7bd5'; ctx.fillRect(sx + 1 + k, sy + 11, 4, 1); ctx.fillStyle = '#c86a2a'; ctx.fillRect(sx + 13 - k, sy + 8, 4, 4); ctx.fillStyle = '#d6302f'; ctx.fillRect(sx + 13 - k, sy + 11, 4, 1); if (k) { ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx + 8, sy + 6, 2, 2); } }
+  else if (GAMES[c.id]?.marquee) GAMES[c.id].marquee(ctx, sx, sy, t);
   else { ctx.fillStyle = '#c0392b'; for (let i = 0; i < 3; i++) ctx.fillRect(sx + (i % 2 ? 4 : 0), sy + 4 + i * 6, 26, 2); ctx.fillStyle = '#e0802c'; ctx.fillRect(sx + 4 + ((t * 6) % 18), sy + 15, 4, 4); }
   ctx.restore();
   ctx.globalAlpha = 1; ctx.fillStyle = '#00000055'; ctx.fillRect(x + 4, y + 40, CW - 8, 10); ctx.fillStyle = '#d6302f'; ctx.fillRect(x + 8, y + 43, 4, 4); ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + CW - 11, y + 43, 3, 3); ctx.fillRect(x + CW - 7, y + 43, 3, 3);
@@ -278,7 +290,7 @@ function finishRun() {
   S.postScore(key, entry); showResults(C.id, C.result);
   try { globalThis.InuProfile?.gameOver?.({ score }); } catch {} // guests: Hall of Fame / Kennel Chest prompt (kibble-pay /inu-profile.js)
   // wallet-signed score -> kibble-pay prize board (only when signed in with a real wallet)
-  const w = wallet(); if (w?.submitScore && w.address) w.submitScore(C.id, score, Date.now() - (C.runStart || Date.now())).then((r) => note(r.ok ? 'Posted to the $KIBBLE prize board (wallet-signed).' : 'Prize board: ' + r.reason)).catch((e) => note('Prize board: ' + e.message));
+  const w = wallet(); if (!C.G.META.freePlay && w?.submitScore && w.address) w.submitScore(C.id, score, Date.now() - (C.runStart || Date.now())).then((r) => note(r.ok ? 'Posted to the $KIBBLE prize board (wallet-signed).' : 'Prize board: ' + r.reason)).catch((e) => note('Prize board: ' + e.message));
   function note(m) { C.result.posted = m; const pn = document.getElementById('panel'); if (pn && !pn.hidden && pn.dataset.kind === 'results') document.getElementById('pbody').insertAdjacentHTML('beforeend', `<p class="small">${m.replace(/[<>&]/g, '')}</p>`); }
 }
 function drawHUD(C) { const s = C.s, G = C.G, W = G.W, H = G.H; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, 20); const hi = Math.max(S.board(A.db, modeKey(C), 'all')[0]?.score || 0, MET.finalScore(s.score, C.mod));

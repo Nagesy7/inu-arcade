@@ -4,7 +4,7 @@
 // menus (Settings) by pad, joystick knob mirrors the stick, keyboard + touch + pad mixing, unplug, toast overlap.
 import { chromium } from 'playwright'; import { mkdirSync } from 'node:fs';
 const U = (process.env.URL || 'http://localhost:8140').replace(/\/$/, ''), D = '/workspace/inu-arcade-shots/', SHOTS = process.env.SHOTS !== '0';
-const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'];
+const GAMES = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle', 'gust-glider', 'dash-line', 'stack-shift', 'hue-flood', 'beat-lanes', 'tile-fuse', 'sky-springs', 'rift-runner', 'coil', 'spark-factory'];
 let fail = 0, pass = 0; const ok = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (c) pass++; else fail++; }; mkdirSync(D, { recursive: true });
 const MOCK = () => { const pads = [null, null, null, null]; window.__gpCalls = 0;
   const mk = (id, index) => ({ id, index, connected: true, mapping: 'standard', timestamp: 0, buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })), axes: [0, 0, 0, 0] });
@@ -49,7 +49,9 @@ const toCab = (p, g) => p.evaluate((g) => { history.pushState({}, '', '/' + g); 
   for (let i = 0; i < 12 && !found; i++) { await press(p, 13); found = await p.evaluate(() => document.activeElement?.id === 'set-joy'); }
   const fv = await p.evaluate(() => document.activeElement?.classList.contains('gp-focus') && getComputedStyle(document.activeElement).outlineStyle !== 'none');
   ok(found && fv, 'menus: d-pad down moves a visible focus ring through Settings to the joystick switch');
-  await press(p, 0); await p.waitForTimeout(150); ok(await p.evaluate(() => window.__arcade.settings.joystick === true), 'menus: A (south) toggles the focused switch');
+  ok(await p.evaluate(() => window.__arcade.settings.joystick === true && localStorage.getItem('inuarcade.settings.v1') === null), 'menus: joystick starts ON with nothing saved');
+  await press(p, 0); await p.waitForTimeout(150); ok(await p.evaluate(() => window.__arcade.settings.joystick === false && JSON.parse(localStorage.getItem('inuarcade.settings.v1')).joystick === false), 'menus: A (south) toggles the switch off and saves it');
+  await press(p, 0); await p.waitForTimeout(150); ok(await p.evaluate(() => window.__arcade.settings.joystick === true), 'menus: A toggles the switch back on');
   await press(p, 1); await p.waitForTimeout(150); s = await st(p); ok(!s.panel, 'menus: B (east) closes the panel');
   await p.evaluate(() => window.__pad.axes(-0.9, -0.2)); await p.waitForTimeout(150); const kn = await p.evaluate(() => document.querySelector('#joy .knob')?.style.transform || ''); await p.evaluate(() => window.__pad.axes(0, 0)); await p.waitForTimeout(80);
   const kn0 = await p.evaluate(() => document.querySelector('#joy .knob')?.style.transform || ''); ok(/translate\(-3\d/.test(kn) && kn0 === '', `joystick on: the on-screen knob mirrors the left stick (${kn}) and recentres`);
@@ -76,12 +78,13 @@ const toCab = (p, g) => p.evaluate((g) => { history.pushState({}, '', '/' + g); 
   const t = await toast(p); ok(t && /PS controller connected/.test(t.text) && /✕ A\/jump · ○ B\/back/.test(t.text) && /OPTIONS START/.test(t.text) && t.text.includes('✕○□△'), `connect: PS toast with PS glyphs + hints (${t?.text.replace(/\n/g, ' / ')})`);
   const r = await rects(p); ok(!['wallet', 'home', 'bar', 'legal', 'pad', 'badge'].some((k) => X(t.r, r[k])), 'phone 390x844: toast clear of wallet pill, 🏠, toolbar, legal, pad, profile badge');
   if (SHOTS) await p.screenshot({ path: D + 'alive-gamepad-toast.png' });
-  const right = await p.evaluate(() => { const z = document.querySelector('#pad [data-k="right"]').getBoundingClientRect(); return { x: z.x + z.width / 2, y: z.y + z.height / 2 }; });
-  await p.evaluate(() => window.__pad.btn(0, true)); let a = await st(p); await touch('touchStart', [right]); await p.waitForTimeout(400); await touch('touchEnd', []); await p.waitForTimeout(60); let s = await st(p);
-  ok(s.x > a.x + 15 && /\ba\b/.test(s.held), `mixing: touch d-pad walks while the pad holds A; lifting the finger keeps the pad's A (${a.x | 0} -> ${s.x | 0}, held ${s.held})`);
+  const joy = await p.evaluate(() => { const z = document.querySelector('#joy').getBoundingClientRect(); return { x: z.x + z.width / 2, y: z.y + z.height / 2 }; });
+  const joyRight = { x: joy.x + 40, y: joy.y };
+  await p.evaluate(() => window.__pad.btn(0, true)); let a = await st(p); await touch('touchStart', [joy]); await touch('touchMove', [joyRight]); await p.waitForTimeout(400); await touch('touchEnd', []); await p.waitForTimeout(60); let s = await st(p);
+  ok(s.x > a.x + 15 && /\ba\b/.test(s.held), `mixing: touch stick walks while the pad holds A; lifting the finger keeps the pad's A (${a.x | 0} -> ${s.x | 0}, held ${s.held})`);
   await p.evaluate(() => window.__pad.btn(0, false)); await p.waitForTimeout(80); ok(!/\ba\b/.test((await st(p)).held), 'mixing: releasing the pad A releases it');
-  a = await st(p); await p.evaluate(() => window.__pad.axes(-1, 0)); await touch('touchStart', [right]); await p.waitForTimeout(300); s = await st(p); await touch('touchEnd', []); await p.evaluate(() => window.__pad.axes(0, 0)); await p.waitForTimeout(60);
-  ok(/left/.test(s.held) && /right/.test(s.held), `mixing: stick left + finger right are both held (${s.held}), each released on its own`);
+  a = await st(p); await p.evaluate(() => window.__pad.axes(-1, 0)); await touch('touchStart', [joy]); await touch('touchMove', [joyRight]); await p.waitForTimeout(300); s = await st(p); await touch('touchEnd', []); await p.evaluate(() => window.__pad.axes(0, 0)); await p.waitForTimeout(60);
+  ok(/left/.test(s.held) && /right/.test(s.held), `mixing: gamepad stick left + finger on the on-screen stick right are both held (${s.held}), each released on its own`);
   ok(!/left|right/.test((await st(p)).held), 'mixing: nothing stuck after both release');
   ok(errs.length === 0, `phone: no page errors (${errs.join(' | ')})`); await ctx.close(); }
 await b.close(); console.log(`${pass} PASS, ${fail} FAIL`); process.exit(fail ? 1 : 0);

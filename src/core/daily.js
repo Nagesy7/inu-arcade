@@ -1,14 +1,14 @@
 // Daily Event: one free challenge per Sydney calendar day, the same for every player worldwide.
-// Deterministic: the Australia/Sydney date picks the cabinet (cycling all nine, never the same one two days running),
+// Deterministic: the Australia/Sydney date picks the cabinet (cycling the original nine prize cabinets, never the same one two days running),
 // the mode (CLASSIC / INU) and a score target taken from the house-score ladder in scores.js.
 // Rewards are Bones (topped up inside the normal run through rewards.grant, so the 60-per-run and 600-per-day caps
 // still apply) and, after three completed events, one cosmetic (Event Ribbon). Never $KIBBLE, no wagers, no fees,
 // no paid entry, no wallet needed. Progress lives in the local purse only (no new currency, no server ledger).
-import { HOUSE, GAME_IDS } from './scores.js';
+import { HOUSE, PRIZE_IDS } from './scores.js';
 import { hash } from './meta.js';
 export const TZ = 'Australia/Sydney';
-export const EVENT_GAMES = GAME_IDS; // the nine live cabinets
-export const NAMES = { 'kibble-chomp': 'KIBBLE CHOMP', 'bark-invaders': 'BARK INVADERS', 'pup-crossing': 'PUP CROSSING', 'bone-breaker': 'BONE BREAKER', 'street-sniffer': 'STREET SNIFFER', 'paw-fu-tower': 'PAW-FU TOWER', 'bone-digger': 'BONE DIGGER', 'pips-big-bark': "PIP'S BIG BARK", 'shiba-scuffle': 'SHIBA SCUFFLE' };
+export const EVENT_GAMES = PRIZE_IDS; // the original nine prize cabinets. Free-play cabinets are not in this cycle.
+export const NAMES = { 'kibble-chomp': 'KIBBLE CHOMP', 'bark-invaders': 'BARK INVADERS', 'pup-crossing': 'PUP CROSSING', 'bone-breaker': 'BONE BREAKER', 'street-sniffer': 'STREET SNIFFER', 'paw-fu-tower': 'PAW-FU TOWER', 'bone-digger': 'BONE DIGGER', 'pips-big-bark': "PIP'S BIG BARK", 'shiba-scuffle': 'SHIBA SCUFFLE', 'gust-glider': 'GUST GLIDER', 'dash-line': 'DASH LINE', 'stack-shift': 'STACK SHIFT', 'hue-flood': 'HUE FLOOD', 'beat-lanes': 'BEAT LANES', 'tile-fuse': 'TILE FUSE', 'sky-springs': 'SKY SPRINGS', 'rift-runner': 'RIFT RUNNER', 'coil': 'COIL', 'spark-factory': 'SPARK FACTORY' };
 const nice = (v) => { const m = v >= 10000 ? 1000 : v >= 1000 ? 100 : 25; return Math.max(m, Math.round(v / m) * m); };
 // Three tiers per cabinet from the house ladder: DOG (beginner), PUP (typical run), halfway from PUP to INU.
 export const TARGETS = Object.fromEntries(EVENT_GAMES.map((g) => { const h = Object.fromEntries(HOUSE[g]); return [g, [nice(h.DOG), nice(h.PUP), nice((h.PUP + h.INU) / 2)]]; }));

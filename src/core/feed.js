@@ -2,7 +2,7 @@
 // wallet-signed best scores per cabinet for this Sydney week. Nothing is ever simulated or padded: if the endpoint is empty
 // or unreachable we say so, and can show this device's own runs, clearly labelled THIS DEVICE (never the house INU/PUP/DOG demo rows).
 // Wallets are shown shortened (4…4); local runs show their 3-letter initials only.
-import { GAME_IDS } from './scores.js';
+import { GAME_IDS, PRIZE_IDS } from './scores.js';
 export const KP = 'https://kibble-pay.vercel.app';
 export const FEED_URL = KP + '/api/game?action=scores&byGame=1&pool=weekly';
 export const FEED_TIMEOUT_MS = 4000;
@@ -13,7 +13,7 @@ export function withTimeout(p, ms, label = 'timeout') { let t; return Promise.ra
 // kibble-pay byGame payload -> feed entries for the nine arcade cabinets. Malformed rows are dropped, never repaired.
 export function parseFeed(json, n = 12) {
   const out = []; const games = Array.isArray(json?.games) ? json.games : [];
-  for (const g of games) { if (!GAME_IDS.includes(g?.id) || !Array.isArray(g.entries)) continue;
+  for (const g of games) { if (!PRIZE_IDS.includes(g?.id) || !Array.isArray(g.entries)) continue;
     for (const e of g.entries) { const who = shortWallet(e?.wallet), score = Number(e?.score), rank = Number(e?.rank);
       if (!who || !Number.isInteger(score) || score <= 0 || !Number.isInteger(rank) || rank < 1) continue; out.push({ game: g.id, who, score, rank, src: 'kibble-pay' }); } }
   out.sort((a, b) => a.rank - b.rank || b.score - a.score || (a.game < b.game ? -1 : 1)); // every cabinet's #1 first, then #2s, ...

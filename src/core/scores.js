@@ -1,6 +1,10 @@
 // Leaderboards: per-game + combined Arcade board, filtered by day/week/month. Local storage now; server stub in /api/scores.
 // Prizes are awarded by RANK ONLY (skill). Free to play, no paid entry, no chance-based prizes.
-export const GAME_IDS = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'];
+// Prize cabinets: combined arcade board, daily event, and the kibble-pay feed. Order is the daily-event cycle.
+export const PRIZE_IDS = ['kibble-chomp', 'bark-invaders', 'pup-crossing', 'bone-breaker', 'street-sniffer', 'paw-fu-tower', 'bone-digger', 'pips-big-bark', 'shiba-scuffle'];
+// Free-play wing: local boards and the existing Bones caps only. Not on the prize board or the daily rotation.
+export const FREE_IDS = ['gust-glider', 'dash-line', 'stack-shift', 'hue-flood', 'beat-lanes', 'tile-fuse', 'sky-springs', 'rift-runner', 'coil', 'spark-factory'];
+export const GAME_IDS = [...PRIZE_IDS, ...FREE_IDS];
 export const MODE_SUFFIX = ['', '@inu', '@daily'];
 export const SCORES_VERSION = 2, SCORES_KEY = 'inuarcade.scores.v' + SCORES_VERSION; // v2 = remixed original cabinets; v1 (arcade-table) scores stay in their own key
 export const BOARD_KEYS = GAME_IDS.flatMap((g) => MODE_SUFFIX.map((m) => g + m));
@@ -28,7 +32,7 @@ export function board(db, game, period = 'all', now = Date.now(), n = 10) {
 // Combined Arcade board: each game's top score in the period = 1000 pts; a player's best earns a share. Sum over games.
 export function arcadeBoard(db, period = 'all', now = Date.now(), n = 10, mode = 'classic') {
   const tot = new Map();
-  for (const g of GAME_IDS) { const b = board(db, keyFor(g, mode), period, now, 1000); const top = b[0]?.score || 0; if (!top) continue;
+  for (const g of PRIZE_IDS) { const b = board(db, keyFor(g, mode), period, now, 1000); const top = b[0]?.score || 0; if (!top) continue;
     for (const e of b) { const t = tot.get(e.name) || { name: e.name, points: 0, games: 0, house: !!e.house }; t.points += Math.round((1000 * e.score) / top); t.games++; tot.set(e.name, t); } }
   return [...tot.values()].sort((a, b) => b.points - a.points || b.games - a.games).slice(0, n);
 }
@@ -50,7 +54,7 @@ export async function postScore(game, entry, base = '') { try { const r = await 
 // House demo scores so a fresh cabinet has something to beat. Flagged house: shown, never eligible for prizes.
 // House scores for the v2 (remixed) rules, scaled from the human-sim medians (scripts/human-sim.mjs): INU ~2x a typical
 // first-session run, PUP ~ typical, DOG ~ beginner. Bone Breaker classic tops out at MAX_SCORE (714) over 3 screens.
-export const HOUSE = { 'kibble-chomp': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bark-invaders': [['INU', 2500], ['PUP', 1200], ['DOG', 500]], 'pup-crossing': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bone-breaker': [['INU', 650], ['PUP', 400], ['DOG', 200]], 'street-sniffer': [['INU', 4500], ['PUP', 2200], ['DOG', 900]], 'paw-fu-tower': [['INU', 6000], ['PUP', 2700], ['DOG', 1200]], 'bone-digger': [['INU', 12000], ['PUP', 6000], ['DOG', 2500]], 'pips-big-bark': [['INU', 26000], ['PUP', 12000], ['DOG', 5000]], 'shiba-scuffle': [['INU', 30000], ['PUP', 12000], ['DOG', 5000]] };
+export const HOUSE = { 'kibble-chomp': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bark-invaders': [['INU', 2500], ['PUP', 1200], ['DOG', 500]], 'pup-crossing': [['INU', 3000], ['PUP', 1500], ['DOG', 600]], 'bone-breaker': [['INU', 650], ['PUP', 400], ['DOG', 200]], 'street-sniffer': [['INU', 4500], ['PUP', 2200], ['DOG', 900]], 'paw-fu-tower': [['INU', 6000], ['PUP', 2700], ['DOG', 1200]], 'bone-digger': [['INU', 12000], ['PUP', 6000], ['DOG', 2500]], 'pips-big-bark': [['INU', 26000], ['PUP', 12000], ['DOG', 5000]], 'shiba-scuffle': [['INU', 30000], ['PUP', 12000], ['DOG', 5000]], 'gust-glider': [['INU', 40], ['PUP', 16], ['DOG', 6]], 'dash-line': [['INU', 1800], ['PUP', 700], ['DOG', 250]], 'stack-shift': [['INU', 36], ['PUP', 16], ['DOG', 7]], 'hue-flood': [['INU', 900], ['PUP', 350], ['DOG', 120]], 'beat-lanes': [['INU', 8000], ['PUP', 2800], ['DOG', 700]], 'tile-fuse': [['INU', 4000], ['PUP', 1400], ['DOG', 400]], 'sky-springs': [['INU', 2800], ['PUP', 1100], ['DOG', 350]], 'rift-runner': [['INU', 2200], ['PUP', 900], ['DOG', 300]], 'coil': [['INU', 28], ['PUP', 12], ['DOG', 4]], 'spark-factory': [['INU', 40000], ['PUP', 12000], ['DOG', 3500]] };
 export function seedHouse(db, now = Date.now()) { if (db._seeded) return db; db._seeded = 1;
   const H = HOUSE;
   for (const [g, list] of Object.entries(H)) for (const [name, score] of list) addScore(db, g, { name, score, at: now, house: true }); return db; }

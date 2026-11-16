@@ -1,9 +1,13 @@
-// Phone playtest (portrait 390x844 touch; the handheld shell is portrait-only). T=<prefix> JOY=1 URL=<site>
+// Phone playtest (portrait 390x844 touch; the handheld shell is portrait-only). T=<prefix> URL=<site>
+// Directions follow the on-screen control: the stick by default (nothing saved). JOY=0 saves the d-pad. JOY=1 saves the stick.
 import { chromium } from 'playwright';
 const U=process.env.URL||'http://localhost:8140', D='/workspace/inu-arcade-shots/', T=process.env.T||'after';
 const b=await chromium.launch(); const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2,...(process.env.STATE?{storageState:process.env.STATE}:{})});
-const JOY=process.env.JOY==='1'; // JOY=1: run with Settings > Joystick controls ON (directions via the stick, multi-touch)
-const p=await ctx.newPage(); if(JOY) await p.addInitScript(()=>localStorage.setItem('inuarcade.settings.v1','{"joystick":true}'));
+// Unset: product default (stick on, nothing saved). JOY=1 saves stick on. JOY=0 saves the d-pad.
+const JOY=process.env.JOY;
+const p=await ctx.newPage();
+if(JOY==='1') await p.addInitScript(()=>localStorage.setItem('inuarcade.settings.v1','{"joystick":true}'));
+if(JOY==='0') await p.addInitScript(()=>localStorage.setItem('inuarcade.settings.v1','{"joystick":false}'));
 const nav=async(url)=>{await p.goto(url);if(process.env.SHARE&&/vercel\.com|Login/.test(p.url()+await p.title())){await p.goto(process.env.SHARE);await p.goto(url);}}; // protected preview: SHARE link sets the bypass cookie
 const cdp=await ctx.newCDPSession(p); const touch=(type,pts)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:pts.map(([x,y],i)=>({x,y,id:i+1}))});
 const stick=async(k)=>{const q=await p.locator('#joy').boundingBox();const cx=q.x+q.width/2,cy=q.y+q.height/2,o={left:[-36,0],right:[36,0],up:[0,-36],down:[0,36]}[k];
@@ -13,11 +17,12 @@ const stick=async(k)=>{const q=await p.locator('#joy').boundingBox();const cx=q.
 await nav(U+'/'); await p.waitForTimeout(900); await p.screenshot({path:D+T+'-hub.png'});
 const info=await p.evaluate(()=>{const r=document.querySelector('#screen').getBoundingClientRect();const pad=[...document.querySelectorAll('#pad b')].map(e=>{const q=e.getBoundingClientRect();return [e.dataset.k,q.x|0,q.y|0,q.width|0,q.height|0]});const bar=document.querySelector('#bar').getBoundingClientRect();return {cv:[r.x|0,r.y|0,r.width|0,r.height|0],pad,bar:[bar.x|0,bar.y|0,bar.width|0,bar.height|0]}});
 console.log(JSON.stringify(info));
-for (const g of ['kibble-chomp','bark-invaders','pup-crossing','bone-breaker','street-sniffer','paw-fu-tower','bone-digger','pips-big-bark','shiba-scuffle']) for (const m of ['classic','inu']) {
+for (const g of ['kibble-chomp','bark-invaders','pup-crossing','bone-breaker','street-sniffer','paw-fu-tower','bone-digger','pips-big-bark','shiba-scuffle','gust-glider','dash-line','stack-shift','hue-flood','beat-lanes','tile-fuse','sky-springs','rift-runner','coil','spark-factory']) for (const m of ['classic','inu']) {
   await nav(U+'/'+g); await p.waitForTimeout(600);
   if (m==='inu') await p.evaluate(()=>window.__arcade.cab.gmode='inu');
   const a=await p.locator('[data-k=start]').first(); await a.tap(); await p.waitForTimeout(400);
-  const k=['left','right','up','a'];for(const x of k){if(JOY)await stick(x);else await p.locator(`#pad [data-k=${x}]`).first().tap();await p.waitForTimeout(150);}
+  const k=['left','right','up','a'];const stickOn=()=>p.evaluate(()=>document.body.classList.contains('joy'));
+  for(const x of k){if(await stickOn())await stick(x);else await p.locator(`#pad [data-k=${x}]`).first().tap();await p.waitForTimeout(150);}
   await p.waitForTimeout(1200);
   const s=await p.evaluate(()=>({joy:document.body.classList.contains('joy'),mode:window.__arcade.cab.mode,g:window.__arcade.cab.gmode,ac:window.__arcade.audioState()}));
   console.log(g,m,JSON.stringify(s)); await p.screenshot({path:`${D}${T}-${g}-${m}.png`});

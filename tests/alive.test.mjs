@@ -21,7 +21,7 @@ test('daily event: cycles all nine cabinets every 9 days, never the same cabinet
   for (const e of evs) { assert.ok(GAME_IDS.includes(e.game)); assert.ok(['classic', 'inu'].includes(e.mode)); modes.add(e.mode); tiers.add(e.tier);
     assert.equal(e.target, EV.TARGETS[e.game][e.tier]); assert.equal(e.bones, EV.EVENT_BONES[e.tier]); assert.match(e.goal, /^Score [\d,]+ in .+ (Inu Mode|Classic)$/); }
   assert.equal(modes.size, 2); assert.equal(tiers.size, 3);
-  for (const g of GAME_IDS) { const h = Object.fromEntries(HOUSE[g]), t = EV.TARGETS[g]; assert.ok(t[0] < t[1] && t[1] < t[2] && t[2] < h.INU, g); }
+  for (const g of EV.EVENT_GAMES) { const h = Object.fromEntries(HOUSE[g]), t = EV.TARGETS[g]; assert.ok(t[0] < t[1] && t[1] < t[2] && t[2] < h.INU, g); }
 });
 test('daily event rewards: Bones and one cosmetic only; never $KIBBLE, no fees, no wallet', () => {
   assert.deepEqual(EV.REWARD_KINDS, ['bones', 'cosmetic']);
